@@ -3,10 +3,10 @@
 
 
 # Preambel ----------------------------------------------------------------
-getwd()
-setwd()
-install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2"))
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2"), require, character.only = T)
+setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
+install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie"))
+install.packages("drought", repos="http://R-Forge.R-project.org")
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "drought", "lubridate", "dplyr"), require, character.only = T)
 
 # Load data ---------------------------------------------------------------
 
@@ -19,7 +19,7 @@ gauges  <- readOGR(dsn="./data/raster/gauges", layer= "gauges")
 
 # overview ----------------------------------------------------------------
 #gauges
-plot(gauges)
+plot(gauges) 
 
 #writing loading function
 
@@ -38,9 +38,10 @@ load_file <- function(file, value_name){
 #precip
 precip_long <- load_file(precip, "sum_mm")
 
-#  filter(gauge < 10) %>%
-ggplot()+
-  geom_smooth(aes(x=date, y=daily_sum, colour=as.factor(gauge), group=gauge), se=F)
+precip_long %>% 
+  filter(gauge < 10) %>%
+  ggplot()+
+    geom_smooth(aes(x=date, y=sum_mm, colour=as.factor(gauge), group=gauge), se=F)
 
 
 #discharge
@@ -58,3 +59,31 @@ temp %>%
   filter(gauge < 10) %>%
 ggplot()+
   geom_smooth(aes(x=date, y=temp, colour=as.factor(gauge), group=gauge), se=F)
+
+
+
+# Cluster calculation -----------------------------------------------------
+q_long %<>% 
+  mutate(month = month(date)) %>% 
+  mutate(winter= month > 11 | month <4) %>% 
+  mutate(lf_s = 0) %>% 
+   mutate(lf_w = 0) %>%
+  group_by(gauge) %>% 
+  mutate(qt = quantile(q, 0.05)) 
+
+lf_w_ind <- which(q_long$qt >= q_long$q & q_long$winter==TRUE)
+q_long$lf_w[lf_w_ind] <-  q_long$q[lf_w_ind]
+
+lf_s_ind <- which(q_long$qt >= q_long$q & q_long$winter==FALSE)
+q_long$lf_s[lf_s_ind] <-  q_long$q[lf_s_ind]
+  
+
+
+
+
+# SPI calculation ---------------------------------------------------------
+
+
+mtcars %>% 
+  select(cyl)
+
