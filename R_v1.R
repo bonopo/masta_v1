@@ -13,13 +13,14 @@ sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie
 load("./data/catchments/eobs_pr_part.Rdata")
 load("./data/catchments/eobs_temp_part.Rdata")
 load("./data/catchments/streamflow.Rdata")
-gauges  <- readOGR(dsn="./data/raster/gauges", layer= "gauges")
+#gauges  <- readOGR(dsn="./data/raster/gauges", layer= "gauges")
+gauges  <- shapefile("./data/raster/gauges")
 
-
-
+raster(gauges)
 # overview ----------------------------------------------------------------
 #gauges
 plot(gauges) 
+str(gauges)
 
 #writing loading function
 
@@ -63,27 +64,35 @@ ggplot()+
 
 
 # Cluster calculation -----------------------------------------------------
+#seasonality ratio
+
 q_long %<>% 
   mutate(month = month(date)) %>% 
   mutate(winter= month > 11 | month <4) %>% 
   mutate(lf_s = 0) %>% 
-   mutate(lf_w = 0) %>%
+  mutate(lf_w = 0) %>%
   group_by(gauge) %>% 
   mutate(qt = quantile(q, 0.05)) 
 
-lf_w_ind <- which(q_long$qt >= q_long$q & q_long$winter==TRUE)
-q_long$lf_w[lf_w_ind] <-  q_long$q[lf_w_ind]
+  lf_w_ind <- which(q_long$qt >= q_long$q & q_long$winter==TRUE) 
+  q_long$lf_w[lf_w_ind] <-  q_long$q[lf_w_ind]
 
-lf_s_ind <- which(q_long$qt >= q_long$q & q_long$winter==FALSE)
-q_long$lf_s[lf_s_ind] <-  q_long$q[lf_s_ind]
+  lf_s_ind <- which(q_long$qt >= q_long$q & q_long$winter==FALSE)
+  q_long$lf_s[lf_s_ind] <-  q_long$q[lf_s_ind]
   
+sr <- q_long %>% 
+  group_by(gauge) %>% 
+  summarise(mean_s = mean(lf_s), mean_w = mean(lf_w)) %>% 
+  mutate(sr = mean_s/mean_w) 
 
+gauges$sr <- sr$sr
 
-
+gauges$Neue_ID
+  spplot(gauges, "sr")
+  
 
 # SPI calculation ---------------------------------------------------------
 
 
-mtcars %>% 
-  select(cyl)
+
 
