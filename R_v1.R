@@ -282,7 +282,7 @@ dist.start(dpe3(data,shape=1.5, 12, 30 ), "pe3")
 #tweedie function recommended by barker et al 2016
 my.start <- function(x,distr="gamma"){
 ### code based on "mmedist" in package "fitdistrplus"
-ppar <- try({
+ppar <- try({ 
 n <- length(x)
 m <- mean(x)
 v <- (n - 1)/n * var(x)
