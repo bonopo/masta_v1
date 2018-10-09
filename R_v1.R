@@ -175,17 +175,18 @@ pet_th_vec <- pet_th[unique(mt_mn_temp$gauge)] %>%
 spei_data <-precip_monthly %>% 
     mutate(pet_th = pet_th_vec) %>% 
     mutate(p_pet = month_sum - pet_th)
-                   
-spei <- as.list(NA)
+
+# with Generalized Logistic Distribution                  
+spei_gl <- as.list(NA)
 for(i in unique(spei_data$gauge)){
 data <- spei_data$p_pet[spei_data$gauge==i]
 params_dist <- fitSCI(data, first.mon = 1, distr = "genlog", time.scale = 6, p0 =F)
 #inital values for parameters calculated with L-moments and then optimization with maximum likelihood
 spi_temp <- transformSCI(data, first.mon = 1, obj = params_dist)
-spei[[i]] <- spi_temp
+spei_gl[[i]] <- spi_temp
 }    
 
-#with different distribution
+#with Generalized extreme value distribution
 spei_gev <- as.list(NA)
 for(i in unique(spei_data$gauge)){
 data <- spei_data$p_pet[spei_data$gauge==i]
@@ -195,7 +196,7 @@ spi_temp <- transformSCI(data, first.mon = 1, obj = params_dist)
 spei_gev[[i]] <- spi_temp
 }   
 
-#with SPEI package using the log-logistic distr
+#with log-logistic distribution and different function (SPEI package)
 
 spei_llogis <- as.list(NA)
 for(i in unique(spei_data$gauge)){
@@ -203,9 +204,31 @@ data <- spei_data$p_pet[spei_data$gauge==i]
 spei_llogis[[i]] <- spei(data, scale=6)
 }   
 
-plot(spei_data$yr_mt[spei_data$gauge ==1],spei[[1]],t="l")
-lines(spei_data$yr_mt[spei_data$gauge ==1],spei_gev[[1]],t="l", col=2)
-plot(spei_llogis[[1]],t="l", col=2)
+#converting SPEI objects into vectors
+spei_vec <- function(data, spei=FALSE){
+  output <-  vector()
+  for(i in unique(mt_mn_temp$gauge)){
+  temp <- unclass(data[[i]]) 
+  if(spei == FALSE){
+    output <- c(output, as.numeric(temp))}else{
+    output <- c(output, as.numeric(temp$fitted))}
+  }
+  return(output)
+  }
 
-class(spei_llogis[[1]])
-           
+spei_ll_v <- spei_vec(spei_llogis,spei= TRUE)
+spei_gv_v <- spei_vec(spei_gev)
+spei_gl_v <- spei_vec(spei_gl)
+
+
+#merging data
+
+spei <- cbind(spei_ll_v, spei_gv_v, spei_gl_v) %>% 
+  as.data.frame() %>% 
+  as.tbl() %>% 
+  mutate(date= mt_mn_temp$yr_mt)
+  
+
+
+
+
