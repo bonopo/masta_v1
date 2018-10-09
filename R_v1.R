@@ -4,11 +4,11 @@
 
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha"))
+install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 # devtools::install_github("hadley/dplyr")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "drought", "lubridate", "SPEI", "lmomco", "dplyr", "evd"), require, character.only = T)
-library(eha)
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "drought", "lubridate", "SPEI", "lmomco",  "evd", "reliaR"), require, character.only = T)
+#library(eha)
 
 # Load data ---------------------------------------------------------------
 
@@ -176,27 +176,29 @@ spei_data <-precip_monthly %>%
     mutate(pet_th = pet_th_vec) %>% 
     mutate(p_pet = month_sum - pet_th)
 
-# with Generalized Logistic Distribution                  
-spei_gl <- as.list(NA)
-for(i in unique(spei_data$gauge)){
-data <- spei_data$p_pet[spei_data$gauge==i]
-params_dist <- fitSCI(data, first.mon = 1, distr = "genlog", time.scale = 6, p0 =F)
+sci_calc <- function(datax = spei_data$p_pet, gaugex=spei_data$gauge, distx="gev", agg_n=6, p0x=F){
+ output <- as.list(NA)
+for(i in unique(gaugex)){
+data <- datax[gaugex==i]
+params_dist <- fitSCI(data, first.mon = 1, distr = distx, time.scale = agg_n, p0 =p0x)
 #inital values for parameters calculated with L-moments and then optimization with maximum likelihood
+#if there are a lot of zeros in the time series it is recommended to use p0=TRUE
 spi_temp <- transformSCI(data, first.mon = 1, obj = params_dist)
-spei_gl[[i]] <- spi_temp
-}    
+output[[i]] <- spi_temp
+}  
+ return(output)
+  }
+
+# with Generalized Logistic Distribution                  
+spei_gl <- sci_calc(distx = "genlog")
 
 #with Generalized extreme value distribution
-spei_gev <- as.list(NA)
-for(i in unique(spei_data$gauge)){
-data <- spei_data$p_pet[spei_data$gauge==i]
-params_dist <- fitSCI(data, first.mon = 1, distr = "gev", time.scale = 6, p0 =F)
-#inital values for parameters calculated with L-moments and then optimization with maximum likelihood
-spi_temp <- transformSCI(data, first.mon = 1, obj = params_dist)
-spei_gev[[i]] <- spi_temp
-}   
+spei_gev <- sci_calc()
 
-#with log-logistic distribution and different function (SPEI package)
+#with gamma distribution
+spei_gam <- sci_calc(distx="gamma") #bad result three parameter distribution used for arid regions because it can handle negative values better vicente-serrano et al 2010
+
+#with log-logistic distribution (different function from SPEI package)
 
 spei_llogis <- as.list(NA)
 for(i in unique(spei_data$gauge)){
@@ -205,9 +207,9 @@ spei_llogis[[i]] <- spei(data, scale=6)
 }   
 
 #converting SPEI objects into vectors
-spei_vec <- function(data, spei=FALSE){
+spei_vec <- function(data, spei=FALSE, gaugex=mt_mn_temp$gauge){
   output <-  vector()
-  for(i in unique(mt_mn_temp$gauge)){
+  for(i in unique(gaugex)){
   temp <- unclass(data[[i]]) 
   if(spei == FALSE){
     output <- c(output, as.numeric(temp))}else{
@@ -220,15 +222,77 @@ spei_ll_v <- spei_vec(spei_llogis,spei= TRUE)
 spei_gv_v <- spei_vec(spei_gev)
 spei_gl_v <- spei_vec(spei_gl)
 
-
+#which distribution fits best
 #merging data
 
 spei <- cbind(spei_ll_v, spei_gv_v, spei_gl_v) %>% 
   as.data.frame() %>% 
   as.tbl() %>% 
-  mutate(date= mt_mn_temp$yr_mt)
+  mutate(date= mt_mn_temp$yr_mt) %>% 
+  mutate(gauge= mt_mn_temp$gauge )
+
+spei_long <- gather(spei, distr, value, -date, -gauge)
+  spei_long %>% 
+    filter(date < 1980 & gauge == 1) %>% 
+ggplot()+
+  geom_line(aes(x= date, y=value,  color=distr), stat="identity")
+
+#L-moments diagrams
   
-d
+#Kolmogorow-Smirnow-Test
+  ks.test(x=spei_data$p_pet, y=spei$spei_ll_v, alternative = "t" )
+  ks.test(x=spei_data$p_pet, y=spei$spei_gv_v, alternative = "t" )
+  ks.test(x=spei_data$p_pet, y=spei$spei_gl_v, alternative = "t" )
+  # similar d values the lower the better
+  
+# SSI calculation ---------------------------------------------------------
+mt_sum_q <- q_long %>% 
+    mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>% 
+  group_by(gauge,yr_mt) %>% 
+  summarise(q_sum = sum(q)) %>% 
+  ungroup()
+
+ssi_p3 <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "pe3", agg_n = 1, p0x = F ) 
+ssi_wb <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "weibull", agg_n = 1, p0x = F ) 
+ssi_gb <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "gumbel", agg_n = 1, p0x = F ) 
+ssi_ln <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "lnorm", agg_n = 1, p0x = F ) 
+mt_sum_q$ssi_p3 <- spei_vec(ssi_p3, gaugex = mt_sum_q$gauge)
+mt_sum_q$ssi_wb <- spei_vec(ssi_wb, gaugex = mt_sum_q$gauge)
+mt_sum_q$ssi_gb <- spei_vec(ssi_gb, gaugex = mt_sum_q$gauge)
+mt_sum_q$ssi_ln <- spei_vec(ssi_ln, gaugex = mt_sum_q$gauge)
+
+#NA because of fitting errors
+
+g <- mt_sum_q %>% 
+    dplyr::filter(is.na(ssi_gb))
+g2 <- mt_sum_q %>% 
+  filter(gauge == 2)  
+sci_calc(datax = q_sum, gaugex = 2, agg_n = 1)
+  hist(g2$q_sum)
+i <- 338
+data <- mt_sum_q$q_sum[mt_sum_q$gauge ==i]
+params_dist <- fitSCI(data,first.mon = 1, distr = "weibull", time.scale = 1, p0 =FALSE, start.fun.fix=F)
+spi_temp <- transformSCI(data, first.mon = 1, obj = params_dist)
 
 
+dist.start(data[1:150], "pe3")
+dist.start(dpe3(data,shape=1.5, 12, 30 ), "pe3")
+#it seems that it can not fit destinct values for certain distributions
 
+#tweedie function recommended by barker et al 2016
+my.start <- function(x,distr="gamma"){
+### code based on "mmedist" in package "fitdistrplus"
+ppar <- try({
+n <- length(x)
+m <- mean(x)
+v <- (n - 1)/n * var(x)
+shape <- m^2/vf
+rate <- m/v
+list(shape = shape, rate = rate)},TRUE)
+if (class(ppar) == "try-error") ## function has to be able to return NA parameters
+ppar <- list(shape = NA, rate = NA)
+return(ppar)
+}
+my.start(PRECIP)
+spi.para <- fitSCI(PRECIP,first.mon=1,time.scale=6,p0=TRUE,
+distr="gamma",start.fun=my.start)
