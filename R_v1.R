@@ -228,7 +228,7 @@ spei <- cbind(spei_ll_v, spei_gv_v, spei_gl_v) %>%
   as.tbl() %>% 
   mutate(date= mt_mn_temp$yr_mt)
   
-
+d
 
 
 
