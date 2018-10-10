@@ -4,7 +4,7 @@
 
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 # devtools::install_github("hadley/dplyr")
 sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "drought", "lubridate", "SPEI", "lmomco",  "evd", "reliaR"), require, character.only = T)
@@ -246,11 +246,36 @@ ggplot()+
   # similar d values the lower the better
   
 # SSI calculation ---------------------------------------------------------
-mt_sum_q <- q_long %>% 
+mt_mn_q <- q_long %>% 
     mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>% 
   group_by(gauge,yr_mt) %>% 
-  summarise(q_sum = sum(q)) %>% 
-  ungroup()
+  summarise(q_mean = mean(q)) %>% 
+  ungroup() %>% 
+  mutate(month = month(yr_mt))
+  
+# calculating different probability distribution for every month and station as of recommended by shukla and wood 2008 and vicene-serrano et al 2012
+  
+month_ext <- function(monthx = 1, datax = mt_mn_q, yr_llim=1970, yr_rlim = 1972){
+    output <- data.frame()
+    data <- datax %>% 
+      filter(month == monthx)
+    for (g in unique(data$gauge)){
+      for (y in seq(yr_llim,yr_rlim,by = 1)){
+        output[y,g] <- data$q_mean[data$gauge == g & year(data$yr_mt) == y]
+      }
+    }
+    output_short <- output[yr_llim:yr_rlim,]
+    return(output_short)
+  }
+
+
+
+q_by_month <- data.frame()
+for (i in 1:12){
+  q_by_month <- month_ext(monthx = i)
+  assign(str_to_lower(month.abb[i]), q_by_month)
+}
+
 
 ssi_p3 <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "pe3", agg_n = 1, p0x = F ) 
 ssi_wb <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "weibull", agg_n = 1, p0x = F ) 
