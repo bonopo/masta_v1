@@ -284,7 +284,7 @@ my.start <- function(x,distr="gamma"){
 ### code based on "mmedist" in package "fitdistrplus"
 ppar <- try({ 
 n <- length(x)
-m <- mean(x)
+m <- mean(x) 
 v <- (n - 1)/n * var(x)
 shape <- m^2/vf
 rate <- m/v
