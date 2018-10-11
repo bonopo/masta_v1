@@ -4,11 +4,11 @@
 
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 # devtools::install_github("hadley/dplyr")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "drought", "lubridate", "SPEI", "lmomco",  "evd", "reliaR"), require, character.only = T)
-#library(eha)
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist"), require, character.only = T)
+#library(eha) drought
 
 # Load data ---------------------------------------------------------------
 
@@ -253,9 +253,22 @@ mt_mn_q <- q_long %>%
   ungroup() %>% 
   mutate(month = month(yr_mt))
   
+ssi_p3 <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "pe3", agg_n = 1, p0x = F ) 
+ssi_wb <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "weibull", agg_n = 1, p0x = F ) 
+ssi_gb <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "gumbel", agg_n = 1, p0x = F ) 
+ssi_ln <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "lnorm", agg_n = 1, p0x = F ) 
+mt_sum_q$ssi_p3 <- spei_vec(ssi_p3, gaugex = mt_sum_q$gauge)
+mt_sum_q$ssi_wb <- spei_vec(ssi_wb, gaugex = mt_sum_q$gauge)
+mt_sum_q$ssi_gb <- spei_vec(ssi_gb, gaugex = mt_sum_q$gauge)
+mt_sum_q$ssi_ln <- spei_vec(ssi_ln, gaugex = mt_sum_q$gauge)
+
+
+#NA because of fitting errors
+#it seems that it can not fit destinct values for certain distributions
 # calculating different probability distribution for every month and station as of recommended by shukla and wood 2008 and vicene-serrano et al 2012
   
-month_ext <- function(monthx = 1, datax = mt_mn_q, yr_llim=1970, yr_rlim = 1972){
+#month extraction
+month_ext <- function(monthx = 1, datax = mt_mn_q, yr_llim=1970, yr_rlim = 2000){
     output <- data.frame()
     data <- datax %>% 
       filter(month == monthx)
@@ -266,58 +279,104 @@ month_ext <- function(monthx = 1, datax = mt_mn_q, yr_llim=1970, yr_rlim = 1972)
     }
     output_short <- output[yr_llim:yr_rlim,]
     return(output_short)
-  }
- 
+}
 
-
-q_by_month <- data.frame()
 for (i in 1:12){
   q_by_month <- month_ext(monthx = i)
   assign(str_to_lower(month.abb[i]), q_by_month)
 }
 
+bbb <- jan$V1
 
-ssi_p3 <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "pe3", agg_n = 1, p0x = F ) 
-ssi_wb <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "weibull", agg_n = 1, p0x = F ) 
-ssi_gb <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "gumbel", agg_n = 1, p0x = F ) 
-ssi_ln <- sci_calc(datax = mt_sum_q$q_sum, gaugex = mt_sum_q$gauge, distx = "lnorm", agg_n = 1, p0x = F ) 
-mt_sum_q$ssi_p3 <- spei_vec(ssi_p3, gaugex = mt_sum_q$gauge)
-mt_sum_q$ssi_wb <- spei_vec(ssi_wb, gaugex = mt_sum_q$gauge)
-mt_sum_q$ssi_gb <- spei_vec(ssi_gb, gaugex = mt_sum_q$gauge)
-mt_sum_q$ssi_ln <- spei_vec(ssi_ln, gaugex = mt_sum_q$gauge)
+#parameter estimation loglikelihood
+#one sided ks test
+#pvalue > 0.05 means that the zero hypothesis can not be rejected
+# 0 hypothesis is that they are not from the same distribution
+#gev
 
-#NA because of fitting errors
+gev <- fgev(bbb)
+pa <- gev$estimate %>% 
+  as.list()
+pa <- fitdist(bbb, distr = "gev", discrete = FALSE, start = pa)$estimate #log likelihood = default
+ks.test(bbb, "pgev",pa )
 
-g <- mt_sum_q %>% 
-    dplyr::filter(is.na(ssi_gb))
-g2 <- mt_sum_q %>% 
-  filter(gauge == 2)  
-sci_calc(datax = q_sum, gaugex = 2, agg_n = 1)
-  hist(g2$q_sum)
-i <- 338
-data <- mt_sum_q$q_sum[mt_sum_q$gauge ==i]
-params_dist <- fitSCI(data,first.mon = 1, distr = "weibull", time.scale = 1, p0 =FALSE, start.fun.fix=F)
-spi_temp <- transformSCI(data, first.mon = 1, obj = params_dist)
+#pIII
+PE3<-parpe3(lmom.ub(bbb)) 
+ks.test(bbb, "cdfpe3", PE3)
 
+#log normal
+pa <- fitdist(bbb, distr = "lnorm", discrete = FALSE)$estimate #log likelihood = default
+ks.test(bbb, "plnorm",pa )
+e_bbb <- ecdf(bbb)
 
-dist.start(data[1:150], "pe3")
-dist.start(dpe3(data,shape=1.5, 12, 30 ), "pe3")
-#it seems that it can not fit destinct values for certain distributions
+#weibull
+pa <- fitdist(bbb, "weibull", discrete = FALSE)$estimate  #log likelihood = default
+# bbb_sort <- sort(bbb, decreasing = TRUE)
+# cumsum(bbb_sort)
+# n <- length(bbb)
+# Femp <- 1:n/(n+1)
 
-#tweedie function recommended by barker et al 2016
-my.start <- function(x,distr="gamma"){
-### code based on "mmedist" in package "fitdistrplus"
-ppar <- try({ 
-n <- length(x)
-m <- mean(x) 
-v <- (n - 1)/n * var(x)
-shape <- m^2/vf
-rate <- m/v
-list(shape = shape, rate = rate)},TRUE)
-if (class(ppar) == "try-error") ## function has to be able to return NA parameters
-ppar <- list(shape = NA, rate = NA)
-return(ppar)
+ks.test(Femp, "pweibull",pa)
+
+#log logistic
+fnLLLL = function(vParams, vData) {
+  # uses the density function of the log-logistic function from FAdist
+  return(-sum(log(dllog(vData, shape = vParams[1], scale = vParams[2]))))
 }
-my.start(PRECIP)
-spi.para <- fitSCI(PRECIP,first.mon=1,time.scale=6,p0=TRUE,
-distr="gamma",start.fun=my.start)
+# optimize it
+res <- optim(c(2, 3), fnLLLL, vData = bbb)$par 
+pa <- list()
+pa$shape <- res[1]
+pa$scale <- res[2]
+ks.test(bbb, "pllog",shape = pa$shape, scale= pa$scale)
+
+#generalized Pareto
+pa <- pargpa(lmom.ub(bbb))
+ks.test(bbb, "cdfgpa", pa)
+
+
+
+dist_fitt <- function(distry, monthy){
+  q_by_month <- data.frame()
+    for (i in monthy){
+    q_by_month <- month_ext(monthx = monthy)
+    assign(str_to_lower(month.abb[i]), q_by_month)
+    }
+    temp <- fitSCI(q_by_month$V1, first.mon = 1, distr = distx, time.scale = agg_n, p0 =p0x)
+  assign(paste0("params_", disrty), temp)
+}
+
+
+#ks test compares overall shape of distribution not specifically central tendency, dispersion or other parameters
+
+
+sci_calc <- function(datax = spei_data$p_pet, gaugex=spei_data$gauge, distx="gev", agg_n=6, p0x=F){
+ output <- as.list(NA)
+for(i in unique(gaugex)){
+data <- datax[gaugex==i]
+params_dist <- fitSCI(data, first.mon = 1, distr = distx, time.scale = agg_n, p0 =p0x)
+#inital values for parameters calculated with L-moments and then optimization with maximum likelihood
+#if there are a lot of zeros in the time series it is recommended to use p0=TRUE
+spi_temp <- transformSCI(data, first.mon = 1, obj = params_dist)
+output[[i]] <- spi_temp
+}  
+ return(output)
+  }
+
+#fitting to cumulative normal distribution with mean 0 and sd = 1
+pnorm
+
+j1<- jan$V1
+
+j1_sort <- sort(j1, decreasing = FALSE)
+  n <- length(j1)
+  femp <- 1:n/(n+1)
+  cum_n <- data.frame()
+
+
+  int <- which(near(femp, .5))
+
+  plot(x= Femp,y= j1_sort )
+  cum_n$ssi[int:length(cum_n$ssi)] <- 1/n
+
+
