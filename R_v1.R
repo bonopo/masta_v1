@@ -4,16 +4,20 @@
 
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#save.image(file="./data/r_temp_image/line307.Rdata")
+save.image(file="./data/r_temp_image/line447.Rdata")
 # load(file="./data/r_temp_image/line307.Rdata")
 
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
-# install.packages(c("trend", "Kendall"))
+#install.packages("lmtest")
 # devtools::install_github("hadley/dplyr")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall"), require, character.only = T)
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest"), require, character.only = T)
 #library(eha) drought
 
+# User defined constants --------------------------------------------------
+
+agg_month <- 12 #spei-n and spi-n how many month should be max aggregation
+date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
 # User defined functions --------------------------------------------------
 
 # loading function
@@ -81,7 +85,7 @@ month_ext <- function(monthx = 1, datax = mt_mn_q){#month extraction for SSI cal
     return(output_short)
 }
 
-ken_trend <- function(sci= seq(1:12), sci_name="spei_v2"){
+ken_trend <- function(sci= seq(1:agg_month), sci_name="spei_v2"){
   ken_tot <- list()
   ken_tau <- data.frame()
   ken_sl <- data.frame()
@@ -90,8 +94,6 @@ ken_trend <- function(sci= seq(1:12), sci_name="spei_v2"){
   sci_data <- ssi_sorted }else{
   sci_data <- get(paste0(sci_name,"_",i))}
   for(g in 1:ncol(sci_data)){
-    if(any(is.infinite(sci_data[,g]))) {
-     sci_data[,g][which(is.infinite(sci_data[,g]))] <- NA}
   res <- MannKendall(sci_data[,g])
   ken_tau[g,i] <- res$tau
   ken_sl[g,i] <- res$sl
@@ -105,6 +107,52 @@ ken_trend <- function(sci= seq(1:12), sci_name="spei_v2"){
   ken_tot[[1]] <- ken_tau
   ken_tot[[2]] <- ken_sl}
   return(ken_tot)
+}
+
+sci_ccf <- function(sci= seq(1:agg_month), sci_namex="spei_v2", sci_namey="ssi_sorted"){
+  ccf_tot <- list()
+  ccf_acf <- data.frame()
+  ccf_lag <- data.frame()
+  y <- get(sci_namey)
+  for (i in sci){
+  sci_data <- get(paste0(sci_namex,"_",i))
+  for(g in 1:ncol(sci_data)){
+    if(any(is.infinite(sci_data[,g]))) {
+     sci_data[,g][ which(is.infinite(sci_data[,g]))] <- NA}
+  ccf_temp <- ccf(x= sci_data[,g], y= y[,g], na.action = na.pass, plot = FALSE)
+  ccf_acf[g,i] <- max(ccf_temp$acf)
+  ccf_lag[g,i] <- ccf_temp$lag[which.max(ccf_temp$acf),1,1]
+  }}
+  colnames(ccf_lag) <- as.character(sci)
+  colnames(ccf_acf) <- as.character(sci)
+  ccf_tot[[2]] <- ccf_lag
+  ccf_tot[[1]] <- ccf_acf
+  return(ccf_tot)
+}
+
+
+spi_spei_reg <- function(sci_n = agg_month){
+  lm_intercept <- data.frame()
+  lm_slope <- data.frame()
+  lm_rsq <- data.frame()
+  lm_res <- list()
+  for (n in 1:sci_n){
+      x <- get(paste0("spei_v2_",n))
+      y <- get(paste0("spi_v2_",n))
+      for (g in 1:ncol(x)){
+        temp <- lm(x[,g]~y[,g], na.action = na.exclude)
+        lm_intercept[g,n]  <- temp$coefficients[1]
+        lm_slope[g,n] <- temp$coefficients[2]
+        lm_rsq[g,n] <- summary(temp)$adj.r.squared
+    }
+  }
+  colnames(lm_intercept) <- 1:agg_month
+  colnames(lm_slope) <- 1:agg_month
+  colnames(lm_rsq) <- 1:agg_month
+  lm_res[[1]] <- lm_intercept
+  lm_res[[2]] <- lm_slope
+  lm_res[[3]] <- lm_rsq
+return(lm_res)
 }
 # Load data ---------------------------------------------------------------
 
@@ -147,43 +195,44 @@ temp_long %<>% filter(date>= "1970-01-01" & date <= "2009-12-31")
 
 
 
-# # Cluster calculation -----------------------------------------------------
-# #seasonality ratio (SR)
-# 
-# # creating two time series one winter one summer
-# #calculating q95 for both parts
-# q_sr_w <- q_long %>% 
-#   mutate(month = month(date)) %>% 
-#   filter(month > 11 | month <4) %>%  #definitin of winter from Laaha et al 2006
-#   group_by(gauge) %>% 
-#   mutate(qt = quantile(q, 0.05)) %>% 
-#   summarise(q95_w = mean(qt))
-# 
-# q_sr_s <- q_long %>% 
-#   mutate(month = month(date)) %>% 
-#   filter(month < 12 | month > 3) %>% 
-#   group_by(gauge) %>% 
-#   mutate(qt = quantile(q, 0.05)) %>% 
-#   summarise(q95_s = mean(qt))
-# 
-# q_sr <- merge(q_sr_s, q_sr_w, by="gauge")
-# q_sr$sr <- q_sr$q95_s/q_sr$q95_w # SR is caclulated via q95_summer/q95_winter from Laaha et al 2006
-# 
-# q_sr$sr_value[which(q_sr$sr < 1)] <- 0 #summer
-# q_sr$sr_value[which(q_sr$sr > 1)] <- 1 #winter NAs are produced in a 9 time series that are very altered or have no clear seasonality 
-# 
-# gauges$sr <- as.numeric(q_sr$sr_value)
-# # spplot(gauges, "sr")
-#   
-# # ind <- which(is.na(q_sr$sr_value))
-# # q_long %>%
-# #   filter(gauge %in% ind) %>%
-# #   filter(year(date) < 1975) %>%
-# #   ggplot() +
-# #   geom_smooth(aes(x=date, y=q, group= as.factor(gauge), color= as.factor(gauge)))+
-# #   scale_y_log10()
-# 
-# 
+ # Cluster calculation -----------------------------------------------------
+#seasonality ratio (SR)
+
+# creating two time series one winter one summer
+#calculating q95 for both parts
+q_sr_w <- q_long %>%
+  mutate(month = month(date)) %>%
+  filter(month > 11 | month <4) %>%  #definitin of winter from Laaha et al 2006
+  group_by(gauge) %>%
+  mutate(qt = quantile(q, 0.05)) %>%
+  summarise(q95_w = mean(qt))
+
+q_sr_s <- q_long %>%
+  mutate(month = month(date)) %>%
+  filter(month < 12 | month > 3) %>%
+  group_by(gauge) %>%
+  mutate(qt = quantile(q, 0.05)) %>%
+  summarise(q95_s = mean(qt))
+
+q_sr <- merge(q_sr_s, q_sr_w, by="gauge")
+q_sr$sr <- q_sr$q95_s/q_sr$q95_w # SR is caclulated via q95_summer/q95_winter from Laaha et al 2006
+
+q_sr$sr_value[which(q_sr$sr < 1)] <- 0 #summer
+q_sr$sr_value[which(q_sr$sr > 1)] <- 1 #winter NAs are produced in 9 time series that are very altered or have no clear seasonality
+
+gauges$sr <- as.numeric(q_sr$sr_value)
+#spplot(gauges, "sr")
+
+# ind <- which(is.na(q_sr$sr_value))
+# q_long %>%
+#   filter(gauge %in% ind) %>%
+#   filter(year(date) < 1975) %>%
+#   ggplot() +
+#   geom_smooth(aes(x=date, y=q, group= as.factor(gauge), color= as.factor(gauge)))+
+#   scale_y_log10()
+
+gauges$ezggr_class <- cut(gauges$Enzgsg_, breaks=c(0,50,100,150,Inf), labels=c("<50", "50-100", "100-150", "150-200"))
+
 # SPI calculation ---------------------------------------------------------
 #aggregating into montly sums
 
@@ -196,7 +245,7 @@ precip_monthly <- precip_long %>%
 # plot(spi[[1]], type="l")
 
 #calculating SPI with gamma distribution see paper McKee et al 1993
-# for (i in 1:12){ #change to 24 later
+# for (i in 1:agg_month){ #change to 24 later
 #   #SPI - n aggregation month 1 -24 month like in barker et al 2016
 # temp <- sci_calc(datax = precip_monthly$month_sum, gaugex =precip_monthly$gauge, distx = "gamma", agg_n = i )
 # spi_v <- spei_vec(temp)
@@ -208,14 +257,16 @@ precip_monthly <- precip_long %>%
 #calculate SPI with spei package
 spi_data <- precip_monthly %>% spread(gauge, month_sum) %>% dplyr::select(-yr_mt) %>% as.data.frame()
 
-for (n in 1:12){ 
+for (n in 1:agg_month){ 
 res <- SPEI::spi(data= spi_data, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
+if(any(is.infinite(m1))) {
+     m1[which(is.infinite(m1))] <- NA}
 assign(paste0("spi_v2_",n), as.data.frame(m1))
 }
 
 
-# SPEI Calculation --------------------------------------------------------
+# SPEI Preperation --------------------------------------------------------
 #with SPEI package and SCI
 
 
@@ -268,24 +319,14 @@ remove(spei_data,pet_th, latitude,pet_th_vec)
 # SPEI calculation with loglogistic distribution--------------------------------
 
 
-for (n in 1:12){ 
+for (n in 1:agg_month){ 
 res <- SPEI::spei(data= spei_data_mat, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
+if(any(is.infinite(m1))) {
+     m1[which(is.infinite(m1))] <- NA}
 assign(paste0("spei_v2_",n), as.data.frame(m1))
 }
 
-#(different function from SPEI package)
-# spei_llogis <- as.list(NA)
-# for (n in 3){ 
-#   #SPEI - n aggregation month 1 - 12 month like in barker et al 2016 but SPI is 1:24 careful!! change later
-# for(i in unique(spei_data$gauge)){
-# data <- spei_data$p_pet[spei_data$gauge==i]
-# spei_llogis[[i]] <- spei(data, scale=n, fit = 'ub-pwm') #unbiased Probability Weighted Moments, maximum likelihood fitting takes too long
-# 
-# }
-# m1 <- matrix(spei_vec(spei_llogis, spei = TRUE), nrow = 480, byrow =F)
-# assign(paste0("spei_",n), as.data.frame(m1))
-# }  
 
 # mean discharge extraction for every gauge -------------------------------
 # 
@@ -307,8 +348,7 @@ mt_mn_q <- q_long %>%
 
   gauges_ssi <- data.frame()
   ssi_entire <- data.frame()
-i <- 2
-g <- 1
+
   for (i in 1:12){
      data <- month_ext(monthx = i, datax = mt_mn_q)
      for (g in 1:ncol(data)){
@@ -321,6 +361,7 @@ g <- 1
   } 
 ssi_sorted <- ssi_entire[order(as.Date(ssi_entire$yr_mt)),]
 ssi_sorted %<>% dplyr::select(-(yr_mt))
+ssi_sorted %>% unlist() %>% is.infinite() %>% any()
 remove(ssi_entire)
 
 # the standartization (p.42p in satistical methods in the atmospheric sciences) removes the interannual variation forms a distribution with mean 0 and sd 1 but it does not remove the skewness (see hist(janssi[,6]) it is still skewed to the right
@@ -334,25 +375,7 @@ acf(spei_1)
 
 # cross correlation -------------------------------------------------------
 
-sci_ccf <- function(sci= seq(1:12), sci_name="spei_v2"){
-  ccf_tot <- list()
-  ccf_acf <- data.frame()
-  ccf_lag <- data.frame()
-  for (i in sci){
-  sci_data <- get(paste0(sci_name,"_",i))
-  for(g in 1:ncol(sci_data)){
-    if(any(is.infinite(sci_data[,g]))) {
-     sci_data[,g][ which(is.infinite(sci_data[,g]))] <- NA}
-  ccf_temp <- ccf(x= sci_data[,g], y= ssi_sorted[,g], na.action = na.pass, plot = FALSE)
-  ccf_acf[g,i] <- max(ccf_temp$acf)
-  ccf_lag[g,i] <- ccf_temp$lag[which.max(ccf_temp$acf),1,1]
-  }}
-  colnames(ccf_lag) <- as.character(sci)
-  colnames(ccf_acf) <- as.character(sci)
-  ccf_tot[[2]] <- ccf_lag
-  ccf_tot[[1]] <- ccf_acf
-  return(ccf_tot)
-}
+
 
 
 ccf_spei <- sci_ccf()
@@ -363,36 +386,36 @@ ccf_spi <- sci_ccf(sci_name = "spi_v2")
 plot(x= spei_6$V1, y= ssi_sorted$V1)
 plot(ssi_sorted$V1, type="l")
 
-pdf("./plots/boxplot_ccf_spei_acf.pdf")
-boxplot(ccf_spei[[1]], xlab="SPEI-n", ylab="acf")
-dev.off()
+# pdf("./plots/boxplot_ccf_spei_acf.pdf")
+# boxplot(ccf_spei[[1]], xlab="SPEI-n", ylab="acf")
+# dev.off()
+# 
+# pdf("./plots/boxplot_ccf_spei_lag.pdf")
+# boxplot(ccf_spei[[2]], xlab="SPEI-n", ylab="lag")
+# dev.off()
+# 
+# pdf("./plots/boxplot_ccf_spi_acf.pdf")
+# boxplot(ccf_spi[[1]], xlab="SPI-n", ylab="acf")
+# dev.off()
+# 
+# pdf("./plots/boxplot_ccf_spi_lag.pdf")
+# boxplot(ccf_spi[[2]], xlab="SPI-n", ylab="lag")
+# dev.off()
 
-pdf("./plots/boxplot_ccf_spei_lag.pdf")
-boxplot(ccf_spei[[2]], xlab="SPEI-n", ylab="lag")
-dev.off()
-
-pdf("./plots/boxplot_ccf_spi_acf.pdf")
-boxplot(ccf_spi[[1]], xlab="SPI-n", ylab="acf")
-dev.off()
-
-pdf("./plots/boxplot_ccf_spi_lag.pdf")
-boxplot(ccf_spi[[2]], xlab="SPI-n", ylab="lag")
-dev.off()
-
-#gauge 72 has high lag why? its real number is 94
+#gauge 72 has high lag why? its real catchment number is 94
 unique(mt_mn_temp$gauge)[72]
 
 ccf(x = spi_v2_7$V72, y = ssi_sorted$V72, na.action = na.pass)
 plot(spi_v2_7$V72, type="l")
 lines(ssi_sorted$V72, col=2)
 
-mt_mn_temp %>% 
-  filter(gauge==94) %>% 
-ggplot()+
-  geom_smooth(aes(y=temp_m, x= yr_mt), span=.05)+
-  geom_smooth(data= precip_monthly %>% filter(gauge==94), aes(y=month_sum, x= yr_mt), span=.05)+
-   geom_line(data= mt_mn_q %>% filter(gauge==94), aes(y=q_mean, x= yr_mt), span=.05)+
-  scale_y_log10()
+# mt_mn_temp %>% 
+#   filter(gauge==94) %>% 
+# ggplot()+
+#   geom_smooth(aes(y=temp_m, x= yr_mt), span=.05)+
+#   geom_smooth(data= precip_monthly %>% filter(gauge==94), aes(y=month_sum, x= yr_mt), span=.05)+
+#    geom_line(data= mt_mn_q %>% filter(gauge==94), aes(y=q_mean, x= yr_mt), span=.05)+
+#   scale_y_log10()
 
 # kendall monotonic trend -------------------------------------------------
 
@@ -400,27 +423,112 @@ ken_spei <- ken_trend(sci_name = "spei_v2")
 ken_spi <- ken_trend(sci_name="spi_v2")
 ken_ssi <- ken_trend(sci_name= "ssi")
 
-pdf("./plots/spei_trend.pdf")
-boxplot(ken_spei[[1]])
+# pdf("./plots/spei_trend.pdf")
+# boxplot(ken_spei[[1]])
+# dev.off()
+# 
+# pdf("./plots/spi_trend.pdf")
+# boxplot(ken_spi[[1]])
+# dev.off()
+
+
+# pdf("./plots/spei_ssi_trend.pdf")
+# plot(y= median(as.numeric(ken_spei[[1]][1,])), x=ken_ssi[1,1], type="p", ylim=c(-0.4,0.4), xlim=c(-0.6,0.4))
+# for (i in 1:nrow(ken_spei[[1]])) lines(y=median(as.numeric(ken_spei[[1]][i,])),x=ken_ssi[i,1], type="p")
+# dev.off()
+
+# pdf("./plots/spi_ssi_trend.pdf")
+# plot(y= median(as.numeric(ken_spi[[1]][1,])), x=ken_ssi[1,1], type="p", ylim=c(-0.4,0.4), xlim=c(-0.6,0.4))
+# for (i in 1:nrow(ken_spi[[1]])) lines(y=median(as.numeric(ken_spei[[1]][i,])),x=ken_ssi[i,1], type="p")
+# dev.off()
+
+plot(y=ken[[1]][1,],x=1:agg_month, type="l", ylim=c(-.5, .5))
+for (i in 2:50) lines(y=ken[[1]][i,],x=1:agg_month, type="l")
+
+
+# SPEI vs. SPI comparison -------------------------------------------------
+
+lm_spi_spei <- spi_spei_reg()
+
+#plots
+# pdf("./plots/spei-spi_regression.pdf")
+# par(mfrow=c(1,3))
+# boxplot(lm_spi_spei[[1]], ylab="intercept", xlab="spi/spei-n" ) #intercept
+# boxplot(lm_spi_spei[[2]], ylab="slope", xlab="spi/spei-n") #slope
+# boxplot(lm_spi_spei[[3]], ylab="r²", xlab="spi/spei-n") #r²
+# dev.off()
+
+# correlation spi/spei-ssi -----------------------------------------------------
+
+cor_sci_ssi <- function(sci_n= c(1:12), cor_met="p", sci="spi_v2"){
+mat <- matrix(ncol=agg_month, nrow=length(ssi_sorted))
+    for (n in sci_n){
+    x_data <- get(paste0(sci,"_",n))
+    for (g in 1:length(ssi_sorted)){
+    mat[g,n] <- cor(x= x_data[,g], ssi_sorted[,g], method = cor_met, use="na.or.complete" )
+    }    }
+return(mat)
+}
+
+spi_ssi_c <- cor_sci_ssi()
+spei_ssi_c <- cor_sci_ssi(sci="spei_v2")
+
+grangertest(x=spi_v2_2$V12,y=ssi_sorted[,12], order=1 )
+
+
+heatmap(spi_ssi_c, Colv = NA, Rowv = NA, scale="column")
+my_palette <- colorRampPalette(c("red", "blue"))(n = 199)
+
+gplots::heatmap.2(spi_ssi_c[gauges$ezggr_class == "<50",],
+    # same data set for cell labels
+  main = "Correlation SPI-n + SSI-1", # heat map title
+  notecol="black",      # change font color of cell labels to black
+  density.info="none",  # turns off density plot inside color legend
+  trace="none",         # turns off trace lines inside the heat map
+ # margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+ # breaks=col_breaks,    # enable color transition at specified limits
+  dendrogram="none",     # only draw a row dendrogram
+  Colv="F",               # turn off column clustering
+ Rowv = "F"
+ ) 
+
+
+
+boxplot(spi_ssi_c, horizontal = F)
+opt_spei_n <- c()
+for (i in 1:length(spei_ssi_c[,1])){
+opt_spei_n[i] <- which.max(spei_ssi_c[i,])
+}
+opt_spi_n <- c()
+for (i in 1:length(spi_ssi_c[,1])){
+opt_spi_n[i] <- which.max(spi_ssi_c[i,])
+}
+gauges$optim_spi_p  <- opt_spi_n
+gauges$optim_spei_p <- opt_spei_n
+spplot(gauges, "optim_spi_p")
+
+pdf("./plots/opt_spei_n.pdf")
+plot(x=1:length(spei_ssi_c[,1]), y=opt_spei_n, xlab="Catchments", ylab="SPI-n with highest cor")
+points(x=1:length(spei_ssi_c[,1]), y=opt_spi_n, col=2)
 dev.off()
 
-pdf("./plots/spi_trend.pdf")
-boxplot(ken_spi[[1]])
+pdf("./plots/opt_spi-spei_n._spearman.pdf")
+plot(x=1:length(spei_ssi_c[,1]), y=opt_spi_n-opt_spei_n, xlab="Catchments", ylab="optim. SPI-n - optim. SPEI-n")
 dev.off()
 
+gam( ssi_sorted$V1~s(spi_v2_1$V1)+s(spei_v2_1$V1)) %>% summary()
+lm( ssi_sorted$V1~spi_v2_1$V1+spei_v2_1$V1) %>% summary()
+nls(ssi~spi, data=test)
+lo <- loess(ssi~spi,data=test, span=.6,method = "l" )
 
-pdf("./plots/spei_ssi_trend.pdf")
-plot(y= median(as.numeric(ken_spei[[1]][1,])), x=ken_ssi[1,1], type="p", ylim=c(-0.4,0.4), xlim=c(-0.6,0.4))
-for (i in 1:nrow(ken_spei[[1]])) lines(y=median(as.numeric(ken_spei[[1]][i,])),x=ken_ssi[i,1], type="p")
-dev.off()
+lm(ssi_sorted$V1 ~ spei_v2_1$V1) %>% summary()
+predicted.intervals <- predict(rm,data.frame(x=spei_v2_1$V1),interval='confidence',level=0.99)
+plot(ssi_sorted$V1~spei_v2_1$V1, t="p")
+lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,1][order(predicted.intervals[,1])],col='green',lwd=3)
+lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,2][order(predicted.intervals[,1])],col=1,lwd=3)
+lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.intervals[,1])],col=1,lwd=3)
 
-pdf("./plots/spi_ssi_trend.pdf")
-plot(y= median(as.numeric(ken_spi[[1]][1,])), x=ken_ssi[1,1], type="p", ylim=c(-0.4,0.4), xlim=c(-0.6,0.4))
-for (i in 1:nrow(ken_spi[[1]])) lines(y=median(as.numeric(ken_spei[[1]][i,])),x=ken_ssi[i,1], type="p")
-dev.off()
-
-plot(y=ken[[1]][1,],x=1:12, type="l", ylim=c(-.5, .5))
-for (i in 2:50) lines(y=ken[[1]][i,],x=1:12, type="l")
 
 # kendall rank correlation -----------------------------------------------------
 
