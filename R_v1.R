@@ -9,15 +9,16 @@ save.image(file="./data/r_temp_image/line447.Rdata")
 
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
-#install.packages("lmtest")
+install.packages("lfstat")
 # devtools::install_github("hadley/dplyr")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest"), require, character.only = T)
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat"), require, character.only = T)
 #library(eha) drought
 
 # User defined constants --------------------------------------------------
 
 agg_month <- 12 #spei-n and spi-n how many month should be max aggregation
 date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
+catch_n <- 338
 # User defined functions --------------------------------------------------
 
 # loading function
@@ -130,7 +131,6 @@ sci_ccf <- function(sci= seq(1:agg_month), sci_namex="spei_v2", sci_namey="ssi_s
   return(ccf_tot)
 }
 
-
 spi_spei_reg <- function(sci_n = agg_month){
   lm_intercept <- data.frame()
   lm_slope <- data.frame()
@@ -153,6 +153,28 @@ spi_spei_reg <- function(sci_n = agg_month){
   lm_res[[2]] <- lm_slope
   lm_res[[3]] <- lm_rsq
 return(lm_res)
+}
+sci_reg <- function(sci_n = 2, pred="spei_v2", resp="ssi_sorted", pred2="spi_v2", interaction=FALSE){
+  lm_res <- list()
+      x <- get(paste0(pred,"_",sci_n))
+      x2 <- get(paste0(pred2,"_",sci_n))
+      y <- get(paste0(resp))
+      for (g in 1:ncol(x)){
+        if(interaction==FALSE){
+        lm_res[[g]] <- lm(y[,g]~x[,g], na.action = na.exclude) %>% summary()}else{
+        lm_res[[g]] <- lm(y[,g]~x[,g] *x2[,g], na.action = na.exclude) %>% summary()}
+      }
+  return(lm_res)}
+
+
+cor_sci_ssi <- function(sci_n= c(1:12), cor_met="p", sci="spi_v2"){
+mat <- matrix(ncol=agg_month, nrow=length(ssi_sorted))
+    for (n in sci_n){
+    x_data <- get(paste0(sci,"_",n))
+    for (g in 1:length(ssi_sorted)){
+    mat[g,n] <- cor(x= x_data[,g], ssi_sorted[,g], method = cor_met, use="na.or.complete" )
+    }}
+return(mat)
 }
 # Load data ---------------------------------------------------------------
 
@@ -233,6 +255,20 @@ gauges$sr <- as.numeric(q_sr$sr_value)
 
 gauges$ezggr_class <- cut(gauges$Enzgsg_, breaks=c(0,50,100,150,Inf), labels=c("<50", "50-100", "100-150", "150-200"))
 
+
+# BFI clustering according  ---------------------------------------------
+bfi <- c()
+for (i in 1:catch_n){
+lf_obj <- q_long %>% 
+  filter(gauge == i) %>% 
+  mutate( flow= q,day = day(date), month=month(date), year = year(date)) %>% 
+  dplyr::select(-date, -gauge, -q) %>% 
+  as.data.frame()
+ 
+basefl <- createlfobj(x= lf_obj, hyearstart = 1, baseflow = T)
+bfi[i] <- BFI(basefl)
+}
+plot(bfi)
 # SPI calculation ---------------------------------------------------------
 #aggregating into montly sums
 
@@ -327,7 +363,7 @@ if(any(is.infinite(m1))) {
 assign(paste0("spei_v2_",n), as.data.frame(m1))
 }
 
-
+remove(m1)
 # mean discharge extraction for every gauge -------------------------------
 # 
 # 
@@ -359,10 +395,12 @@ mt_mn_q <- q_long %>%
     gauges_ssi$yr_mt <- seq.Date(from= ymd(paste("1970",i, "15", sep="-")), to = ymd(paste("2009",i,"15", sep="-")), by="year")  
     ssi_entire <- rbind(ssi_entire,gauges_ssi)
   } 
+  
+  
 ssi_sorted <- ssi_entire[order(as.Date(ssi_entire$yr_mt)),]
 ssi_sorted %<>% dplyr::select(-(yr_mt))
 ssi_sorted %>% unlist() %>% is.infinite() %>% any()
-remove(ssi_entire)
+remove(ssi_entire,data)
 
 # the standartization (p.42p in satistical methods in the atmospheric sciences) removes the interannual variation forms a distribution with mean 0 and sd 1 but it does not remove the skewness (see hist(janssi[,6]) it is still skewed to the right
 #if not n+1 than that would mean that the probability to measure an event higher than the highest is 0
@@ -379,12 +417,10 @@ acf(spei_1)
 
 
 ccf_spei <- sci_ccf()
-ccf_spi <- sci_ccf(sci_name = "spi_v2")
+ccf_spi <- sci_ccf(sci_namex = "spi_v2")
 
 #one can see that advancing the spei value leads to considerly less correlation after the spei_n lag (positive) the correlation drops dramatically. retropespective the correlation decreases slower. Meaning that spei leads ssi. 
 
-plot(x= spei_6$V1, y= ssi_sorted$V1)
-plot(ssi_sorted$V1, type="l")
 
 # pdf("./plots/boxplot_ccf_spei_acf.pdf")
 # boxplot(ccf_spei[[1]], xlab="SPEI-n", ylab="acf")
@@ -448,30 +484,35 @@ for (i in 2:50) lines(y=ken[[1]][i,],x=1:agg_month, type="l")
 
 # SPEI vs. SPI comparison -------------------------------------------------
 
-lm_spi_spei <- spi_spei_reg()
+lm_spei_ssi <- spi_spei_reg(pred = "spei_v2") #[1]intercept, [2]slope [3] r²
+lm_spi_ssi <- spi_spei_reg(pred="spi_v2")
+
+sci_4_i <- sci_reg(sci_n = 4, interaction = T)
+
+
+stat <- c()
+for (i in 1:338){
+  stat[i] <- sci_4_i[[i]]$adj.r.squared
+}
+
+pdf("./plots/sci_4_i_r2.pdf") #i interaction, ni no interaction
+plot(stat, t="p")
+dev.off()
 
 #plots
-# pdf("./plots/spei-spi_regression.pdf")
+# pdf("./plots/spi-ssi_regression.pdf")
 # par(mfrow=c(1,3))
-# boxplot(lm_spi_spei[[1]], ylab="intercept", xlab="spi/spei-n" ) #intercept
-# boxplot(lm_spi_spei[[2]], ylab="slope", xlab="spi/spei-n") #slope
-# boxplot(lm_spi_spei[[3]], ylab="r²", xlab="spi/spei-n") #r²
+# boxplot(lm_spi_ssi[[1]], ylab="intercept", xlab="spi-n" ) #intercept
+# boxplot(lm_spi_ssi[[2]], ylab="slope", xlab="spi-n") #slope
+# boxplot(lm_spi_ssi[[3]], ylab="r²", xlab="spi-n") #r²
 # dev.off()
 
 # correlation spi/spei-ssi -----------------------------------------------------
 
-cor_sci_ssi <- function(sci_n= c(1:12), cor_met="p", sci="spi_v2"){
-mat <- matrix(ncol=agg_month, nrow=length(ssi_sorted))
-    for (n in sci_n){
-    x_data <- get(paste0(sci,"_",n))
-    for (g in 1:length(ssi_sorted)){
-    mat[g,n] <- cor(x= x_data[,g], ssi_sorted[,g], method = cor_met, use="na.or.complete" )
-    }    }
-return(mat)
-}
 
-spi_ssi_c <- cor_sci_ssi()
-spei_ssi_c <- cor_sci_ssi(sci="spei_v2")
+
+spi_ssi_c <- cor_sci_ssi(sci="spi_v2", cor_met = "p") #pearson
+spei_ssi_c <- cor_sci_ssi(sci="spei_v2", cor_met = "p") #pearson
 
 grangertest(x=spi_v2_2$V12,y=ssi_sorted[,12], order=1 )
 
@@ -479,23 +520,23 @@ grangertest(x=spi_v2_2$V12,y=ssi_sorted[,12], order=1 )
 heatmap(spi_ssi_c, Colv = NA, Rowv = NA, scale="column")
 my_palette <- colorRampPalette(c("red", "blue"))(n = 199)
 
-gplots::heatmap.2(spi_ssi_c[gauges$ezggr_class == "<50",],
-    # same data set for cell labels
-  main = "Correlation SPI-n + SSI-1", # heat map title
-  notecol="black",      # change font color of cell labels to black
-  density.info="none",  # turns off density plot inside color legend
-  trace="none",         # turns off trace lines inside the heat map
- # margins =c(12,9),     # widens margins around plot
-  col=my_palette,       # use on color palette defined earlier
- # breaks=col_breaks,    # enable color transition at specified limits
-  dendrogram="none",     # only draw a row dendrogram
-  Colv="F",               # turn off column clustering
- Rowv = "F"
- ) 
+# gplots::heatmap.2(spi_ssi_c[gauges$ezggr_class == "<50",],
+#     # same data set for cell labels
+#   main = "Correlation SPI-n + SSI-1", # heat map title
+#   notecol="black",      # change font color of cell labels to black
+#   density.info="none",  # turns off density plot inside color legend
+#   trace="none",         # turns off trace lines inside the heat map
+#  # margins =c(12,9),     # widens margins around plot
+#   col=my_palette,       # use on color palette defined earlier
+#  # breaks=col_breaks,    # enable color transition at specified limits
+#   dendrogram="none",     # only draw a row dendrogram
+#   Colv="F",               # turn off column clustering
+#  Rowv = "F"
+#  ) 
 
 
 
-boxplot(spi_ssi_c, horizontal = F)
+# boxplot(spi_ssi_c, horizontal = F)
 opt_spei_n <- c()
 for (i in 1:length(spei_ssi_c[,1])){
 opt_spei_n[i] <- which.max(spei_ssi_c[i,])
@@ -508,14 +549,14 @@ gauges$optim_spi_p  <- opt_spi_n
 gauges$optim_spei_p <- opt_spei_n
 spplot(gauges, "optim_spi_p")
 
-pdf("./plots/opt_spei_n.pdf")
-plot(x=1:length(spei_ssi_c[,1]), y=opt_spei_n, xlab="Catchments", ylab="SPI-n with highest cor")
-points(x=1:length(spei_ssi_c[,1]), y=opt_spi_n, col=2)
-dev.off()
+# pdf("./plots/opt_spei_n.pdf")
+# plot(x=1:length(spei_ssi_c[,1]), y=opt_spei_n, xlab="Catchments", ylab="SPI-n with highest cor")
+# points(x=1:length(spei_ssi_c[,1]), y=opt_spi_n, col=2)
+# dev.off()
 
-pdf("./plots/opt_spi-spei_n._spearman.pdf")
-plot(x=1:length(spei_ssi_c[,1]), y=opt_spi_n-opt_spei_n, xlab="Catchments", ylab="optim. SPI-n - optim. SPEI-n")
-dev.off()
+# pdf("./plots/opt_spi-spei_n._spearman.pdf")
+# plot(x=1:length(spei_ssi_c[,1]), y=opt_spi_n-opt_spei_n, xlab="Catchments", ylab="optim. SPI-n - optim. SPEI-n")
+# dev.off()
 
 gam( ssi_sorted$V1~s(spi_v2_1$V1)+s(spei_v2_1$V1)) %>% summary()
 lm( ssi_sorted$V1~spi_v2_1$V1+spei_v2_1$V1) %>% summary()
@@ -529,6 +570,25 @@ lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,1][order(predicted.
 lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,2][order(predicted.intervals[,1])],col=1,lwd=3)
 lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.intervals[,1])],col=1,lwd=3)
 
+
+# drought characteristics -------------------------------------------------
+40*12
+#month with max drought#
+res <- c()
+for ( i in 1:338){
+data <- ssi_sorted %>% 
+  gather(key=gauge, value=ssi) %>% 
+  mutate(yr_mt = rep(date_seq,338), gauge = substring(gauge, 2) %>% as.integer()) %>% 
+  filter(gauge == i)
+data_by <- data %>% group_by(year(yr_mt)) %>% 
+  summarise(mon_min = month(yr_mt[which.min(ssi)]))  
+  res[i] <- names(which.max(table(data_by$mon_min)))
+}
+count
+plot(res)
+which.min(data$ssi)
+
+  summarise(mean(month(yr_mt[which.min(ssi)])))
 
 # kendall rank correlation -----------------------------------------------------
 
