@@ -19,165 +19,11 @@ sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie
 agg_month <- 12 #spei-n and spi-n how many month should be max aggregation
 date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
 catch_n <- 338
-# User defined functions --------------------------------------------------
-
-# loading function
-
-load_file <- function(file, value_name, origin="1970-1-1"){
-  output <- melt(file, varnames = c("date", "gauge"), value.name = value_name )
-  seq_date <- seq.Date(from= as.Date(origin),by=1, length.out = diff(range(output$date))+1) %>% 
-  rep(., times=length(unique(output$gauge)))
-  output %<>%
-  mutate(date = seq_date) %>% 
-  mutate(gauge = parse_number(gauge)) %>% 
-  mutate(gauge =as.integer(gauge)) %>% 
-  as.tibble()
-  return(output)
-}
-
-sci_calc <- function(datax = spei_data$p_pet, gaugex=spei_data$gauge, distx="gev", agg_n=6, p0x=F){ #fit monthly values to certain distribution and calculate indice
- # 1. Step: fitting of distribution to aggregated data with SCI package
- output <- as.list(NA)
-for(i in unique(gaugex)){
-data <- datax[gaugex==i]
-params_dist <- fitSCI(data, first.mon = 1, distr = distx, time.scale = agg_n, p0 =p0x)
-#inital values for parameters calculated with L-moments and then optimization with maximum likelihood
-#if there are a lot of zeros in the time series it is recommended to use p0=TRUE
-# 2. Step: transform to standart normal distribuion with mean: 0 and sd: 1
-spi_temp <- transformSCI(data, first.mon = 1, obj = params_dist)
-output[[i]] <- spi_temp
-}
- return(output)
-}
-
-# dist_fitt <- function(distry, monthy){ #similar as above, old version, not used in script
-#   q_by_month <- data.frame()
-#     for (i in monthy){
-#     q_by_month <- month_ext(monthx = monthy)
-#     assign(str_to_lower(month.abb[i]), q_by_month)
-#     }
-#     temp <- fitSCI(q_by_month$V1, first.mon = 1, distr = distx, time.scale = agg_n, p0 =p0x)
-#   assign(paste0("params_", disrty), temp)
-# }
-
-spei_vec <- function(data, spei=FALSE, gaugex=mt_mn_temp$gauge){ #to transform spei or spi list into vector
-  output <-  vector()
-  for(i in unique(gaugex)){
-  temp <- unclass(data[[i]])
-  if(spei == FALSE){
-    output <- c(output, as.numeric(temp))}else{
-    output <- c(output, as.numeric(temp$fitted))}
-  }
-  return(output)
-}
-y <- 1970
-g <- 1
-
-month_ext <- function(monthx = 1, datax = mt_mn_q){#month extraction for SSI calculation to calculate SSI for each month individually
-    output <- data.frame()
-    data <- datax %>% 
-      filter(month == monthx)
-    for (g in unique(data$gauge)){
-      for (y in seq(min(year(datax$yr_mt)),max(year(datax$yr_mt)),by = 1)){
-        output[y,g] <- data$q_mean[data$gauge == g & year(data$yr_mt) == y]
-      }
-    }
-    output_short <- output[min(year(datax$yr_mt)):max(year(datax$yr_mt)),]
-    return(output_short)
-}
-
-ken_trend <- function(sci= seq(1:agg_month), sci_name="spei_v2"){
-  ken_tot <- list()
-  ken_tau <- data.frame()
-  ken_sl <- data.frame()
-  for (i in sci){
-  if(sci_name == "ssi"){
-  sci_data <- ssi_sorted }else{
-  sci_data <- get(paste0(sci_name,"_",i))}
-  for(g in 1:ncol(sci_data)){
-  res <- MannKendall(sci_data[,g])
-  ken_tau[g,i] <- res$tau
-  ken_sl[g,i] <- res$sl
-  }}
-  if(sci_name == "ssi"){
-    ken_tot <- cbind(ken_tau[,1], ken_sl[,1])
-    colnames(ken_tot) <- c("tau", "sl")
-  }else{
-  colnames(ken_tau) <- as.character(sci)
-  colnames(ken_sl) <- as.character(sci)
-  ken_tot[[1]] <- ken_tau
-  ken_tot[[2]] <- ken_sl}
-  return(ken_tot)
-}
-
-sci_ccf <- function(sci= seq(1:agg_month), sci_namex="spei_v2", sci_namey="ssi_sorted"){
-  ccf_tot <- list()
-  ccf_acf <- data.frame()
-  ccf_lag <- data.frame()
-  y <- get(sci_namey)
-  for (i in sci){
-  sci_data <- get(paste0(sci_namex,"_",i))
-  for(g in 1:ncol(sci_data)){
-    if(any(is.infinite(sci_data[,g]))) {
-     sci_data[,g][ which(is.infinite(sci_data[,g]))] <- NA}
-  ccf_temp <- ccf(x= sci_data[,g], y= y[,g], na.action = na.pass, plot = FALSE)
-  ccf_acf[g,i] <- max(ccf_temp$acf)
-  ccf_lag[g,i] <- ccf_temp$lag[which.max(ccf_temp$acf),1,1]
-  }}
-  colnames(ccf_lag) <- as.character(sci)
-  colnames(ccf_acf) <- as.character(sci)
-  ccf_tot[[2]] <- ccf_lag
-  ccf_tot[[1]] <- ccf_acf
-  return(ccf_tot)
-}
-
-spi_spei_reg <- function(sci_n = agg_month){
-  lm_intercept <- data.frame()
-  lm_slope <- data.frame()
-  lm_rsq <- data.frame()
-  lm_res <- list()
-  for (n in 1:sci_n){
-      x <- get(paste0("spei_v2_",n))
-      y <- get(paste0("spi_v2_",n))
-      for (g in 1:ncol(x)){
-        temp <- lm(x[,g]~y[,g], na.action = na.exclude)
-        lm_intercept[g,n]  <- temp$coefficients[1]
-        lm_slope[g,n] <- temp$coefficients[2]
-        lm_rsq[g,n] <- summary(temp)$adj.r.squared
-    }
-  }
-  colnames(lm_intercept) <- 1:agg_month
-  colnames(lm_slope) <- 1:agg_month
-  colnames(lm_rsq) <- 1:agg_month
-  lm_res[[1]] <- lm_intercept
-  lm_res[[2]] <- lm_slope
-  lm_res[[3]] <- lm_rsq
-return(lm_res)
-}
-sci_reg <- function(sci_n = 2, pred="spei_v2", resp="ssi_sorted", pred2="spi_v2", interaction=FALSE){
-  lm_res <- list()
-      x <- get(paste0(pred,"_",sci_n))
-      x2 <- get(paste0(pred2,"_",sci_n))
-      y <- get(paste0(resp))
-      for (g in 1:ncol(x)){
-        if(interaction==FALSE){
-        lm_res[[g]] <- lm(y[,g]~x[,g], na.action = na.exclude) %>% summary()}else{
-        lm_res[[g]] <- lm(y[,g]~x[,g] *x2[,g], na.action = na.exclude) %>% summary()}
-      }
-  return(lm_res)}
 
 
-cor_sci_ssi <- function(sci_n= c(1:12), cor_met="p", sci="spi_v2"){
-mat <- matrix(ncol=agg_month, nrow=length(ssi_sorted))
-    for (n in sci_n){
-    x_data <- get(paste0(sci,"_",n))
-    for (g in 1:length(ssi_sorted)){
-    mat[g,n] <- cor(x= x_data[,g], ssi_sorted[,g], method = cor_met, use="na.or.complete" )
-    }}
-return(mat)
-}
 # Load data ---------------------------------------------------------------
 
+source("./R/masta_v1/functions.R")
 load("./data/catchments/eobs_pr_part.Rdata")
 load("./data/catchments/eobs_temp_part.Rdata")
 load("./data/catchments/streamflow.Rdata")
@@ -217,58 +63,7 @@ temp_long %<>% filter(date>= "1970-01-01" & date <= "2009-12-31")
 
 
 
- # Cluster calculation -----------------------------------------------------
-#seasonality ratio (SR)
 
-# creating two time series one winter one summer
-#calculating q95 for both parts
-q_sr_w <- q_long %>%
-  mutate(month = month(date)) %>%
-  filter(month > 11 | month <4) %>%  #definitin of winter from Laaha et al 2006
-  group_by(gauge) %>%
-  mutate(qt = quantile(q, 0.05)) %>%
-  summarise(q95_w = mean(qt))
-
-q_sr_s <- q_long %>%
-  mutate(month = month(date)) %>%
-  filter(month < 12 | month > 3) %>%
-  group_by(gauge) %>%
-  mutate(qt = quantile(q, 0.05)) %>%
-  summarise(q95_s = mean(qt))
-
-q_sr <- merge(q_sr_s, q_sr_w, by="gauge")
-q_sr$sr <- q_sr$q95_s/q_sr$q95_w # SR is caclulated via q95_summer/q95_winter from Laaha et al 2006
-
-q_sr$sr_value[which(q_sr$sr < 1)] <- 0 #summer
-q_sr$sr_value[which(q_sr$sr > 1)] <- 1 #winter NAs are produced in 9 time series that are very altered or have no clear seasonality
-
-gauges$sr <- as.numeric(q_sr$sr_value)
-#spplot(gauges, "sr")
-
-# ind <- which(is.na(q_sr$sr_value))
-# q_long %>%
-#   filter(gauge %in% ind) %>%
-#   filter(year(date) < 1975) %>%
-#   ggplot() +
-#   geom_smooth(aes(x=date, y=q, group= as.factor(gauge), color= as.factor(gauge)))+
-#   scale_y_log10()
-
-gauges$ezggr_class <- cut(gauges$Enzgsg_, breaks=c(0,50,100,150,Inf), labels=c("<50", "50-100", "100-150", "150-200"))
-
-
-# BFI clustering according  ---------------------------------------------
-bfi <- c()
-for (i in 1:catch_n){
-lf_obj <- q_long %>% 
-  filter(gauge == i) %>% 
-  mutate( flow= q,day = day(date), month=month(date), year = year(date)) %>% 
-  dplyr::select(-date, -gauge, -q) %>% 
-  as.data.frame()
- 
-basefl <- createlfobj(x= lf_obj, hyearstart = 1, baseflow = T)
-bfi[i] <- BFI(basefl)
-}
-plot(bfi)
 # SPI calculation ---------------------------------------------------------
 #aggregating into montly sums
 
@@ -371,7 +166,7 @@ remove(m1)
 #   q_by_month <- month_ext(monthx = i, datax = mt_mn_q)
 #   assign(paste0("q_",str_to_lower(month.abb[i])), q_by_month)
 # }
-
+ 
 # SSI calculation ---------------------------------------------------------
 mt_mn_q <- q_long %>% 
     mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>% 
@@ -571,24 +366,7 @@ lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,2][order(predicted.
 lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.intervals[,1])],col=1,lwd=3)
 
 
-# drought characteristics -------------------------------------------------
-40*12
-#month with max drought#
-res <- c()
-for ( i in 1:338){
-data <- ssi_sorted %>% 
-  gather(key=gauge, value=ssi) %>% 
-  mutate(yr_mt = rep(date_seq,338), gauge = substring(gauge, 2) %>% as.integer()) %>% 
-  filter(gauge == i)
-data_by <- data %>% group_by(year(yr_mt)) %>% 
-  summarise(mon_min = month(yr_mt[which.min(ssi)]))  
-  res[i] <- names(which.max(table(data_by$mon_min)))
-}
-count
-plot(res)
-which.min(data$ssi)
 
-  summarise(mean(month(yr_mt[which.min(ssi)])))
 
 # kendall rank correlation -----------------------------------------------------
 
