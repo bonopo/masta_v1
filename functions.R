@@ -175,3 +175,85 @@ erg[,i] <- CTT::score.transform(data[,i], mu.new = 0, sd.new = 1, normalize = TR
   return(erg)
 }
 
+
+# drought characteristics -------------------------------------------------
+
+#drought length
+dr_length <- function(severity = -1){
+res<- list()
+for (i in 1:catch_n){
+  ssi_temp <- ssi_wide %>% 
+   mutate( year= year (date))%>% 
+   filter(ssi < (severity)) %>% 
+   as.tbl()
+  
+  res[[i]] <-   ssi_temp %>% 
+    filter(gauge== i) %>% 
+    group_by(year) %>% 
+    mutate(date_diff = c(0,diff(date))) %>% 
+    filter(date_diff <32) %>% 
+    summarise(sum(date_diff))
+}
+ return(res)
+}
+
+
+# p <-  ssi_temp %>% 
+#     filter(gauge== i) %>% 
+#     group_by(year) %>% 
+#     mutate(date_diff = c(0,diff(date)))
+# 
+# p$date_diff
+
+#drought events count
+dr_n <- function(severity = -1)  {
+ res<- list()
+for (i in 1:catch_n){
+  ssi_temp <- ssi_wide %>% 
+   mutate( year= year (date))%>% 
+   filter(ssi < (severity)) %>% 
+   as.tbl()
+  
+  res[[i]] <-   ssi_temp %>% 
+    filter(gauge== i) %>% 
+    group_by(year) %>% 
+    summarise(occurences = n())
+}
+ return(res)
+}
+
+#counting number of events depending on severity threshhold
+
+dr_count <- function(severity = -1){
+ res<- list()
+ for (g in 1:catch_n){
+s1 <- ssi_wide %>% 
+  filter(gauge == g, ssi < severity) %>% 
+   mutate(date_diff = c(diff.Date(date),0)) 
+n <- 1
+for (i in 1: length(s1$date)){
+  s1$no_event[i] <- n
+if(s1$date_diff[i] > 31) {
+  n <- n+1
+}}
+res[[g]] <- s1}
+ return(res)
+}
+
+#sum of severity per event
+dr_severity <- function(severity = -1){
+res_list <- list()
+for (g in 1:catch_n){
+    data  <- dr_sev_1[[g]]
+    res   <- matrix(nrow = max(data$no_event), ncol=4) 
+for (d in 1:max(data$no_event)){
+  res[d,1]        <- sum(data$ssi[data$no_event == d]-severity)
+  res[d,2]        <- d
+  res[d,3]        <- data$date[data$no_event == d][1] 
+  res[d,4]        <- tail(data$date[data$no_event == d],1)
+}
+    colnames(res) <- c("dsi", "no_event", "dr_start", "dr_end")
+    res_list[[g]] <- res
+    }
+return(res_list)
+}
