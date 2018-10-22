@@ -1,7 +1,8 @@
 
 # SCI calculation ---------------------------------------------------------
-source("./R/masta_v1/functions.R")
+setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 source("./R/masta_v1/data_handling.R")
+source("./R/masta_v1/functions.R")
 
 # SPI calculation ---------------------------------------------------------
 #aggregating into montly sums
@@ -266,9 +267,18 @@ ggplot()+
   
 # Distribution free calculation -------------------------------------------
 
-spi_1 <- sci_np(sci="mt_sm_p", n=1, method = "mean") #huang et al 2017
-spei_1 <- sci_np(sci="spei_data_mat", n=1, method = "mean") 
-ssi <- sci_np(sci="ssi_sorted")
+spi_v1 <- sci_np(sci="mt_sm_p", n=1, method = "mean") #huang et al 2017
+spei_v1 <- sci_np(sci="spei_data_mat", n=1, method = "mean") 
+ssi <- sci_np(sci="mt_mn_q_wide")
+
+colnames(ssi) <- 1:catch_n
+ssi_wide <-  ssi %>% 
+      as.data.frame() %>% 
+      mutate(date = date_seq) %>% 
+      mutate(month= month(date)) %>% 
+      gather(., gauge, ssi , -month , -date) %>% 
+      as.tbl()
+    
 p <- CTT::score.transform(data, mu.new = 0, sd.new = 1, normalize = TRUE)$p.scores
 
 range(p)
