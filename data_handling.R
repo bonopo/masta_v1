@@ -49,7 +49,9 @@ mt_sm_p <- spread(precip_monthly, key=gauge, value=month_sum, drop=F) %>% dplyr:
 
 #discharge
 q_long <- load_file(streamflow, "q")
-
+q_wide <- spread(q_long, key= gauge, value = q)
+q_wide %<>% dplyr::select(-date) %>% as.data.frame()
+colnames(q_wide) <- c(1:catch_n)
 mt_mn_q <- q_long %>% 
     mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>% 
   group_by(gauge,yr_mt) %>% 
