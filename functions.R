@@ -65,6 +65,23 @@ month_ext <- function(monthx = 1, datax = mt_mn_q){#month extraction for SSI cal
     output_short <- output[min(year(datax$yr_mt)):max(year(datax$yr_mt)),]
     return(output_short)
 }
+# trend analysis ####
+qua_trend <- function(quantil=0.1){
+  ken=matrix(nrow=catch_n, ncol=2)
+  data <- q_long %>%
+  mutate(year = year(date)) %>% 
+  group_by(gauge, year) %>%
+  summarise(qt=quantile(q, quantil)) %>% 
+    ungroup()
+  for (g in 1:catch_n){
+  res <- MannKendall(data[data$gauge == g,]$qt)
+  ken[g,1] <- res$tau
+  ken[g,2] <- res$sl
+  }
+  ken <- as.data.frame(ken)
+  colnames(ken) <- c("tau", "sl")
+  return(ken)
+  }
 
 ken_trend <- function(sci= seq(1:agg_month), sci_name="spei_v2"){
   ken_tot <- list()
@@ -134,17 +151,31 @@ spi_spei_reg <- function(sci_n = agg_month){
   lm_res[[3]] <- lm_rsq
 return(lm_res)
 }
-sci_reg <- function(sci_n = 2, pred="spei_v2", resp="ssi_sorted", pred2="spi_v2", interaction=FALSE){
+
+sci_reg <- function(pred="spei_v1", resp="ssi", pred2="spi_v1", interaction=FALSE){
   lm_res <- list()
-      x <- get(paste0(pred,"_",sci_n))
-      x2 <- get(paste0(pred2,"_",sci_n))
-      y <- get(paste0(resp))
+  res <- matrix(nrow=catch_n, ncol = 3)
+      x <- get(pred)
+      if (interaction == TRUE) x2 <- get(pred2)
+      y <- get(resp)
       for (g in 1:ncol(x)){
         if(interaction==FALSE){
-        lm_res[[g]] <- lm(y[,g]~x[,g], na.action = na.exclude) %>% summary()}else{
-        lm_res[[g]] <- lm(y[,g]~x[,g] *x2[,g], na.action = na.exclude) %>% summary()}
+          temp <- lm(y[,g]~x[,g], na.action = na.exclude)
+        res[g,1]  <- temp$coefficients[1]
+        res[g,2] <- temp$coefficients[2]
+        res[g,3] <- summary(temp)$adj.r.squared
+    }else{
+        temp <- lm(y[,g]~x[,g] *x2[,g], na.action = na.exclude) 
+        res[g,1]  <- temp$coefficients[1]
+        res[g,2] <- temp$coefficients[2]
+        res[g,3] <- summary(temp)$adj.r.squared
+        
+        }
       }
-  return(lm_res)}
+      res <- as.data.frame(res)
+      colnames(res) <- c("intercept", "slope", "rsq")
+       return(res)
+    }
 
 
 cor_sci_ssi <- function(sci_n= c(1:12), cor_met="p", sci="spi_v2_", ssi="ssi_sortet"){
@@ -198,14 +229,7 @@ for (i in 1:catch_n){
 }
 
 
-# p <-  ssi_temp %>% 
-#     filter(gauge== i) %>% 
-#     group_by(year) %>% 
-#     mutate(date_diff = c(0,diff(date)))
-# 
-# p$date_diff
-
-#drought events count
+#counting every month below threshhold
 dr_n <- function(severity = -1)  {
  res<- list()
 for (i in 1:catch_n){
@@ -241,10 +265,10 @@ res[[g]] <- s1}
 }
 
 #sum of severity per event
-dr_severity <- function(severity = -1){
+dr_severity <- function(severity = -1, data_source = "dr_sev_1"){
 res_list <- list()
 for (g in 1:catch_n){
-    data  <- dr_sev_1[[g]]
+    data  <- get(data_source)[[g]]
     res   <- matrix(nrow = max(data$no_event), ncol=4) 
 for (d in 1:max(data$no_event)){
   res[d,1]        <- sum(data$ssi[data$no_event == d]-severity)
@@ -253,7 +277,37 @@ for (d in 1:max(data$no_event)){
   res[d,4]        <- tail(data$date[data$no_event == d],1)
 }
     colnames(res) <- c("dsi", "no_event", "dr_start", "dr_end")
+    res <- as.data.frame(res)
+    res[,3]<- as.Date(res$dr_start, origin = "1970-01-01")
+    res$dr_end<- as.Date(res$dr_end, origin = "1970-01-01")
     res_list[[g]] <- res
     }
 return(res_list)
 }
+
+#plot functions ####
+
+#regression sci ~ ssi
+plot_reg <- function(spi_source = "spi_ssi_reg", spei_source="spei_ssi_reg", agg_n = 1){
+  spi <- get(spi_source)
+  spei <- get(spei_source)
+  print({
+pdf(paste0("./plots/reg_slope_",agg_n,".pdf"))
+  plot(x=1:catch_n, y=spi$slope, type="p", ylim=c(0,1), ylab="lm slope", xlab="catchment")
+  points(spei$slope, col=2)
+  legend("topleft", col=c(1,2), pch=c(1, 1), bty="n", c("SPI", "SPEI"))})
+dev.off()
+  print({
+pdf(paste0("./plots/reg_intercept_",agg_n,".pdf"))
+  plot(x=1:catch_n, y=spi$intercept, type="p", ylab="lm intercep", xlab="catchment")
+  points(spei$intercept, col=2)
+  legend("topleft", col=c(1,2), pch=c(1, 1), bty="n", c("SPI", "SPEI"))})
+dev.off()
+  print({
+pdf(paste0("./plots/reg_rsq_",agg_n,".pdf"))
+  plot(x=1:catch_n, y=spi$rsq, type="p", ylim=c(0,.8), ylab="lm r²", xlab="catchment")
+  points(spei$rsq, col=2)
+  legend("topleft", col=c(1,2), pch=c(1, 1), bty="n", c("SPI", "SPEI"))})
+dev.off()
+}
+
