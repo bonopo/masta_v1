@@ -22,10 +22,9 @@ source("./R/masta_v1/functions.R")
 # }
 
 #calculate SPI with spei package####
-spi_data <- precip_monthly %>% spread(gauge, month_sum) %>% dplyr::select(-yr_mt) %>% as.data.frame()
 
 for (n in 1:agg_month){ 
-res <- SPEI::spi(data= spi_data, scale=n)
+res <- SPEI::spi(data= mt_sm_p, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
 if(any(is.infinite(m1))) {
      m1[which(is.infinite(m1))] <- NA}
