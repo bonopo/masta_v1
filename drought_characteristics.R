@@ -1,9 +1,9 @@
 
 # Drought Characteristics -------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-source("./R/masta_v1/data_handling.R")
-source("./R/masta_v1/functions.R")
 
+source("./R/masta_v1/functions.R")
+source("./R/masta_v1/data_handling.R")
 
 #month with max drought overall####
 
@@ -41,6 +41,7 @@ plot(mnq30_month)
 
 
 #mnq30 30 day window####
+ 
 mq30 <-  rollapply(q_wide, width = 30, FUN = mean, by.column=TRUE ,fill = NA, align="center") %>% as.data.frame()
 
 mq30$date <- q_long$date[q_long$gauge == 1]
@@ -57,11 +58,6 @@ mnq30_date <- mnq30_long %>%
   ungroup()
 
 colnames(mnq30_date) <- c("year", "gauge", "date_mnq30")
-
-mnq30_date %>% 
-  filter(gauge == 100) 
-
-
 
 
 #measure of distance to june to overcome problem 12 - 1####
@@ -90,12 +86,9 @@ dr_length_3 <- dr_length(severity = -3)
  
 plot(dr_length_2[[80]])
 
-#drought events per decade #### 
-dr_n_1 = dr_n()
+#number of month with drought according to threshhold (per decade) #### 
+dr_n_1 = dr_n(severity = -1)
 plot(dr_n_1[[50]])
-
-# drought intensity####
-# i.Drought intensity (Id): it is the average value of a drought parameter below the critical level. It is measured as the drought severity divided by the duration.
 
 
 
@@ -104,7 +97,20 @@ plot(dr_n_1[[50]])
 #sum of differences between ssi indicator and threshold
 #Drought severity (Sd): it indicates a cumulative deficiency of a drought parameter below the critical level. 
 
+dr_sev_2<- dr_count(severity = -2)
+dsi_2<- dr_severity(severity = -2, data_source = "dr_sev_2")
 
+# drought intensity####
+# i.Drought intensity (Id): it is the average value of a drought parameter below the critical level. It is measured as the drought severity divided by the duration.
+# or maybe max deviation from treshhold per year ()
 
-dsi_1 <- dr_severity()
-
+dr_intens <- function(data_source = "dsi_2"){
+  for (g in 1:catch_n){
+    data <- get(data_source)[[g]]
+    res[[g]] <- data$dsi/(data$dr_end - data$dr_start)
+  }
+  
+#problem if month is below  threshhold means that it is automatically 30/31 days long, lowing the intensity much to low!
+  
+  
+}
