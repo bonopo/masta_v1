@@ -190,3 +190,23 @@ ssi_ts <- ts(ssi_sorted, start=c(1970,1), end=c(2009, 12), deltat = 1/12 )
 
 ssi_dec <- decompose(ssi_ts[,1])
 plot(ssi_dec)
+
+#drought attribution: SPI or SPEI? with linear regression ####
+lm_sci <- function(sci="spi_v1"){
+  data <- get(sci)
+  res <- matrix(nrow=catch_n, ncol=4)
+for(g in 1:catch_n){
+  fm <- lm(ssi[,g] ~ data[,g]) %>% summary()
+  res[g,1] <- coef(fm) 
+}
+  return(res)
+}
+reg_spi_ssi <- lm_sci(sci="spi_v1")
+
+spi_ssi_reg <- sci_reg(pred= "spi_v1", resp="ssi", interaction = FALSE)
+spei_ssi_reg <- sci_reg(pred= "spei_v1", resp="ssi", interaction = FALSE)
+
+
+
+plot_reg(spi_source = "spi_ssi_reg", spei_source="spei_ssi_reg", agg_n = 1)
+
