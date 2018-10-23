@@ -31,6 +31,7 @@ gauges  <- shapefile("./data/raster/gauges")
 # overview ----------------------------------------------------------------
 
 #precip
+colnames(precip) <- 1:catch_n
 precip_long <- load_file(precip, "sum_mm")
 unique(precip_long$gauge)
 precip_monthly <- precip_long %>%
