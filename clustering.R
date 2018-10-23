@@ -3,7 +3,7 @@
 source("./R/masta_v1/functions.R")
 source("./R/masta_v1/data_handling.R")
 
-#seasonality ratio (SR)
+#seasonality ratio (SR)####
 
 # creating two time series one winter one summer
 #calculating q95 for both parts
@@ -43,6 +43,7 @@ gauges$ezggr_class <- cut(gauges$Enzgsg_, breaks=c(0,50,100,150,Inf), labels=c("
 
 # BFI clustering according  ---------------------------------------------
 bfi <- c()
+
 for (i in 1:catch_n){
 lf_obj <- q_long %>% 
   filter(gauge == i) %>% 
@@ -54,3 +55,14 @@ basefl <- createlfobj(x= lf_obj, hyearstart = 1, baseflow = T)
 bfi[i] <- BFI(basefl)
 }
 plot(bfi)
+gauges$bfi <- bfi
+
+#SAAR ####
+#standart climate period 1971 bis 2000 (see DWD)
+# standart period averae annual rainfall
+saar <- precip_long %>% 
+  filter(year(date) >1970 & year(date) < 2001) %>% 
+  group_by(gauge) %>% 
+  summarise(sum_mm_yr = sum(sum_mm)/30)
+
+gauges$saar <- saar$sum_mm_yr
