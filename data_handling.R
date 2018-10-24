@@ -6,10 +6,9 @@ setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "CTT"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
-#install.packages("lfstat")
-# devtools::install_github("hadley/dplyr")
+#install.packages("tidyverse")
 sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "CTT"), require, character.only = T)
-#library(eha) drought
+#library(tidyverse) 
 
 # User defined constants --------------------------------------------------
 
@@ -34,13 +33,14 @@ gauges  <- shapefile("./data/raster/gauges")
 colnames(precip) <- 1:catch_n
 precip_long <- load_file(precip, "sum_mm")
 unique(precip_long$gauge)
-precip_monthly <- precip_long %>%
+mt_sm_p <- precip_long %>%
   mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>%
   group_by(gauge,yr_mt) %>%
   summarise(month_sum = sum(sum_mm)) %>%
   ungroup()
 
-mt_sm_p <- spread(precip_monthly, key=gauge, value=month_sum, drop=F) %>% dplyr::select(-yr_mt) %>% as.data.frame()
+
+mt_sm_p_wide <- spread(precip_monthly, key=gauge, value=month_sum, drop=F) %>% dplyr::select(-yr_mt) %>% as.data.frame()
 
 
 # precip_long %>% 
@@ -70,6 +70,7 @@ mt_mn_q_wide <- spread(mt_mn_q, key = gauge, value = q_mean) %>% dplyr::select(-
 #   geom_smooth(aes(x=date, y=q, colour=as.factor(gauge), group=gauge), se=F)
 
 #temperature
+colnames(tempera) <- 1:catch_n
 temp_long <- load_file(file=tempera, value_name = "temp", origin = "1950-01-01")
 temp_long %<>% filter(date>= "1970-01-01" & date <= "2009-12-31") 
 mt_mn_temp <- temp_long %>%
