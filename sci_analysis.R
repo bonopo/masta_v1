@@ -98,13 +98,65 @@ dev.off()
 # boxplot(lm_spi_ssi[[3]], ylab="r²", xlab="spi-n") #r²
 # dev.off()
 
-# correlation spi/spei-ssi -----------------------------------------------------
-spi_ssi_np <- cor_sci_ssi(sci="spi", cor_met = "p", ssi = "ssi") #pearson
-spei_ssi_np <- cor_sci_ssi(sci="spei_v2", cor_met = "p") #pearson
+# kendall rank correlation -----------------------------------------------------
+
+mk_spi_tau <- list()
+mk_spi_S <- list()
+mk_spi_D <- list()
+mk_spi_p <- list()
+for (i in 1:ncol(spi_df)){
+ mk_spi_tau[[i]] <-  Kendall(spi_df[,i], ssi_sorted[,i])$tau[1] 
+ mk_spi_S[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$S[1] 
+mk_spi_D[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$D[1] 
+mk_spi_p[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$sl[1] 
+}
+
+Kendall(spi_df[,i], ssi_sorted[,i])$sl[1]
+#tau ist S/D
+#S anzahl an positiven - negativen trends
+#D value theoretisch mögliche maximale anzahl an trends
+plot(x =spi_df[,1] , y=ssi_sorted[,1])
+#offensichtliche aussage: desto höher der spi, desto höher der spei 
 
 
-spi_ssi_c <- cor_sci_ssi(sci="spi_v2", cor_met = "p") #pearson
-spei_ssi_c <- cor_sci_ssi(sci="spei_v2", cor_met = "p") #pearson
+# decompose time series into trend and seasonal part ----------------------
+ssi_ts <- ts(ssi_sorted, start=c(1970,1), end=c(2009, 12), deltat = 1/12 )
+
+ssi_dec <- decompose(ssi_ts[,1])
+plot(ssi_dec)
+
+#drought attribution: SPI or SPEI? with linear regression ####
+lm_sci <- function(sci="spi_v1"){
+  data <- get(sci)
+  res <- matrix(nrow=catch_n, ncol=4)
+for(g in 1:catch_n){
+  fm <- lm(ssi[,g] ~ data[,g]) %>% summary()
+  res[g,1] <- coef(fm) 
+}
+  return(res)
+}
+reg_spi_ssi <- lm_sci(sci="spi_v1")
+
+spi_ssi_reg <- sci_reg(pred= "spi_v1", resp="ssi", interaction = FALSE)
+spei_ssi_reg <- sci_reg(pred= "spei_v1", resp="ssi", interaction = FALSE)
+
+
+
+plot_reg(spi_source = "spi_ssi_reg", spei_source="spei_ssi_reg", agg_n = 1)
+
+
+#drought attribution: SPI or SPEI? with correlation ####
+
+
+
+
+
+spi_ssi_np <- cor_sci_ssi_old(sci="spi", cor_met = "p", ssi = "ssi") #pearson
+spei_ssi_np <- cor_sci_ssi_old(sci="spei_v2", cor_met = "p") #pearson
+
+
+spi_ssi_c <- cor_sci_ssi_old(sci="spi_v2", cor_met = "p") #pearson
+spei_ssi_c <- cor_sci_ssi_old(sci="spei_v2", cor_met = "p") #pearson
 
 grangertest(x=spi_v2_2$V12,y=ssi_sorted[,12], order=1 )
 
@@ -162,51 +214,4 @@ lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,1][order(predicted.
 lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,2][order(predicted.intervals[,1])],col=1,lwd=3)
 lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.intervals[,1])],col=1,lwd=3)
 
-
-
-# kendall rank correlation -----------------------------------------------------
-
-mk_spi_tau <- list()
-mk_spi_S <- list()
-mk_spi_D <- list()
-mk_spi_p <- list()
-for (i in 1:ncol(spi_df)){
- mk_spi_tau[[i]] <-  Kendall(spi_df[,i], ssi_sorted[,i])$tau[1] 
- mk_spi_S[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$S[1] 
-mk_spi_D[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$D[1] 
-mk_spi_p[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$sl[1] 
-}
-
-Kendall(spi_df[,i], ssi_sorted[,i])$sl[1]
-#tau ist S/D
-#S anzahl an positiven - negativen trends
-#D value theoretisch mögliche maximale anzahl an trends
-plot(x =spi_df[,1] , y=ssi_sorted[,1])
-#offensichtliche aussage: desto höher der spi, desto höher der spei 
-
-
-# decompose time series into trend and seasonal part ----------------------
-ssi_ts <- ts(ssi_sorted, start=c(1970,1), end=c(2009, 12), deltat = 1/12 )
-
-ssi_dec <- decompose(ssi_ts[,1])
-plot(ssi_dec)
-
-#drought attribution: SPI or SPEI? with linear regression ####
-lm_sci <- function(sci="spi_v1"){
-  data <- get(sci)
-  res <- matrix(nrow=catch_n, ncol=4)
-for(g in 1:catch_n){
-  fm <- lm(ssi[,g] ~ data[,g]) %>% summary()
-  res[g,1] <- coef(fm) 
-}
-  return(res)
-}
-reg_spi_ssi <- lm_sci(sci="spi_v1")
-
-spi_ssi_reg <- sci_reg(pred= "spi_v1", resp="ssi", interaction = FALSE)
-spei_ssi_reg <- sci_reg(pred= "spei_v1", resp="ssi", interaction = FALSE)
-
-
-
-plot_reg(spi_source = "spi_ssi_reg", spei_source="spei_ssi_reg", agg_n = 1)
 
