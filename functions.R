@@ -1,7 +1,7 @@
 
 # User defined functions --------------------------------------------------
 
-# loading function
+# loading function####
 
 load_file <- function(file, value_name, origin="1970-1-1"){
   output <- melt(file, varnames = c("date", "gauge"), value.name = value_name )
@@ -50,16 +50,17 @@ spei_vec <- function(data, spei=FALSE, gaugex=mt_mn_temp$gauge){ #to transform s
   }
   return(output)
 }
-y <- 1970
-g <- 1
 
-month_ext <- function(monthx = 1, datax = mt_mn_q){#month extraction for SSI calculation to calculate SSI for each month individually
+month_ext <- function(monthx = 1,datax = mt_sm_p_long, value="month_sum"){#month extraction for SSI calculation to calculate SSI for each month individually
     output <- data.frame()
+    col_no <- which(colnames(datax) == value)
     data <- datax %>% 
+      mutate(month = lubridate::month(yr_mt)) %>% 
       filter(month == monthx)
     for (g in unique(data$gauge)){
       for (y in seq(min(year(datax$yr_mt)),max(year(datax$yr_mt)),by = 1)){
-        output[y,g] <- data$q_mean[data$gauge == g & year(data$yr_mt) == y]
+    output[y,g] <- data[data$gauge == g & year(data$yr_mt) == y,col_no]
+
       }
     }
     output_short <- output[min(year(datax$yr_mt)):max(year(datax$yr_mt)),]
@@ -178,7 +179,7 @@ sci_reg <- function(pred="spei_v1", resp="ssi", pred2="spi_v1", interaction=FALS
     }
 
 
-cor_sci_ssi <- function(sci_n= c(1:12), cor_met="p", sci="spi_v2_", ssi="ssi_sortet"){
+cor_sci_ssi_old <- function(sci_n= c(1:12), cor_met="p", sci="spi_v2_", ssi="ssi_sortet"){
 mat <- matrix(ncol=agg_month, nrow=length(ssi_sorted))
     y_data <- get(ssi)
     for (n in sci_n){
@@ -190,23 +191,63 @@ mat <- matrix(ncol=agg_month, nrow=length(ssi_sorted))
 return(mat)
 }
 
-# non parametric sci calculation ------------------------------------------
-
-
-sci_np <- function(sci="mt_sm_p", n=1, method="mean"){
- erg <- matrix(nrow=480, ncol=catch_n)
- data <- get(sci)
- if(n>1){ 
-   data <- rollapply(data, width=n, FUN=method, by.column =TRUE, align="right", fill=NA)}
-  for(i in 1:catch_n){
-# r_test <- rank(x= test_2, na.last = T, ties.method = "f")
-erg[,i] <- CTT::score.transform(data[,i], mu.new = 0, sd.new = 1, normalize = TRUE)$new.scores 
-  }
- erg[which(is.infinite(erg))] <- NA
-  return(erg)
+cor_sci_ssi <- function(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi"){
+   mat <- matrix(ncol=sci_n, nrow=length(ssi_sorted))
+   i <- 1
+  for (n in sci_n){
+  x_data <- get(paste0(sci,n))
+  y_data <- get(ssi)
+     for (g in 1:length(ssi)){
+    mat[g,i] <- cor(x= x_data[,g], y_data[,g], method = cor_met, use="na.or.complete" )
+     }
+  i = i+1}
+df = mat %>% as.data.frame()
+colnames(df) = sci_n
+return(mat)
 }
 
+# non parametric sci calculation ------------------------------------------
 
+sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
+ for (n in agg_n){
+  erg <- matrix(nrow=480, ncol=(catch_n+1))
+  data <- get(sci_data)
+   if(n>1){ 
+   data <- rollapply(data, width=n, FUN=mean, by.column =TRUE, align="right", fill=NA) %>% as.data.frame()}
+  data$yr_mt <- date_seq
+    for(i in 1:catch_n){
+    for (m in 1:12) {
+    data_temp <- data %>% filter(month(yr_mt) == m) 
+    erg[(40*m-39):(40*m),i] <- CTT::score.transform(data_temp[,i], mu.new = 0, sd.new = 1, normalize = TRUE)$new.scores 
+    erg[(40*m-39):(40*m),(catch_n+1)] <- c(data_temp$yr_mt)
+  }}
+ erg <- erg[order(as.Date(erg[,(catch_n+1)])),] %>% as.data.frame()
+ erg[,(catch_n+1)] <- as.Date(erg[,(catch_n+1)],origin = "1970-01-01")
+ colnames(erg) <- c(1:catch_n,"yr_mt")
+  assign(paste0(sci_name,"_",n), erg, envir = .GlobalEnv)
+}}
+
+is.finite.data.frame <- function(obj){
+    sapply(obj,FUN = function(x) which(is.infinite(x)))
+}
+
+class(p)
+# m <- 2
+# which(is.infinite(erg[,5]))
+# p <-  CTT::score.transform(data_temp[,i], mu.new = 0, sd.new = 1, normalize = T)
+# plot(p$new.scores) 
+# plot(p$new.scores[order(p$new.scores)])
+# 
+# is.infinite(erg) %>% which() %>% length()/(338*400) # 3%infinite values
+# 
+# dd <- c(data_temp[,i],1000)
+# p <- CTT::score.transform(dd, mu.new = 0, sd.new = 1, normalize = T)
+# dput(dd)
+# dput(p)
+
+
+
+ 
 # drought characteristics -------------------------------------------------
 
 #drought length
