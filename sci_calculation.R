@@ -24,7 +24,7 @@ source("./R/masta_v1/functions.R")
 #calculate SPI with spei package####
 
 for (n in 1:agg_month){ 
-res <- SPEI::spi(data= mt_sm_p, scale=n)
+res <- SPEI::spi(data= mt_sm_p_wide, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
 if(any(is.infinite(m1))) {
      m1[which(is.infinite(m1))] <- NA}
@@ -69,7 +69,7 @@ pet_th_vec <- pet_th[unique(mt_mn_temp$gauge)] %>%
   unlist() %>%
   as.numeric()
 
-spei_data <-precip_monthly %>%
+spei_data <- mt_sm_p %>%
     mutate(pet_th = pet_th_vec) %>%
     mutate(p_pet = month_sum - pet_th) 
 
@@ -265,22 +265,27 @@ ggplot()+
   
   
 # Distribution free calculation -------------------------------------------
-
-spi_v1 <- sci_np(sci="mt_sm_p", n=1, method = "mean") #huang et al 2017
-spei_v1 <- sci_np(sci="spei_data_mat", n=1, method = "mean") 
+  
+sci_np(sci_data="mt_sm_p_wide", agg_n=c(1:3), sci_name="spi")
+sci_np(sci_data="spei_data_mat", agg_n=c(1:3), sci_name="spei")  
+sci_np(sci_data="mt_mn_q_wide", agg_n=1, sci_name="ssi") 
+  
+  spei_v1_s <- sci_np(sci="spei_data_mat", n=1, method = "mean") 
 ssi <- sci_np(sci="mt_mn_q_wide")
 
-colnames(ssi) <- 1:catch_n
-ssi_wide <-  ssi %>% 
-      as.data.frame() %>% 
-      mutate(date = date_seq) %>% 
-      mutate(month= month(date)) %>% 
-      gather(., gauge, ssi , -month , -date) %>% 
-      as.tbl()
-    
-p <- CTT::score.transform(data, mu.new = 0, sd.new = 1, normalize = TRUE)$p.scores
+plot(y= ssi$V1, x= date_seq, type="l")
+lines(spi_v1$V1, col=2)
 
-range(p)
+plot(spi_v1$V1[order(spi_v1$V1)])
+plot(mt_sm_p_wide$`1`[order(mt_sm_p_wide$`1`)])
 
-((1-1/(2*n))-(1/(2*n)))/n
-diff(sort(p))
+
+  ggplot()+
+    geom_smooth(data= ssi, aes(x=date, y=sum_mm, colour=as.factor(gauge), group=gauge), se=F)
+
+    p <- CTT::score.transform(mt_sm_p_wide$`2`, normalize = T)
+plot(p$new.scores) 
+plot(p$new.scores[order(p$new.scores)])
+score
+  
+plot(x= spi_2_m$`1`, y=spi_2_s$`1`)
