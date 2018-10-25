@@ -40,7 +40,7 @@ mt_sm_p <- precip_long %>%
   ungroup()
 
 
-mt_sm_p_wide <- spread(precip_monthly, key=gauge, value=month_sum, drop=F) %>% dplyr::select(-yr_mt) %>% as.data.frame()
+mt_sm_p_wide <- spread(mt_sm_p, key=gauge, value=month_sum, drop=F) %>% dplyr::select(-yr_mt) %>% as.data.frame()
 
 
 # precip_long %>% 
