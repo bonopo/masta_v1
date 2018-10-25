@@ -37,3 +37,12 @@ points(quant_trend_1$tau, col=2)
 legend("bottomleft", pch=c(1,1), col=c(1,2), c("quantil = .05", "quantil = .1"), bty="n")
 abline(h=0, lty=2, col=4)
 dev.off()
+
+# temperature trends ####
+begin = 4
+end = 10
+paste0(value,"_",method) 
+
+# precipitation trends ####
+rename_mp
+quote()
