@@ -265,10 +265,12 @@ ggplot()+
   
   
 # Distribution free calculation -------------------------------------------
-  
-sci_np(sci_data="mt_sm_p_wide", agg_n=c(1:3), sci_name="spi")
-sci_np(sci_data="spei_data_mat", agg_n=c(1:3), sci_name="spei")  
+  c(6,12,24)
+sci_np(sci_data="mt_sm_p_wide", agg_n=24, sci_name="spi")
+sci_np(sci_data="spei_data_mat", agg_n=c(1:3,6,12,24), sci_name="spei")  
 sci_np(sci_data="mt_mn_q_wide", agg_n=1, sci_name="ssi") 
+
+plot(order(spi_24$`1`))
   
   spei_v1_s <- sci_np(sci="spei_data_mat", n=1, method = "mean") 
 ssi <- sci_np(sci="mt_mn_q_wide")
@@ -276,7 +278,7 @@ ssi <- sci_np(sci="mt_mn_q_wide")
 plot(y= ssi$V1, x= date_seq, type="l")
 lines(spi_v1$V1, col=2)
 
-plot(spi_v1$V1[order(spi_v1$V1)])
+plot(spi_24$`1`[order(spi_24$`1`)])
 plot(mt_sm_p_wide$`1`[order(mt_sm_p_wide$`1`)])
 
 
