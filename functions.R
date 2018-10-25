@@ -66,47 +66,7 @@ month_ext <- function(monthx = 1,datax = mt_sm_p_long, value="month_sum"){#month
     output_short <- output[min(year(datax$yr_mt)):max(year(datax$yr_mt)),]
     return(output_short)
 }
-# trend analysis ####
-qua_trend <- function(quantil=0.1){
-  ken=matrix(nrow=catch_n, ncol=2)
-  data <- q_long %>%
-  mutate(year = year(date)) %>% 
-  group_by(gauge, year) %>%
-  summarise(qt=quantile(q, quantil)) %>% 
-    ungroup()
-  for (g in 1:catch_n){
-  res <- MannKendall(data[data$gauge == g,]$qt)
-  ken[g,1] <- res$tau
-  ken[g,2] <- res$sl
-  }
-  ken <- as.data.frame(ken)
-  colnames(ken) <- c("tau", "sl")
-  return(ken)
-  }
-
-ken_trend <- function(sci= seq(1:agg_month), sci_name="spei_v2"){
-  ken_tot <- list()
-  ken_tau <- data.frame()
-  ken_sl <- data.frame()
-  for (i in sci){
-  if(sci_name == "ssi"){
-  sci_data <- ssi_sorted }else{
-  sci_data <- get(paste0(sci_name,"_",i))}
-  for(g in 1:ncol(sci_data)){
-  res <- MannKendall(sci_data[,g])
-  ken_tau[g,i] <- res$tau
-  ken_sl[g,i] <- res$sl
-  }}
-  if(sci_name == "ssi"){
-    ken_tot <- cbind(ken_tau[,1], ken_sl[,1])
-    colnames(ken_tot) <- c("tau", "sl")
-  }else{
-  colnames(ken_tau) <- as.character(sci)
-  colnames(ken_sl) <- as.character(sci)
-  ken_tot[[1]] <- ken_tau
-  ken_tot[[2]] <- ken_sl}
-  return(ken_tot)
-}
+# correlation regression ####
 
 sci_ccf <- function(sci= seq(1:agg_month), sci_namex="spei_v2", sci_namey="ssi_sorted"){
   ccf_tot <- list()
@@ -209,45 +169,31 @@ return(mat)
 # non parametric sci calculation ------------------------------------------
 
 sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
- for (n in agg_n){
+ for (a in agg_n){
   erg <- matrix(nrow=480, ncol=(catch_n+1))
   data <- get(sci_data)
-   if(n>1){ 
-   data <- rollapply(data, width=n, FUN=mean, by.column =TRUE, align="right", fill=NA) %>% as.data.frame()}
+   if(a>1){ 
+   data <- rollapply(data, width=a, FUN=mean, by.column =TRUE, align="right", fill=NA) %>% as.data.frame()}
   data$yr_mt <- date_seq
     for(i in 1:catch_n){
     for (m in 1:12) {
-    data_temp <- data %>% filter(month(yr_mt) == m) 
-    erg[(40*m-39):(40*m),i] <- CTT::score.transform(data_temp[,i], mu.new = 0, sd.new = 1, normalize = TRUE)$new.scores 
-    erg[(40*m-39):(40*m),(catch_n+1)] <- c(data_temp$yr_mt)
-  }}
+    data_temp <- data %>% filter(month(yr_mt) == m) %>% dplyr::select(i) 
+    if(a>1) {
+      data_temp_na <- data_temp[which(!is.na(data_temp)),]
+      res <-  c(rep(NA,times=length(which(is.na(data_temp)))),qnorm(trunc(rank(data_temp_na))/(length(data_temp_na)+1)))
+      erg[(40*m-39):(40*m),i] <- res
+    }else{
+      erg[(40*m-39):(40*m),i] <- qnorm(trunc(rank(data_temp))/(length(data_temp)+1))
+    }  
+    
+    erg[(40*m-39):(40*m),(catch_n+1)] <- data$yr_mt[month(data$yr_mt)==m]
+    }}
  erg <- erg[order(as.Date(erg[,(catch_n+1)])),] %>% as.data.frame()
- erg[,(catch_n+1)] <- as.Date(erg[,(catch_n+1)],origin = "1970-01-01")
  colnames(erg) <- c(1:catch_n,"yr_mt")
-  assign(paste0(sci_name,"_",n), erg, envir = .GlobalEnv)
-}}
-
-is.finite.data.frame <- function(obj){
-    sapply(obj,FUN = function(x) which(is.infinite(x)))
-}
-
-class(p)
-# m <- 2
-# which(is.infinite(erg[,5]))
-# p <-  CTT::score.transform(data_temp[,i], mu.new = 0, sd.new = 1, normalize = T)
-# plot(p$new.scores) 
-# plot(p$new.scores[order(p$new.scores)])
-# 
-# is.infinite(erg) %>% which() %>% length()/(338*400) # 3%infinite values
-# 
-# dd <- c(data_temp[,i],1000)
-# p <- CTT::score.transform(dd, mu.new = 0, sd.new = 1, normalize = T)
-# dput(dd)
-# dput(p)
+ assign(paste0(sci_name,"_",a), erg, envir = .GlobalEnv)
+ }}
 
 
-
- 
 # drought characteristics -------------------------------------------------
 
 #drought length
@@ -351,4 +297,89 @@ pdf(paste0("./plots/reg_rsq_",agg_n,".pdf"))
   legend("topleft", col=c(1,2), pch=c(1, 1), bty="n", c("SPI", "SPEI"))})
 dev.off()
 }
+
+
+# trend calculaton --------------------------------------------------------
+qua_trend <- function(quantil=0.1){
+  ken=matrix(nrow=catch_n, ncol=2)
+  data <- q_long %>%
+  mutate(year = year(date)) %>% 
+  group_by(gauge, year) %>%
+  summarise(qt=quantile(q, quantil)) %>% 
+    ungroup()
+  for (g in 1:catch_n){
+  res <- MannKendall(data[data$gauge == g,]$qt)
+  ken[g,1] <- res$tau
+  ken[g,2] <- res$sl
+  }
+  ken <- as.data.frame(ken)
+  colnames(ken) <- c("tau", "sl")
+  return(ken)
+  }
+
+ken_trend <- function(sci= seq(1:agg_month), sci_name="spei_v2"){
+  ken_tot <- list()
+  ken_tau <- data.frame()
+  ken_sl <- data.frame()
+  for (i in sci){
+  if(sci_name == "ssi"){
+  sci_data <- ssi_sorted }else{
+  sci_data <- get(paste0(sci_name,"_",i))}
+  for(g in 1:ncol(sci_data)){
+  res <- MannKendall(sci_data[,g])
+  ken_tau[g,i] <- res$tau
+  ken_sl[g,i] <- res$sl
+  }}
+  if(sci_name == "ssi"){
+    ken_tot <- cbind(ken_tau[,1], ken_sl[,1])
+    colnames(ken_tot) <- c("tau", "sl")
+  }else{
+  colnames(ken_tau) <- as.character(sci)
+  colnames(ken_sl) <- as.character(sci)
+  ken_tot[[1]] <- ken_tau
+  ken_tot[[2]] <- ken_sl}
+  return(ken_tot)
+}
+
+## extracting seasonal data 
+seas_cl = function(data_source = "mt_mn_temp", method="mean", value = "temp_m", begin =4, end=10){
+ data = get(data_source)
+  if(method=="mean"){
+  
+  res <- data %>% 
+  filter(month(yr_mt) >= begin, month(yr_mt)<= end) %>% 
+  group_by(gauge, year(yr_mt)) %>% 
+  summarise(method = mean(value))  %>% 
+  ungroup() %>% 
+  spread(key=gauge, value=method) %>% 
+  as.data.frame()
+  
+}else{
+res <- data %>% 
+  filter(month(yr_mt) >= begin, month(yr_mt)<= end) %>% 
+  group_by(gauge, year(yr_mt)) %>% 
+  summarise(method = sum(value)) %>% 
+  ungroup() %>% 
+  spread(key=gauge, value=method) %>% 
+  as.data.frame()
+}
+    
+  return(res)
+  
+}
+
+## drought calculation with long term average deviation after Parry et al 2016
+
+# d = min. number of days with negative Z to start "drought"
+#r= allowed wet days within a drought e.g. so that the drought is not ended by one peak flow one day
+#t= when z is positive for specific (t) number of consecutive time steps -> drought ends
+#t_et drought termination 
+#tm= drought termination magnitude = Z%anom i at  t_et
+# t_sd = is the start of drought development
+#t_ed is the end of drought development
+#t_st is the start of drought termination
+
+
+
+
 
