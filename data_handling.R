@@ -27,7 +27,7 @@ load("./data/catchments/streamflow.Rdata")
 gauges  <- shapefile("./data/raster/gauges")
 
 # raster(gauges)
-# overview ----------------------------------------------------------------
+# transforming data ----------------------------------------------------------------
 
 #precip
 colnames(precip) <- 1:catch_n
@@ -79,9 +79,55 @@ mt_mn_temp <- temp_long %>%
   summarise(temp_m = mean(temp)) %>%
   ungroup()
 
+
+remove(precip, tempera,streamflow)
 # temp %>% 
 #   filter(gauge < 10) %>%
 # ggplot()+
 #   geom_smooth(aes(x=date, y=temp, colour=as.factor(gauge), group=gauge), se=F)
 
 
+
+# SPEI Preperation --------------------------------------------------------
+# PET calculation with thornwaite -----------------------------------------
+
+
+
+
+#Gauss Krueger converted to WGS84
+xy_gk <- cbind.data.frame("x_gk" = 4475806, "y_gk"= gauges$Hochwrt) #only latitude is needed, therefore random x value
+coordinates(xy_gk) <-  c("x_gk", "y_gk")
+proj4string(xy_gk) <- CRS("+proj=tmerc +lat_0=0 +lon_0=9 +k=1 +x_0=3500000 +y_0=0 +ellps=bessel +datum=potsdam +units=m +no_defs")
+xy_wgs84 <- spTransform(xy_gk, CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+
+
+latitude <- coordinates(xy_wgs84) %>%
+  as.data.frame() %>%
+  dplyr::select(y_gk) %>%
+  cbind("gauge" = unique(mt_mn_temp$gauge)) %>%
+  as.tbl()
+
+#calculating Potential Evapotranspiration with thornthwaite
+pet_th <- list(NA)
+for(i in unique(mt_mn_temp$gauge)){
+  data <- mt_mn_temp$temp_m[mt_mn_temp$gauge==i]
+  res_ts <- ts(data, frequency=12, start=c(1970,1))
+  pet_th[[i]] <- thornthwaite(data,latitude$y_gk[latitude$gauge==i] )
+}
+
+
+# calculating SPEI: P - PET -----------------------------------------------
+
+pet_th_vec <- pet_th[unique(mt_mn_temp$gauge)] %>%
+  unlist() %>%
+  as.numeric()
+
+spei_data <- mt_sm_p %>%
+    mutate(pet_th = pet_th_vec) %>%
+    mutate(p_pet = month_sum - pet_th) 
+
+spei_data_mat <- spei_data %>% dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame()
+colnames(spei_data_mat) <- 1:catch_n
+
+
+remove(spei_data,pet_th, latitude,pet_th_vec)

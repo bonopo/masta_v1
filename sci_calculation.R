@@ -1,4 +1,20 @@
 
+# Preambel ----------------------------------------------------------------
+setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
+source("./R/masta_v1/data_handling.R")
+
+
+# Distribution free calculation -------------------------------------------
+
+sci_np(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi")
+sci_np(sci_data="spei_data_mat", agg_n=1, sci_name="spei")  
+sci_np(sci_data="mt_mn_q_wide", agg_n=1, sci_name="ssi") 
+
+    plot(order(spi_24$`1`))
+  
+# Parametric method --------------------------------------------------------
+
+
 # SCI calculation ---------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 source("./R/masta_v1/data_handling.R")
@@ -32,52 +48,6 @@ assign(paste0("spi_v2_",n), as.data.frame(m1))
 }
 
 
-# SPEI Preperation --------------------------------------------------------
-#with SPEI package and SCI
-
-
-# PET calculation with thornwaite -----------------------------------------
-
-
-
-
-#Gauss Krueger converted to WGS84
-xy_gk <- cbind.data.frame("x_gk" = 4475806, "y_gk"= gauges$Hochwrt) #only latitude is needed, therefore random x value
-coordinates(xy_gk) <-  c("x_gk", "y_gk")
-proj4string(xy_gk) <- CRS("+proj=tmerc +lat_0=0 +lon_0=9 +k=1 +x_0=3500000 +y_0=0 +ellps=bessel +datum=potsdam +units=m +no_defs")
-xy_wgs84 <- spTransform(xy_gk, CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
-
-
-latitude <- coordinates(xy_wgs84) %>%
-  as.data.frame() %>%
-  dplyr::select(y_gk) %>%
-  cbind("gauge" = unique(mt_mn_temp$gauge)) %>%
-  as.tbl()
-
-#calculating Potential Evapotranspiration with thornthwaite
-pet_th <- list(NA)
-for(i in unique(mt_mn_temp$gauge)){
-  data <- mt_mn_temp$temp_m[mt_mn_temp$gauge==i]
-  res_ts <- ts(data, frequency=12, start=c(1970,1))
-  pet_th[[i]] <- thornthwaite(data,latitude$y_gk[latitude$gauge==i] )
-}
-
-
-# calculating SPEI: P - PET -----------------------------------------------
-
-pet_th_vec <- pet_th[unique(mt_mn_temp$gauge)] %>%
-  unlist() %>%
-  as.numeric()
-
-spei_data <- mt_sm_p %>%
-    mutate(pet_th = pet_th_vec) %>%
-    mutate(p_pet = month_sum - pet_th) 
-
-spei_data_mat <- spei_data %>% dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame()
-colnames(spei_data_mat) <- 1:catch_n
-
-
-remove(spei_data,pet_th, latitude,pet_th_vec)
 
 # SPEI calculation with loglogistic distribution--------------------------------
 
@@ -264,30 +234,3 @@ ggplot()+
   
   
   
-# Distribution free calculation -------------------------------------------
-  c(6,12,24)
-sci_np(sci_data="mt_sm_p_wide", agg_n=24, sci_name="spi")
-sci_np(sci_data="spei_data_mat", agg_n=c(1:3,6,12,24), sci_name="spei")  
-sci_np(sci_data="mt_mn_q_wide", agg_n=1, sci_name="ssi") 
-
-plot(order(spi_24$`1`))
-  
-  spei_v1_s <- sci_np(sci="spei_data_mat", n=1, method = "mean") 
-ssi <- sci_np(sci="mt_mn_q_wide")
-
-plot(y= ssi$V1, x= date_seq, type="l")
-lines(spi_v1$V1, col=2)
-
-plot(spi_24$`1`[order(spi_24$`1`)])
-plot(mt_sm_p_wide$`1`[order(mt_sm_p_wide$`1`)])
-
-
-  ggplot()+
-    geom_smooth(data= ssi, aes(x=date, y=sum_mm, colour=as.factor(gauge), group=gauge), se=F)
-
-    p <- CTT::score.transform(mt_sm_p_wide$`2`, normalize = T)
-plot(p$new.scores) 
-plot(p$new.scores[order(p$new.scores)])
-score
-  
-plot(x= spi_2_m$`1`, y=spi_2_s$`1`)

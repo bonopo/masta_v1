@@ -167,7 +167,7 @@ return(mat)
 }
 
 # non parametric sci calculation ------------------------------------------
-
+a=1
 sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
  for (a in agg_n){
   erg <- matrix(nrow=480, ncol=(catch_n+1))
@@ -178,21 +178,15 @@ sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
     for(i in 1:catch_n){
     for (m in 1:12) {
     data_temp <- data %>% filter(month(yr_mt) == m) %>% dplyr::select(i) 
-    if(a>1) {
-      data_temp_na <- data_temp[which(!is.na(data_temp)),]
-      res <-  c(rep(NA,times=length(which(is.na(data_temp)))),qnorm(trunc(rank(data_temp_na))/(length(data_temp_na)+1)))
-      erg[(40*m-39):(40*m),i] <- res
-    }else{
-      erg[(40*m-39):(40*m),i] <- qnorm(trunc(rank(data_temp))/(length(data_temp)+1))
-    }  
-    
-    erg[(40*m-39):(40*m),(catch_n+1)] <- data$yr_mt[month(data$yr_mt)==m]
+    data_temp_na <- data_temp[which(!is.na(data_temp)),] #removing NA, produced by moving average
+      erg[(40*m-39):(40*m),i] <-  c(rep(NA,times=length(which(is.na(data_temp)))),qnorm(trunc(rank(data_temp_na))/(length(data_temp_na)+1))) # fitting data to follow normal inverse cumulative function
+      erg[(40*m-39):(40*m),(catch_n+1)] <- data$yr_mt[month(data$yr_mt)==m] # adding date to sort later
     }}
  erg <- erg[order(as.Date(erg[,(catch_n+1)])),] %>% as.data.frame()
  colnames(erg) <- c(1:catch_n,"yr_mt")
+ erg$yr_mt = as.Date(erg$yr_mt, origin = "1970-01-01")
  assign(paste0(sci_name,"_",a), erg, envir = .GlobalEnv)
  }}
-
 
 # drought characteristics -------------------------------------------------
 
@@ -368,7 +362,7 @@ res <- data %>%
   
 }
 
-## drought calculation with long term average deviation after Parry et al 2016
+## drought calculation with long term average deviation after Parry et al 2016 ####
 
 # d = min. number of days with negative Z to start "drought"
 #r= allowed wet days within a drought e.g. so that the drought is not ended by one peak flow one day
@@ -380,6 +374,39 @@ res <- data %>%
 #t_st is the start of drought termination
 
 
+lta_dr <- function(data_source = "q_long", ref_begin = "1970", ref_end= "2000", d_start = 20, d_end = 10){
+  data <- get(data_source)
+  lta_tbl = data %>%
+    filter(year(date)<=ref_end && year(date)>=ref_begin) %>% 
+    mutate(mt_dy = paste0(month(date), "-",day(date))) %>% #ref_end,"-",
+    group_by(gauge,mt_dy) %>% 
+    summarise(mean_daily = mean(q)) %>% 
+    ungroup()
+  
+  for (g in 1:catch_n){
+data$lta[data$gauge == g] = lta_tbl$mean_daily[match(paste0(month(data$date[data$gauge == g]),"-", day(data$date[data$gauge == g])),lta_tbl$mt_dy[lta_tbl$gauge == g])]
 
+data$z_anom[data$gauge == g] = 100*((data$q[data$gauge == g]/data$lta[data$gauge == g])-1)
 
+data$z_anom_start = rollapply(data$z_anom[data$gauge==g], width=d_start, FUN= max, align="right", fill=NA)
 
+data$z_anom_end = rollapply(data$z_anom[data$gauge==g], width=d_end, FUN= min, align="right", fill=NA)
+  }
+ end_data = c()
+ n=1
+ d=30
+  for(d in 1:length(data$gauge[data$gauge == g])){
+if(data$z_anom_start[data$gauge == g][d+d_start-1] < 0){
+  pos_end = which(data$z_anom_end[data$gauge == g] > 0)
+  end_data[n] =  data$date[pos_end[which(pos_end > d)[1]]]
+  n = n+1
+}
+
+  end_data = as.Date(end_data,origin = "1970-1-1")
+}
+data$z_anom_end[data$gauge == g]
+
+}
+plot(y= data$z_anom[data$gauge==1],x = data$date[data$gauge==1],t="l")
+
+sign
