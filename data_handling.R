@@ -1,13 +1,13 @@
 # Startin script
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#save.image(file="./data/r_temp_image/line447.Rdata")
-# load(file="./data/r_temp_image/line307.Rdata")
+#save.image(file="./data/r_temp_image/spi_spei_ssi.Rdata")
+#load(file="./data/r_temp_image/spi_spei_ssi.Rdata")
 
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "CTT"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 #install.packages("tidyverse")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "CTT"), require, character.only = T)
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat"), require, character.only = T)
 #library(tidyverse) 
 
 # User defined constants --------------------------------------------------
