@@ -2,6 +2,8 @@
 # Clustering --------------------------------------------------------------
 source("./R/masta_v1/functions.R")
 source("./R/masta_v1/data_handling.R")
+source("./R/masta_v1/sci_calculation.R")
+source("./R/masta_v1/drought_characteristics.R")
 
 #seasonality ratio (SR)####
 
@@ -66,3 +68,85 @@ saar <- precip_long %>%
   summarise(sum_mm_yr = sum(sum_mm)/30)
 
 gauges$saar <- saar$sum_mm_yr
+
+#median drought duration ####
+  median_drought_duration = c()
+  for (g in 1:catch_n){
+    median_drought_duration[g] = dsi_1_5[[g]]$dr_length %>% median()
+  }
+
+gauges$med_dr_dur = median_drought_duration
+
+#maximum duration ####
+max_drought_duration = c()
+  for (g in 1:catch_n){
+    max_drought_duration[g] = dsi_1_5[[g]]$dr_length %>% max()
+  }
+
+gauges$max_dr_dur = max_drought_duration
+#median severity####
+median_drought_severity = c()
+  for (g in 1:catch_n){
+    median_drought_severity[g] = dsi_1_5[[g]]$dsi %>% median()
+  }
+
+gauges$med_dr_sev = median_drought_severity
+
+#maximum intensity ####
+
+median_drought_inten = c()
+  for (g in 1:catch_n){
+    median_drought_inten[g] = dsi_1_5[[g]]$dr_intens %>% median()
+  }
+
+gauges$med_dr_int  =median_drought_inten
+#maximum severity####
+max_drought_sev = c()
+  for (g in 1:catch_n){
+    max_drought_sev[g] = dsi_1_5[[g]]$dsi%>% min()
+  }
+
+gauges$max_dr_sev  =max_drought_sev
+
+#total number of events####
+
+n_events = c()
+  for (g in 1:catch_n){
+    n_events[g] = dsi_1_5[[g]]$event_n %>% max()
+  }
+
+gauges$n_events = n_events
+
+#clustered plots #### 
+#see barker et al
+
+gauges_df = as.data.frame(gauges)
+
+head(gauges_df)
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=saar, y= n_events, alpha= bfi))
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=saar, y= best_spi, col= bfi))
+
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=saar, y= best_spei, col= bfi))
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=saar, y= cor_spi, col= bfi))
+
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=saar, y= cor_spi, col= best_spi))
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=Enzgsg_, y= med_dr_sev, col= bfi))
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=max_dr_sev, y= n_events, col= bfi))
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=max_dr_int, y= n_events, col= bfi))
+
