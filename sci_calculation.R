@@ -9,8 +9,11 @@ source("./R/masta_v1/data_handling.R")
 sci_np(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi")
 sci_np(sci_data="spei_data_mat", agg_n=1, sci_name="spei")  
 sci_np(sci_data="mt_mn_q_wide", agg_n=1, sci_name="ssi") 
+ssi_1_long = ssi_1 %>% 
+gather(key=gauge, value=ssi, -yr_mt) %>% 
+  as.tbl()
 
-    plot(order(spi_24$`1`))
+plot(order(spi_24$`1`))
   
 # Parametric method --------------------------------------------------------
 
