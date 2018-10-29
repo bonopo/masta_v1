@@ -77,40 +77,25 @@ plot(x= dr_beg[[15]]$mon_min, ylim= c(4,12), type="p")
    summarise(which.min(ssi))
  
 
-#lengths of severe droughts ####
-#defining drought: ssi < -2
+#month in a year affected by drought ####
 
-dr_length_1 <- dr_length()
-dr_length_2 <- dr_length(severity = -2)
-dr_length_3 <- dr_length(severity = -3)
+
+dr_length_1 <- dr_n()
+dr_length_1_5 <- dr_n(severity = -1.5) #min value is -1.97
+
  
-plot(dr_length_2[[80]])
-
-#number of month with drought according to threshhold (per decade) #### 
-dr_n_1 = dr_n(severity = -1)
-plot(dr_n_1[[50]])
 
 
-
-
-#drought severity ####
-#sum of differences between ssi indicator and threshold
+#drought severity & intensity####
+#severity: sum of differences between ssi indicator and threshold
 #Drought severity (Sd): it indicates a cumulative deficiency of a drought parameter below the critical level. 
-
-dr_sev_2<- dr_count(severity = -2)
-dsi_2<- dr_severity(severity = -2, data_source = "dr_sev_2")
-
-# drought intensity####
 # i.Drought intensity (Id): it is the average value of a drought parameter below the critical level. It is measured as the drought severity divided by the duration.
 # or maybe max deviation from treshhold per year ()
 
-dr_intens <- function(data_source = "dsi_2"){
-  for (g in 1:catch_n){
-    data <- get(data_source)[[g]]
-    res[[g]] <- data$dsi/(data$dr_end - data$dr_start)
-  }
-  
-#problem if month is below  threshhold means that it is automatically 30/31 days long, lowing the intensity much to low!
-  
-  
-}
+dr_event_no<- dr_count(severity = -1.5)
+dr_event_no<- dr_count(severity = -2)
+dsi_1_5<- dr_severity(severity = -1.5, data_source = "dr_event_no")
+
+
+
+
