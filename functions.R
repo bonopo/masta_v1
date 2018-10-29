@@ -66,22 +66,22 @@ month_ext <- function(monthx = 1,datax = mt_sm_p_long, value="month_sum"){#month
     output_short <- output[min(year(datax$yr_mt)):max(year(datax$yr_mt)),]
     return(output_short)
 }
-# correlation regression ####
+# correlation ####
 
-sci_ccf <- function(sci= seq(1:agg_month), sci_namex="spei_v2", sci_namey="ssi_sorted"){
+sci_ccf <- function(sci= c(1,2,3,6,12,24), sci_namex="spei_", sci_namey="ssi_1"){
   ccf_tot <- list()
   ccf_acf <- data.frame()
   ccf_lag <- data.frame()
   y <- get(sci_namey)
-  for (i in sci){
-  sci_data <- get(paste0(sci_namex,"_",i))
-  for(g in 1:ncol(sci_data)){
-    if(any(is.infinite(sci_data[,g]))) {
-     sci_data[,g][ which(is.infinite(sci_data[,g]))] <- NA}
+  i=1
+  for (a in sci){
+  sci_data <- get(paste0(sci_namex,a))
+  for(g in 1:catch_n){
   ccf_temp <- ccf(x= sci_data[,g], y= y[,g], na.action = na.pass, plot = FALSE)
   ccf_acf[g,i] <- max(ccf_temp$acf)
   ccf_lag[g,i] <- ccf_temp$lag[which.max(ccf_temp$acf),1,1]
-  }}
+  }
+  i= i+1}
   colnames(ccf_lag) <- as.character(sci)
   colnames(ccf_acf) <- as.character(sci)
   ccf_tot[[2]] <- ccf_lag
@@ -89,47 +89,88 @@ sci_ccf <- function(sci= seq(1:agg_month), sci_namex="spei_v2", sci_namey="ssi_s
   return(ccf_tot)
 }
 
-spi_spei_reg <- function(sci_n = agg_month){
+cor_sci_ssi <- function(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1"){
+   mat <- matrix(ncol=length(sci_n), nrow=catch_n)
+   i <- 1
+  for (n in sci_n){
+  x_data <- get(paste0(sci,n))
+  y_data <- get(ssi)
+     for (g in 1:catch_n){
+    mat[g,i] <- cor(x= x_data[,g], y_data[,g], method = cor_met, use="na.or.complete" )
+     }
+  i = i+1}
+df = mat %>% as.data.frame()
+colnames(df) = sci_n
+return(df)
+
+}
+
+cor_sci_ssi_sea <- function(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=4, end=10){
+   mat <- matrix(ncol=length(sci_n), nrow=catch_n)
+   i <- 1
+  for (n in sci_n){
+  x_data <- get(paste0(sci,n)) %>% 
+    mutate(yr_mt = as.Date(yr_mt, origin = "1970-01-01")) %>% 
+    filter(month(yr_mt) >= begin | month(yr_mt)<= end) 
+  y_data <- get(ssi) %>% 
+    filter(month(yr_mt) >= begin | month(yr_mt)<= end) 
+  for (g in 1:catch_n){
+    mat[g,i] <- cor(x= x_data[,g], y_data[,g], method = cor_met, use="na.or.complete" )
+     }
+  i = i+1}
+df = mat %>% as.data.frame()
+colnames(df) = sci_n
+return(df)
+}
+
+#regression ####
+
+spi_spei_reg <- function(sci="spi_", sci_n = c(1,2,3,6,12,24)){
   lm_intercept <- data.frame()
   lm_slope <- data.frame()
   lm_rsq <- data.frame()
   lm_res <- list()
-  for (n in 1:sci_n){
-      x <- get(paste0("spei_v2_",n))
-      y <- get(paste0("spi_v2_",n))
-      for (g in 1:ncol(x)){
+  i=1
+  for (n in sci_n){
+      x <- get(paste0(sci,n))
+      y <- get("ssi_1")
+      for (g in 1:catch_n){
         temp <- lm(x[,g]~y[,g], na.action = na.exclude)
-        lm_intercept[g,n]  <- temp$coefficients[1]
-        lm_slope[g,n] <- temp$coefficients[2]
-        lm_rsq[g,n] <- summary(temp)$adj.r.squared
-    }
+        lm_intercept[g,i]  <- temp$coefficients[1]
+        lm_slope[g,i] <- temp$coefficients[2]
+        lm_rsq[g,i] <- summary(temp)$adj.r.squared
+      }
+      i= i+1
   }
-  colnames(lm_intercept) <- 1:agg_month
-  colnames(lm_slope) <- 1:agg_month
-  colnames(lm_rsq) <- 1:agg_month
+  colnames(lm_intercept) <- sci_n
+  colnames(lm_slope) <- sci_n
+  colnames(lm_rsq) <- sci_n
   lm_res[[1]] <- lm_intercept
   lm_res[[2]] <- lm_slope
   lm_res[[3]] <- lm_rsq
 return(lm_res)
 }
 
-sci_reg <- function(pred="spei_v1", resp="ssi", pred2="spi_v1", interaction=FALSE){
+
+sci_reg <- function(pred="spei_1", resp="ssi_1", pred2="spi_1", additive=FALSE){
   lm_res <- list()
-  res <- matrix(nrow=catch_n, ncol = 3)
+  res <- matrix(nrow=catch_n, ncol = 4)
       x <- get(pred)
-      if (interaction == TRUE) x2 <- get(pred2)
+      x2 <- get(pred2)
       y <- get(resp)
-      for (g in 1:ncol(x)){
-        if(interaction==FALSE){
-          temp <- lm(y[,g]~x[,g], na.action = na.exclude)
+      for (g in 1:catch_n){
+        if(additive==FALSE){
+          temp <- lm(y[,g]~x[,g] , na.action = na.exclude)
         res[g,1]  <- temp$coefficients[1]
         res[g,2] <- temp$coefficients[2]
         res[g,3] <- summary(temp)$adj.r.squared
-    }else{
-        temp <- lm(y[,g]~x[,g] *x2[,g], na.action = na.exclude) 
+        res[g,4] = summary(temp)$coefficients[2,4]
+        }else{
+        temp <- glm(y[,g]~x[,g] +x2[,g], na.action = na.exclude) 
         res[g,1]  <- temp$coefficients[1]
         res[g,2] <- temp$coefficients[2]
         res[g,3] <- summary(temp)$adj.r.squared
+        res[g,4] = summary(temp)$coefficients[2,4]
         
         }
       }
@@ -139,32 +180,7 @@ sci_reg <- function(pred="spei_v1", resp="ssi", pred2="spi_v1", interaction=FALS
     }
 
 
-cor_sci_ssi_old <- function(sci_n= c(1:12), cor_met="p", sci="spi_v2_", ssi="ssi_sortet"){
-mat <- matrix(ncol=agg_month, nrow=length(ssi_sorted))
-    y_data <- get(ssi)
-    for (n in sci_n){
-    x_data <- get(paste0(sci,n))
-    for (g in 1:length(ssi_sorted)){
-    mat[g,n] <- cor(x= x_data[,g], y_data[,g], method = cor_met, use="na.or.complete" )
-    }}
 
-return(mat)
-}
-
-cor_sci_ssi <- function(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi"){
-   mat <- matrix(ncol=sci_n, nrow=length(ssi_sorted))
-   i <- 1
-  for (n in sci_n){
-  x_data <- get(paste0(sci,n))
-  y_data <- get(ssi)
-     for (g in 1:length(ssi)){
-    mat[g,i] <- cor(x= x_data[,g], y_data[,g], method = cor_met, use="na.or.complete" )
-     }
-  i = i+1}
-df = mat %>% as.data.frame()
-colnames(df) = sci_n
-return(mat)
-}
 
 # non parametric sci calculation ------------------------------------------
 a=1
@@ -190,32 +206,14 @@ sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
 
 # drought characteristics -------------------------------------------------
 
-#drought length
-dr_length <- function(severity = -1){
-res<- list()
-for (i in 1:catch_n){
-  ssi_temp <- ssi_wide %>% 
-   mutate( year= year (date))%>% 
-   filter(ssi < (severity)) %>% 
-   as.tbl()
-  
-  res[[i]] <-   ssi_temp %>% 
-    filter(gauge== i) %>% 
-    group_by(year) %>% 
-    mutate(date_diff = c(0,diff(date))) %>% 
-    filter(date_diff <32) %>% 
-    summarise(sum(date_diff))
-}
- return(res)
-}
-
 
 #counting every month below threshhold
 dr_n <- function(severity = -1)  {
+try(if(severity < min(ssi_1_long$ssi)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
  res<- list()
 for (i in 1:catch_n){
-  ssi_temp <- ssi_wide %>% 
-   mutate( year= year (date))%>% 
+  ssi_temp <- ssi_1_long %>% 
+   mutate( year= year (yr_mt))%>% 
    filter(ssi < (severity)) %>% 
    as.tbl()
   
@@ -229,15 +227,16 @@ for (i in 1:catch_n){
 
 #counting number of events depending on severity threshhold
 
-dr_count <- function(severity = -1){
+dr_count <- function(severity = -1.5){
+  try(if(severity < min(ssi_1_long$ssi)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
  res<- list()
  for (g in 1:catch_n){
-s1 <- ssi_wide %>% 
-  filter(gauge == g, ssi < severity) %>% 
-   mutate(date_diff = c(diff.Date(date),0)) 
+s1 <- ssi_1_long %>% 
+  filter(gauge == g && ssi < severity) %>% 
+   mutate(date_diff = c(diff.Date(yr_mt),0)) 
 n <- 1
-for (i in 1: length(s1$date)){
-  s1$no_event[i] <- n
+for (i in 1: length(s1$yr_mt)){
+  s1$event_n[i] <- n
 if(s1$date_diff[i] > 31) {
   n <- n+1
 }}
@@ -246,20 +245,27 @@ res[[g]] <- s1}
 }
 
 #sum of severity per event
-dr_severity <- function(severity = -1, data_source = "dr_sev_1"){
+
+dr_severity <- function(severity = -1, data_source = "dr_event_no"){
+try(if(severity < min(ssi_1_long$ssi)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
 res_list <- list()
 for (g in 1:catch_n){
     data  <- get(data_source)[[g]]
-    res   <- matrix(nrow = max(data$no_event), ncol=4) 
-for (d in 1:max(data$no_event)){
-  res[d,1]        <- sum(data$ssi[data$no_event == d]-severity)
+    res   <- matrix(nrow = max(data$event_n), ncol=6) 
+for (d in 1:max(data$event_n)){
+  res[d,1]        <- sum(data$ssi[data$event_n == d]-severity)
   res[d,2]        <- d
-  res[d,3]        <- data$date[data$no_event == d][1] 
-  res[d,4]        <- tail(data$date[data$no_event == d],1)
-}
-    colnames(res) <- c("dsi", "no_event", "dr_start", "dr_end")
+  res[d,3]        <- data$yr_mt[data$event_n == d][1] 
+  res[d,4]        <- tail(data$yr_mt[data$event_n == d],1)
+ if(res[d,4] - res[d,3] == 0){
+     res[d,5] =  days_in_month(as.Date(res[d,3], origin = "1970-01-01"))}else{
+       res[d,5] =  res[d,4] - res[d,3]
+     }
+  res[d,6] = res[d,1]/((month(res[d,4]) - month(res[d,3]))+1)
+  }
+    colnames(res) <- c("dsi", "event_n", "dr_start", "dr_end", "dr_length", "dr_intens")
     res <- as.data.frame(res)
-    res[,3]<- as.Date(res$dr_start, origin = "1970-01-01")
+    res$dr_start<- as.Date(res$dr_start, origin = "1970-01-01")
     res$dr_end<- as.Date(res$dr_end, origin = "1970-01-01")
     res_list[[g]] <- res
     }
@@ -339,28 +345,27 @@ ken_trend <- function(sci= seq(1:agg_month), sci_name="spei_v2"){
 seas_cl = function(data_source = "mt_mn_temp", method="mean", value = "temp_m", begin =4, end=10){
  data = get(data_source)
   if(method=="mean"){
-  
   res <- data %>% 
-  filter(month(yr_mt) >= begin, month(yr_mt)<= end) %>% 
+  filter(month(yr_mt) >= begin | month(yr_mt)<= end) %>% 
   group_by(gauge, year(yr_mt)) %>% 
-  summarise(method = mean(value))  %>% 
+  summarise(mean = get(method)(get(value)))  %>% 
   ungroup() %>% 
   spread(key=gauge, value=method) %>% 
   as.data.frame()
-  
 }else{
 res <- data %>% 
-  filter(month(yr_mt) >= begin, month(yr_mt)<= end) %>% 
+  filter(month(yr_mt) >= begin | month(yr_mt)<= end) %>% 
   group_by(gauge, year(yr_mt)) %>% 
-  summarise(method = sum(value)) %>% 
+  summarise(value = get(method)(get(value))) %>% 
   ungroup() %>% 
-  spread(key=gauge, value=method) %>% 
+  spread(key=gauge, value=value) %>% 
   as.data.frame()
 }
-    
-  return(res)
-  
+    return(res)
 }
+
+
+
 
 ## drought calculation with long term average deviation after Parry et al 2016 ####
 
@@ -409,4 +414,4 @@ data$z_anom_end[data$gauge == g]
 }
 plot(y= data$z_anom[data$gauge==1],x = data$date[data$gauge==1],t="l")
 
-sign
+
