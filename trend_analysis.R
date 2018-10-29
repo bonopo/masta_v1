@@ -38,11 +38,16 @@ legend("bottomleft", pch=c(1,1), col=c(1,2), c("quantil = .05", "quantil = .1"),
 abline(h=0, lty=2, col=4)
 dev.off()
 
-# temperature trends ####
-begin = 4
-end = 10
-paste0(value,"_",method) 
 
-# precipitation trends ####
-rename_mp
-quote()
+# seasonal trends ####
+summer_ave_q = seas_cl(data_source = "mt_mn_q", method = "mean", value = "q_mean") #from incl 4 to incl 10
+
+summer_sum_p = seas_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum")
+winter_sum_p = seas_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin = 11, end =3)
+summer_q_q10 =  mt_mn_q %>% 
+  filter(month(yr_mt) >= 4, month(yr_mt)<= 10) %>% 
+  group_by(gauge, year(yr_mt)) %>% 
+  summarise(q10 = quantile(q_mean, .1)) %>% 
+  ungroup() %>% 
+  spread(key=gauge, value=q10) %>% 
+  as.data.frame()
