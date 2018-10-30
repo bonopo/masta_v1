@@ -7,30 +7,22 @@ source("./R/masta_v1/data_handling.R")
 # mann- kendall test ------------------------------------------------------
 
 
-ken_spei <- ken_trend(sci_name = "spei_v2")
-ken_spi <- ken_trend(sci_name="spi_v2")
-ken_ssi <- ken_trend(sci_name= "ssi")
+ken_spei <- ken_trend(agg_mn= c(1,2,3,6,9,12,24), data_source =  "spei_", sci = TRUE)
+ken_spi <- ken_trend(agg_mn= c(1,2,3,6,9,12,24), sci = TRUE, data_source =  "spi_")
+ken_ssi <- ken_trend(data_source =  "ssi_1", sci = FALSE )
+
+mnq30_df = mnq30[,c(1:catch_n+1)]
+ken_mnq30 = ken_trend(data_source = "mnq30_df", sci=FALSE)
+gauges$mnq30_yearly_trend = ken_mnq30[,1]
+
+plot(ken_ssi[,1])#, log="y",)
 
 # quantil trend ####
-qua_trend <- function(quantil=0.1){
-  ken=matrix(nrow=catch_n, ncol=2)
-  data <- q_long %>%
-  mutate(year = year(date)) %>% 
-  group_by(gauge, year) %>%
-  summarise(qt=quantile(q, quantil)) %>% 
-    ungroup()
-  for (g in 1:catch_n){
-  res <- MannKendall(data[data$gauge == g,]$qt)
-  ken[g,1] <- res$tau
-  ken[g,2] <- res$sl
-  }
-  ken <- as.data.frame(ken)
-  colnames(ken) <- c("tau", "sl")
-  return(ken)
-  }
 
-quant_trend_1 <- qua_trend(quantil = 0.1)
-quant_trend_05 <- qua_trend(quantil = 0.05) # wie schweizer defnition Q347
+
+quant_trend_1 <- qua_trend(quantil = 0.1, data_source = "q_long")
+quant_trend_05 <- qua_trend(quantil = 0.05, data_source = "q_long") # wie schweizer defnition Q347
+
 pdf("./plots/mk_quant.pdf")
 plot(quant_trend_05$tau, ylab="tau", xlab="catchments", ylim=c(-0.65, .45))
 points(quant_trend_1$tau, col=2)
@@ -40,7 +32,8 @@ dev.off()
 
 
 # seasonal trends ####
-summer_ave_q = seas_cl(data_source = "mt_mn_q", method = "mean", value = "q_mean") #from incl 4 to incl 10
+summer_ave_q = seas_cl(data_source = "mt_mn_q", method = "mean", value = "q_mean", begin =4, end=10) 
+summer_min_q = seas_cl(data_source = "mt_mn_q", method = "min", value = "q_mean", begin =4, end=10) #summer mnq30
 
 summer_sum_p = seas_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum")
 winter_sum_p = seas_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin = 11, end =3)
@@ -51,3 +44,18 @@ summer_q_q10 =  mt_mn_q %>%
   ungroup() %>% 
   spread(key=gauge, value=q10) %>% 
   as.data.frame()
+
+
+ken_summer_min_q = ken_trend(data_source = "summer_min_q", sci=FALSE)
+gauges$ken_summer_min_q =ken_summer_min_q[,1]
+
+gauges$summer_ave_q = ken_trend(data_source = "summer_ave_q", sci=FALSE)[,1]
+gauges$summer_sum_p = ken_trend(data_source = "summer_sum_p", sci=FALSE)[,1]
+gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
+
+#yearly trends ####
+yearly_mean_q = mt_mn_q %>% 
+  group_by(gauge, year) %>% 
+  summarise(yearly_mean = mean(q_mean))
+
+
