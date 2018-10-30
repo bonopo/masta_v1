@@ -183,7 +183,7 @@ sci_reg <- function(pred="spei_1", resp="ssi_1", pred2="spi_1", additive=FALSE){
 
 
 # non parametric sci calculation ------------------------------------------
-a=1
+
 sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
  for (a in agg_n){
   erg <- matrix(nrow=480, ncol=(catch_n+1))
@@ -227,12 +227,12 @@ for (i in 1:catch_n){
 
 #counting number of events depending on severity threshhold
 
-dr_count <- function(severity = -1.5){
+dr_count <- function(severity = -1){
   try(if(severity < min(ssi_1_long$ssi)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
  res<- list()
  for (g in 1:catch_n){
 s1 <- ssi_1_long %>% 
-  filter(gauge == g && ssi < severity) %>% 
+  filter(gauge == g , ssi < severity) %>% 
    mutate(date_diff = c(diff.Date(yr_mt),0)) 
 n <- 1
 for (i in 1: length(s1$yr_mt)){
@@ -246,11 +246,12 @@ res[[g]] <- s1}
 
 #sum of severity per event
 
-dr_severity <- function(severity = -1, data_source = "dr_event_no"){
+dr_severity <- function(severity = -1){
 try(if(severity < min(ssi_1_long$ssi)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
 res_list <- list()
+raw_data = dr_count(severity = severity)
 for (g in 1:catch_n){
-    data  <- get(data_source)[[g]]
+    data  <- raw_data[[g]]
     res   <- matrix(nrow = max(data$event_n), ncol=6) 
 for (d in 1:max(data$event_n)){
   res[d,1]        <- sum(data$ssi[data$event_n == d]-severity)
@@ -300,9 +301,10 @@ dev.off()
 
 
 # trend calculaton --------------------------------------------------------
-qua_trend <- function(quantil=0.1){
+qua_trend <- function(quantil=0.1, data_source = "q_long"){
   ken=matrix(nrow=catch_n, ncol=2)
-  data <- q_long %>%
+  raw_data = get(data_source)
+  data <- raw_data %>%
   mutate(year = year(date)) %>% 
   group_by(gauge, year) %>%
   summarise(qt=quantile(q, quantil)) %>% 
@@ -317,23 +319,30 @@ qua_trend <- function(quantil=0.1){
   return(ken)
   }
 
-ken_trend <- function(sci= seq(1:agg_month), sci_name="spei_v2"){
+ken_trend <- function(agg_mn= c(1,2,3,6,9,12,24), data_source="spi_", sci=TRUE){
   ken_tot <- list()
   ken_tau <- data.frame()
   ken_sl <- data.frame()
-  for (i in sci){
-  if(sci_name == "ssi"){
-  sci_data <- ssi_sorted }else{
-  sci_data <- get(paste0(sci_name,"_",i))}
+  i=0
+  if(sci == FALSE){
+  message(paste("Ignoring the sci values since only the trend for", data_source, "is beeing calculated."))
+  sci_data <- get(data_source) 
+  for(g in 1:ncol(sci_data)){
+  res <- MannKendall(sci_data[,g])
+  ken_tau[g,1] <- res$tau
+  ken_sl[g,1] <- res$sl
+  ken_tot <- cbind(ken_tau[,1], ken_sl[,1])
+  colnames(ken_tot) <- c("tau", "sl")
+  }}else{
+    for (a in agg_mn){
+    i= i+1
+  sci_data <- get(paste0(data_source,a))
   for(g in 1:ncol(sci_data)){
   res <- MannKendall(sci_data[,g])
   ken_tau[g,i] <- res$tau
   ken_sl[g,i] <- res$sl
   }}
-  if(sci_name == "ssi"){
-    ken_tot <- cbind(ken_tau[,1], ken_sl[,1])
-    colnames(ken_tot) <- c("tau", "sl")
-  }else{
+ 
   colnames(ken_tau) <- as.character(sci)
   colnames(ken_sl) <- as.character(sci)
   ken_tot[[1]] <- ken_tau
@@ -361,6 +370,7 @@ res <- data %>%
   spread(key=gauge, value=value) %>% 
   as.data.frame()
 }
+ res = res[,c(1:catch_n+1)]
     return(res)
 }
 
@@ -412,6 +422,6 @@ if(data$z_anom_start[data$gauge == g][d+d_start-1] < 0){
 data$z_anom_end[data$gauge == g]
 
 }
-plot(y= data$z_anom[data$gauge==1],x = data$date[data$gauge==1],t="l")
+# plot(y= data$z_anom[data$gauge==1],x = data$date[data$gauge==1],t="l")
 
 
