@@ -80,18 +80,18 @@ mk_spi_tau <- list()
 mk_spi_S <- list()
 mk_spi_D <- list()
 mk_spi_p <- list()
-for (i in 1:ncol(spi_df)){
- mk_spi_tau[[i]] <-  Kendall(spi_df[,i], ssi_sorted[,i])$tau[1] 
- mk_spi_S[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$S[1] 
-mk_spi_D[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$D[1] 
-mk_spi_p[[i]] <- Kendall(spi_df[,i], ssi_sorted[,i])$sl[1] 
+for (i in 1:ncol(spi_2)){
+ mk_spi_tau[[i]] <-  Kendall(spi_2[,i], ssi_1[,i])$tau[1] 
+ mk_spi_S[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$S[1] 
+mk_spi_D[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$D[1] 
+mk_spi_p[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$sl[1] 
 }
 
-Kendall(spi_df[,i], ssi_sorted[,i])$sl[1]
+Kendall(spi_1[,44], ssi_1[,44])
 #tau ist S/D
 #S anzahl an positiven - negativen trends
 #D value theoretisch mögliche maximale anzahl an trends
-plot(x =spi_df[,1] , y=ssi_sorted[,1])
+plot(x =spi_2[,1] , y=ssi_1[,1])
 #offensichtliche aussage: desto höher der spi, desto höher der spei 
 
 
@@ -116,19 +116,23 @@ reg_spi_ssi <- lm_sci(sci="spi_v1")
 spi_ssi_reg <- sci_reg(pred="spi_2", resp="ssi_1",  additive = FALSE)
 spei_ssi_reg <- sci_reg(pred= "spei_2", resp="ssi_1", additive = FALSE)
 
-spi_ssi_reg$rsq
+
 spi_ssi = spi_spei_reg(sci = "spi_") 
 spei_ssi = spi_spei_reg(sci = "spei_") 
-best_spei = c()
-value_spei = c()
+best_spi = c()
+value_spi = c()
 
 for(r in 1:catch_n){
  best_spi[r] = spi_ssi[[3]][r,] %>% which.max()
  value_spi[r] = spi_ssi[[3]][r,] %>% max()}
-
+gauges$spi_n = best_spi
+gauges$spi_n_cor = value_spi
 for(r in 1:catch_n){
  best_spei[r] = spei_ssi[[3]][r,] %>% which.max()
  value_spei[r] = spei_ssi[[3]][r,] %>% max()}
+
+gauges$spei_n = best_spei
+gauges$spei_n_value =value_spei
 
 pdf("./plots/spi_spei_reg.pdf")
 plot(best_spi - best_spei)
@@ -146,13 +150,6 @@ points(x=which(best_spei != best_spi), y=best_spei[best_spei != best_spi], col=2
 legend("topleft", c("spi", "spei(only if diff. to spi)"), col=c(1,2), pch=c(1,1), bty="n")
 dev.off()
 
-
-for(r in 1:catch_n){
- best_sci[r] = spi_ssi[[3]][r,] %>% which.max()
- value[r] = spi_ssi[[3]][r,] %>% max()}
-
-
-plot_reg(spi_source = "spi_ssi_reg", spei_source="spei_ssi_reg", agg_n = 2)
 
 
 # drought attribution: SPI or SPEI? with correlation ####
