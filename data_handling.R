@@ -1,8 +1,8 @@
 # Startin script
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#save.image(file="./data/r_temp_image/spi_spei_ssi.Rdata")
-#load(file="./data/r_temp_image/spi_spei_ssi.Rdata")
+#save.image(file="./data/r_temp_image/version_1.Rdata")
+#load(file="./data/r_temp_image/version_1.Rdata")
 
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
@@ -12,7 +12,6 @@ sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie
 
 # User defined constants --------------------------------------------------
 
-agg_month <- 12 #spei-n and spi-n how many month should be max aggregation
 date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
 catch_n <- 338
 
