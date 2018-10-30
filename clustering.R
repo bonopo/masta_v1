@@ -72,7 +72,7 @@ gauges$saar <- saar$sum_mm_yr
 #median drought duration ####
   median_drought_duration = c()
   for (g in 1:catch_n){
-    median_drought_duration[g] = dsi_1_5[[g]]$dr_length %>% median()
+    median_drought_duration[g] = dsi_1[[g]]$dr_length %>% median()
   }
 
 gauges$med_dr_dur = median_drought_duration
@@ -80,14 +80,14 @@ gauges$med_dr_dur = median_drought_duration
 #maximum duration ####
 max_drought_duration = c()
   for (g in 1:catch_n){
-    max_drought_duration[g] = dsi_1_5[[g]]$dr_length %>% max()
+    max_drought_duration[g] = dsi_1[[g]]$dr_length %>% max()
   }
 
 gauges$max_dr_dur = max_drought_duration
 #median severity####
 median_drought_severity = c()
   for (g in 1:catch_n){
-    median_drought_severity[g] = dsi_1_5[[g]]$dsi %>% median()
+    median_drought_severity[g] = dsi_1[[g]]$dsi %>% median()
   }
 
 gauges$med_dr_sev = median_drought_severity
@@ -96,14 +96,14 @@ gauges$med_dr_sev = median_drought_severity
 
 median_drought_inten = c()
   for (g in 1:catch_n){
-    median_drought_inten[g] = dsi_1_5[[g]]$dr_intens %>% median()
+    median_drought_inten[g] = dsi_1[[g]]$dr_intens %>% median()
   }
 
 gauges$med_dr_int  =median_drought_inten
 #maximum severity####
 max_drought_sev = c()
   for (g in 1:catch_n){
-    max_drought_sev[g] = dsi_1_5[[g]]$dsi%>% min()
+    max_drought_sev[g] = dsi_1[[g]]$dsi%>% min() #min!!!!!!!!!!!
   }
 
 gauges$max_dr_sev  =max_drought_sev
@@ -112,7 +112,7 @@ gauges$max_dr_sev  =max_drought_sev
 
 n_events = c()
   for (g in 1:catch_n){
-    n_events[g] = dsi_1_5[[g]]$event_n %>% max()
+    n_events[g] = dsi_1[[g]]$event_n %>% max()
   }
 
 gauges$n_events = n_events
