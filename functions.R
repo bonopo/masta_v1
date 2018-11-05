@@ -301,6 +301,111 @@ dev.off()
 
 
 # trend calculaton --------------------------------------------------------
+mk_tests_par = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
+
+for(d in raw_data){
+  #bootstrapping
+  cl = makeCluster(no_cores)
+  ts_data = get(d)
+  cat("calculating bootstrapped MK Trend test: " , d, "\n")
+  res_bb=parSapply(cl,c(ts_data[,1:ncol(ts_data)]),FUN=bbsmK_mod )
+  stopCluster(cl) #to return memory ressources to the system
+  message("finished bootstrapping starting modifed mk")
+  #modified mk test
+  res_mmkh = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmkh))
+  res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky))
+  assign(paste0("bb_",d ), as.data.frame(t(res_bb)), envir = .GlobalEnv)
+  assign(paste0("mmkh_", d), as.data.frame(res_mmkh), envir = .GlobalEnv )
+  assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
+}}
+
+
+mk_tests = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
+res_bb = data.frame()
+res_mmkh = list()
+res_mmky = list()
+for(d in raw_data){
+  ts_data = as.ts(get(d), frequency =frequency, start=start)
+  for(i in 2:ncol(ts_data)){
+temp_bb <-  bbsmK_mod(c(ts_data[,i]))
+res_bb = rbind(res_bb, temp_bb)
+res_mmkh[[i]] =  mmkh(c(ts_data[,i]))
+res_mmky[[i]] = mmky(c(ts_data[,i]))
+cat(round((i/(ncol(ts_data)*length(raw_data))), 4), "% & i =", i, "\n" )
+
+
+  }
+  assign(paste0("bb_",d, "_df" ), res_bb, envir = .GlobalEnv)
+  assign(paste0("mmkh_", d,"_list"), res_mmkh, envir = .GlobalEnv )
+  assign(paste0("mmky_", d,"_list"), res_mmky, envir = .GlobalEnv )
+}}
+
+
+
+bbsmK_mod = function (x, ci = 0.95, nsim = 2000, eta = 1, bl.len = NULL) 
+{ #altered from package modifiedmk and boot
+    x = x
+    ci = ci
+    nsim = nsim
+    eta = eta
+    bl.len = bl.len
+    if (is.vector(x) == FALSE) {
+        stop("Input data must be a vector")
+    }
+    n <- length(x)
+    if (n < 4) {
+        stop("Input vector must contain at least four values")
+    }
+    if (is.null(bl.len) == FALSE) 
+        if (bl.len > n) {
+            stop("Block length must be less than the time series length")
+        }
+    if (any(is.finite(x) == FALSE)) {
+        x <- x[-c(which(is.finite(x) == FALSE))]
+        warning("The input vector contains non-finite numbers. An attempt was made to remove them")
+    }
+    if (is.null(bl.len) == TRUE) {
+        bd <- qnorm((1 + ci)/2)/sqrt(n)
+        ro <- acf(x, lag.max = round(n/4), plot = FALSE)$acf[-1]
+        sig.v <- rep(0, round(n/4))
+        for (i in 1:round(n/4)) {
+            if (-bd > ro[i] | bd < ro[i]) {
+                sig.v[i] <- ro[i]
+            }
+        }
+        if (all(sig.v == 0)) {
+            min.sig <- 0
+        }
+        else {
+            min.sig.init <- rle(sig.v)
+            min.sig <- max(min.sig.init$lengths[min.sig.init$values != 
+                0])
+        }
+        bl.len <- min.sig + eta
+    }
+    MK.orig <- modifiedmk::mkttest(x)
+    z <- round(MK.orig["Z-Value"], digits = 7)
+    slp <- round(MK.orig["Sen's slope"], digits = 7)
+    S <- MK.orig["S"]
+    MKtau <- function(x) modifiedmk::mkttest(x)[["Tau"]]
+    boot.out <- boot::tsboot(x, MKtau, R = nsim, l = bl.len, sim = "fixed")
+    Tau <- round(boot.out$t0, digits = 7)
+    bbs.ci <- boot::boot.ci(boot.out, conf = ci, type = "basic")$basic[4:5]
+    lb <- round(bbs.ci[1], digits = 7)
+    ub <- round(bbs.ci[2], digits = 7)
+    res = matrix(nrow=1, ncol=6)
+    res[1,1] = z
+    res[1,2] = slp
+    res[1,3] = S
+    res[1,4] = Tau
+    res[1,5] = lb
+    res[1,6] = ub
+    res = as.data.frame(res)
+    colnames(res) = c("z_value", "sen_slope", "S", "tau", "lb", "ub")
+    return(res)
+}
+
+
 qua_trend <- function(quantil=0.1, data_source = "q_long"){
   ken=matrix(nrow=catch_n, ncol=2)
   raw_data = get(data_source)
