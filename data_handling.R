@@ -1,19 +1,20 @@
 # Startin script
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#save.image(file="./data/r_temp_image/version_1.Rdata")
-#load(file="./data/r_temp_image/version_1.Rdata")
+#save.image(file="./data/r_temp_image/version_2.Rdata")
+load(file="./data/r_temp_image/version_2.Rdata")
 
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
-#install.packages("tidyverse")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat"), require, character.only = T)
+#install.packages("boot")
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel"), require, character.only = T)
 #library(tidyverse) 
-
+#install.packages("climtrends", repos="http://R-Forge.R-project.org")
 # User defined constants --------------------------------------------------
 
 date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
-catch_n <- 338
+catch_n <- 338 # number of catchments
+no_cores = detectCores()-1 #for parallel computing
 
 
 # Load data ---------------------------------------------------------------
@@ -130,3 +131,13 @@ colnames(spei_data_mat) <- 1:catch_n
 
 
 remove(spei_data,pet_th, latitude,pet_th_vec)
+
+#von Neumann homogenity test ####
+#Under the null hypothesis of constant mean, i.e., homogenous time series, the expected value of the von Neumann ratio is 2. However, it tends to be < 2 for the non-homogenous time series 
+n72 = mt_mn_q_wide[,72]
+ts72 = as.ts(n72, deltat= 1/12, start=c(1970,1))
+
+(sum((n72[1:(length(n72)-1)]-n72[2:length(n72)])^2))/(sum((n72-mean(n72))^2))
+
+VonNeumannRatio(ts72)
+ 
