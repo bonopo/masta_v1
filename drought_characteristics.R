@@ -5,10 +5,56 @@ setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 source("./R/masta_v1/functions.R")
 source("./R/masta_v1/data_handling.R")
 
+
+
+
+# seasonal data ####
+summer_ave_q = seas_cl(data_source = "mt_mn_q", method = "mean", value = "q_mean", begin =4, end=10) 
+summer_min_q = seas_cl(data_source = "mt_mn_q", method = "min", value = "q_mean", begin =4, end=10) #summer mnq30
+
+summer_sum_p = seas_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum")
+winter_sum_p = seas_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin = 11, end =3)
+
+summer_q_q10 =  mt_mn_q %>% 
+  filter(month(yr_mt) >= 4, month(yr_mt)<= 10) %>% 
+  group_by(gauge, year(yr_mt)) %>% 
+  summarise(q10 = quantile(q_mean, .1)) %>% 
+  ungroup() %>% 
+  spread(key=gauge, value=q10) %>% 
+  as.data.frame()
+
+summer_q = mt_mn_q %>% 
+  filter(month(yr_mt) >= 4, month(yr_mt)<= 10) %>% 
+  spread(key=gauge, value=q_mean) %>% 
+  dplyr::select(-yr_mt, -month, -year) %>% 
+  as.data.frame()
+
+winter_q = mt_mn_q %>% 
+  filter(month(yr_mt) < 4 | month(yr_mt) > 10) %>%
+  spread(key=gauge, value=q_mean) %>% 
+   dplyr::select(-yr_mt, -month, -year) %>% 
+   as.data.frame()
+
+
+#yearly data ####
+yearly_mean_q = mt_mn_q %>% 
+  group_by(gauge, year) %>% 
+  summarise(yearly_mean = mean(q_mean)) %>% 
+  spread(key=gauge, value=yearly_mean) %>% 
+  dplyr::select(-year) %>% 
+  as.data.frame()
+
+yearly_min_q = mt_mn_q %>%  #same as mnq30
+  group_by(gauge, year) %>% 
+  summarise(yearly_min = min(q_mean)) %>% 
+  spread(key=gauge, value=yearly_min) %>% 
+  dplyr::select(-year) %>% 
+  as.data.frame()
+
+
 #month with max drought overall####
 
 
-#with actuall flow data
 year = year(date_seq) %>% list()
 mt_mn_q$year <- unlist(rep(year, times = catch_n))
 mnq30 <- aggregate(mt_mn_q_wide, by= year, FUN= min, by.column=T)
@@ -35,26 +81,20 @@ data_by <- data %>% group_by(year(yr_mt)) %>%
   mnq30_month[i] <- names(which.max(table(data_by$mon_min))) %>% as.integer()
 }
 
-plot(mnq30_month)
+
 
 gauges$mnq30_month = mnq30_month
-
-# #comparing ssi data with real q data. are they similar?
-#  ssi_1 %>% 
-#     group_by(month, gauge) %>% 
-#     summarise(q_mean = mean(ssi)) %>% 
-#   filter(gauge==200) %>% 
-#   ggplot()+
-#   geom_point(aes(y=q_mean, x=month), na.rm = T)+
-#    geom_line(data =    mt_mn_q %>% 
-#     group_by(month, gauge) %>% 
-#     summarise(q_mean = mean(q_mean)) %>% 
-#   filter(gauge==200), aes(y=q_mean, x=month))
-    
-   
+#monthly data ####
+nq_monthly = q_long %>% 
+  mutate(yr_mt = ymd(paste0(year(date),"-",month(date),"-15"))) %>% 
+  group_by(gauge, yr_mt) %>% 
+  summarise(monthly_min = min(q)) %>% 
+  spread(key = gauge, value=monthly_min) %>% 
+  dplyr::select(-yr_mt) %>% 
+  as.data.frame()
 
 
-#month in a year affected by drought ####
+#number of months in a year affected by drought ####
 
 
 dr_length_1 <- dr_n()
