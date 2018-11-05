@@ -26,8 +26,10 @@ q_sr_s <- q_long %>%
 q_sr <- merge(q_sr_s, q_sr_w, by="gauge")
 q_sr$sr <- q_sr$q95_s/q_sr$q95_w # SR is caclulated via q95_summer/q95_winter from Laaha et al 2006
 
-q_sr$sr_value[which(q_sr$sr < 1)] <- 0 #summer
-q_sr$sr_value[which(q_sr$sr > 1)] <- 1 #winter NAs are produced in 9 time series that are very altered or have no clear seasonality
+q_sr$sr_value = NA
+q_sr$sr_value[which(q_sr$sr < .9)] <- 0 #summer
+q_sr$sr_value[which(q_sr$sr > 1.1)] <- 2 #winter NAs are produced in 9 time series that are very altered or have no clear seasonality
+q_sr$sr_value[which(q_sr$sr >= .9 & q_sr$sr <= 1.1)] = 1 #no clear seasonality 
 
 gauges$sr <- as.numeric(q_sr$sr_value)
 #spplot(gauges, "sr")
@@ -92,7 +94,7 @@ median_drought_severity = c()
 
 gauges$med_dr_sev = median_drought_severity
 
-#maximum intensity ####
+#median intensity ####
 
 median_drought_inten = c()
   for (g in 1:catch_n){
@@ -128,19 +130,19 @@ ggplot(data=gauges_df)+
   geom_point(aes(x=saar, y= n_events, alpha= bfi))
 
 ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= best_spi, col= bfi))
+  geom_point(aes(x=saar, y= best_spi, alpha= bfi))
 
 
 ggplot(data=gauges_df)+
   geom_point(aes(x=saar, y= best_spei, col= bfi))
 
 ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= cor_spi, col= bfi))
-
+  geom_point(aes(x=saar, y= cor_spi, alpha= bfi))
+ggsave("best_spi_cor_spi_saar.png")
 
 ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= cor_spi, col= best_spi))
-
+  geom_point(aes(x=saar, y= cor_spei, col= bfi))
+ggsave("bfi_cor_spei_saar.png")
 ggplot(data=gauges_df)+
   geom_point(aes(x=Enzgsg_, y= med_dr_sev, col= bfi))
 
@@ -148,5 +150,7 @@ ggplot(data=gauges_df)+
   geom_point(aes(x=max_dr_sev, y= n_events, col= bfi))
 
 ggplot(data=gauges_df)+
-  geom_point(aes(x=max_dr_int, y= n_events, col= bfi))
+  geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
+ggsave("max_dr_dur_med_dr_int_bfi.png")
 
+gauges$sr
