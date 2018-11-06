@@ -21,6 +21,7 @@ summer_q_q10 =  mt_mn_q %>%
   summarise(q10 = quantile(q_mean, .1)) %>% 
   ungroup() %>% 
   spread(key=gauge, value=q10) %>% 
+  dplyr::select(-`year(yr_mt)` ) %>% 
   as.data.frame()
 
 summer_q = mt_mn_q %>% 
@@ -47,6 +48,13 @@ yearly_mean_q = mt_mn_q %>%
 yearly_min_q = mt_mn_q %>%  #same as mnq30
   group_by(gauge, year) %>% 
   summarise(yearly_min = min(q_mean)) %>% 
+  spread(key=gauge, value=yearly_min) %>% 
+  dplyr::select(-year) %>% 
+  as.data.frame()
+
+yearly_q10 = mt_mn_q %>%  #same as mnq30
+  group_by(gauge, year) %>% 
+  summarise(yearly_min = quantile(q_mean,.1)) %>% 
   spread(key=gauge, value=yearly_min) %>% 
   dplyr::select(-year) %>% 
   as.data.frame()
@@ -113,6 +121,18 @@ dr_event_no_1<- dr_count(severity = -1)
 
 dsi_1<- dr_severity(severity = -1)
 
+dsi_1_yearly = list()
+for (i in 1:catch_n){
+dsi_1_yearly[[i]] = dsi_1[[i]] %>% 
+  mutate(year = year(dr_start)) %>% 
+  group_by(year) %>% 
+  summarise(mean_dsi = mean(dsi), mean_length = mean(dr_length), mean_inten = mean(dr_intens))
+
+}
+
+
+  
+
 
 #measure of distance to june to overcome problem 12 - 1####
  
@@ -132,3 +152,8 @@ plot(x= dr_beg[[15]]$mon_min, ylim= c(4,12), type="p")
  
 
 
+
+ 
+ 
+ 
+ 
