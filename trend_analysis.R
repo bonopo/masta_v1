@@ -38,7 +38,7 @@ abline(h=c(1.96/sqrt(length(acf_df[,i])), -1.96/sqrt(length(acf_df[,i]))), lty=2
 legend("topleft", col=c(1,2), pch=c(1, NA), lty=c(NA, 2), c("ACF", "p value"), bty="n")
 dev.off()
 }
-#block bootstrap mann kendall ####
+#mann kendall with AR correction ####
 yearly_mean_q
 yearly_min_q#
 summer_ave_q#
@@ -46,12 +46,16 @@ summer_min_q#
 summer_q_q10
 nq_monthly
 
-mk_tests_par(raw_data = c("yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10","nq_monthly"))
+mk_tests_par(raw_data = c("yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10","nq_monthly", "yearly_mean_q"))
 
+
+mk_tests_par(raw_data = "yearly_mean_q")
 #problem of sqrt(VS) = na produced
-mk_tests_par(raw_data = "nq_monthly")
 
-yearly_min_q
+mmkh_nq_monthly = t(sapply(c(nq_monthly[,1:ncol(nq_monthly)]), FUN =mmkh))
+mmkh_yearly_q10 = t(sapply(c(yearly_q10[,1:ncol(yearly_q10)]), FUN =mmkh)) %>% as.data.frame()
+
+mmkh_summer_q10 = t(sapply(c(summer_q_q10[,1:ncol(summer_q_q10)]), FUN =mmkh))
 
 
 # mann- kendall test ------------------------------------------------------
@@ -71,24 +75,54 @@ which.min(ken_mnq30[,1])
 
 #plotting mann-kendall ####
 
-bb_yearly_mean_q_df %>% head()
-class(mmkh_yearly_mean_q_df)
-data = as.data.frame(bb_yearly_min_q_df)
-unlist(data)
-plot(mmkh_yearly_mean_q_df[,1])
-class(data)
-data$`Corrected Zc`
-ggplot(data=mmkh_yearly_mean_q_df %>% as.data.frame())+
-  geom_point(aes(y=`Corrected Zc`,x=2:catch_n, col=as.factor(gauges$sr[2:338])))
+data_mmkh = as.data.frame(mmkh_yearly_q10)
 
-ggplot(data=mmkh_yearly_mean_q_df %>% as.data.frame())+
-  geom_point(aes(y=`Corrected Zc`,x=gauges$Enzgsg_[2:338], col=as.factor(gauges$sr[2:338])))
-bb = bb_yearly_min_q_df %>% as.data.frame()
+colnames(data_mmkh) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "Tau", "sen_slope", "old_var", "new_var")
+
+data_bb = modiscloud::unlist_df(bb_yearly_min_q_df)
+plot(mmkh_summer_ave_q_df$Tau ~ mmkh_summer_min_q_df$Tau)
+
+ggsave("yearly_q10_significance.png")
+
 ggplot()+
-  geom_point(data = bb, aes(y=z_value, x=as.factor(1:5)),inherit.aes = FALSE)+
- geom_errorbar(data =bb, aes(x= z_value, ymin= lb , ymax= ub), colour=2, width = .05,inherit.aes = FALSE, position = pd)
+  geom_point(data = data_mmkh, aes(y=Tau, x=as.factor(gauges$mnq30_month), col= gauges$bfi),inherit.aes = FALSE)+
+  xlab("month of mnq30")+
+  ylab("mk tau of yearly q10")+
+  scale_color_continuous("BFI")
 
-#need to fix the position or statistical transform
+ggplot()+
+  geom_point(data = data_mmkh, aes(y=Tau, col=gauges$bfi, x=gauges$Enzgsg_),inherit.aes = FALSE)+
+  xlab("catchment size [km²]")+
+  ylab("mk tau of yearly q10")+
+  scale_color_continuous("BFI")
+
+ggplot()+
+  geom_point(data = data_mmkh, aes(y=Tau, x=gauges$saar),inherit.aes = FALSE)+ 
+  geom_point(data= data_mmkh[which(data_mmkh$new_p<.05),] , aes(y=Tau, x=gauges$saar[which(data_mmkh$new_p<.05)], col="p<0.05"))+
+  xlab("SAAR [mm]")+
+  ylab("mk tau of yearly q10")+
+  scale_color_discrete("Significance")
+
+ggplot()+
+  geom_point(data = data_mmkh, aes(y=Tau, x=gauges$saar ,col=as.factor(gauges$sr)),inherit.aes = FALSE)+
+  xlab("SAAR [mm]")+
+  ylab("mk tau of yearly q10")+
+  scale_color_manual("Seasonality",labels = c("summer", "no clear seasonality", "winter"), values = c(2, 3,4))
+
+
+
+ggplot()+
+  geom_point(data = data_bb[1:50,], aes(y=tau, x=gauges$saar[1:50], col=gauges$bfi[1:50]),inherit.aes = FALSE)+
+ geom_errorbar(data =data_bb[1:50,], aes(x=gauges$saar[1:50], ymin= lb , ymax= ub), colour=2, width = .05,inherit.aes = FALSE)
+
+ggplot()+
+  geom_point(data = data_bb[1:50,], aes(y=tau, x=1:50),inherit.aes = FALSE)+
+ geom_errorbar(data =data_bb[1:50,], aes(x=1:50, ymin= lb , ymax= ub), colour=2, width = .05,inherit.aes = FALSE)
+
+
+ggplot()+
+  geom_point(data = data_bb[1:50,], aes(y=tau, x=1:50),inherit.aes = FALSE)
+
 
 # quantil trend ####
 
@@ -102,4 +136,71 @@ points(quant_trend_1$tau, col=2)
 legend("bottomleft", pch=c(1,1), col=c(1,2), c("quantil = .05", "quantil = .1"), bty="n")
 abline(h=0, lty=2, col=4)
 dev.off()
+
+
+# trends in drought charachteristics --------------------------------------
+
+#looking only at the catchments that have a negative trend in q10 values:
+
+neg_q10 = which(mmkh_yearly_q10$Tau < 0)
+
+trend_dsi= sapply(1:catch_n,  FUN = function(x) MannKendall(dsi_1_yearly[[x]]$mean_dsi)) %>% t() %>% as.data.frame() %>% modiscloud::unlist_df()
+trend_len_mmkh=sapply(1:catch_n,  FUN = function(x) mmkh(dsi_1_yearly[[x]]$mean_length)) %>% t() %>% as.data.frame() %>% modiscloud::unlist_df()
+trend_inten = sapply(1:catch_n,  FUN = function(x) MannKendall(dsi_1_yearly[[x]]$mean_inten)) %>% t() %>% as.data.frame() %>% modiscloud::unlist_df()
+
+ggsave("q10_dsi_trend.png")
+
+ggplot()+
+  geom_point(aes(x=trend_len$tau, y=mmkh_yearly_q10$Tau))+
+  geom_point(data = trend_len[trend_len$sl<.1,], aes(x=tau, y=mmkh_yearly_q10$Tau[which(trend_len$sl<.1)], col="p<0.1"))+
+  ylab("mmkh tau q10 yearly")+
+  xlab("mk tau drought length")+
+  scale_color_discrete("Significance of \n drought length tau")
+
+ggplot()+
+  geom_point(aes(x=trend_len$tau, y=mmkh_yearly_q10$Tau))+
+    geom_point(data = mmkh_yearly_q10[which(mmkh_yearly_q10$`new P-value`<0.05 && trend_len$sl<0.05),] , aes(x=trend_len$tau[which(mmkh_yearly_q10$`new P-value`<0.05)], y=Tau, col="p<0.05"))+
+  ylab("mmkh tau q10 yearly")+
+  xlab("mk tau drought length")+
+  scale_color_discrete("Significance of \n drought length tau")
+
+ggplot()+
+  geom_point(aes(x=trend_inten$tau, y=mmkh_yearly_q10$Tau))+
+    geom_point(data = mmkh_yearly_q10[which(mmkh_yearly_q10$`new P-value`<0.1),], aes(x=trend_inten$tau[which(mmkh_yearly_q10$`new P-value`<0.1)], y=Tau, col="p<0.1"))+
+  ylab("mmkh tau q10 yearly")+
+  xlab("mk tau drought intensity")+
+  scale_color_discrete("Significance of \n q10 trend")
+
+
+plot(trend_len$sl ~ trend_len_mmkh$new.P.value)
+
+gauges$mmkh_q10 = mmkh_yearly_q10$Tau
+gauges$mmkh_q10[gauges$mmkh_q10 <= -.2] = -.2
+gauges$mmkh_q10[gauges$mmkh_q10 < 0 & gauges$mmkh_q10 > -.2] = -.1
+gauges$mmkh_q10[gauges$mmkh_q10 >= 0 & gauges$mmkh_q10 < .2] = 0
+gauges$mmkh_q10[gauges$mmkh_q10 >= .2] = .2
+
+gauges$mmkh_q10 = cut(gauges$mmkh_q10, seq(-.3, .3,.1 )) 
+
+hist(gauges$mmkh_q10)
+
+labelat = c(0,2,3,4,5,6)
+labeltext = c("low","high","low","high","low","high")
+spplot(gauges, c("mmkh_q10"), col.regions = rainbow(100, start = 4/6, end = 1),
+    colorkey = list(
+        labels=list(
+            at = labelat,
+            labels = labeltext
+        )
+    )
+)
+# negative trend detail examination ####
+
+
+neg_tau_q10 = mmkh_yearly_q10 %>% 
+  as.data.frame() %>% 
+  filter(Tau <0)
+
+neg_q10 = which(mmkh_yearly_q10$Tau < 0)
+
 
