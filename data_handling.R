@@ -1,14 +1,13 @@
 # Startin script
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#save.image(file="./data/r_temp_image/version_2.Rdata")
+save.image(file="./data/r_temp_image/version_4.Rdata")
 load(file="./data/r_temp_image/version_2.Rdata")
 
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 #install.packages("boot")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel"), require, character.only = T)
-#library(tidyverse) 
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud"), require, character.only = T)
 #install.packages("climtrends", repos="http://R-Forge.R-project.org")
 # User defined constants --------------------------------------------------
 
@@ -26,7 +25,6 @@ load("./data/catchments/streamflow.Rdata")
 #gauges  <- readOGR(dsn="./data/raster/gauges", layer= "gauges")
 gauges  <- shapefile("./data/raster/gauges")
 
-# raster(gauges)
 # transforming data ----------------------------------------------------------------
 
 #precip
