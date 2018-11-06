@@ -310,14 +310,16 @@ for(d in raw_data){
   cat("calculating bootstrapped MK Trend test: " , d, "\n")
   res_bb=parSapply(cl,c(ts_data[,1:ncol(ts_data)]),FUN=bbsmK_mod )
   stopCluster(cl) #to return memory ressources to the system
-  message("finished bootstrapping starting modifed mk")
+  cat("finished bootstrapping starting modifed mk")
   #modified mk test
   res_mmkh = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmkh))
   res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky))
-  assign(paste0("bb_",d ), as.data.frame(t(res_bb)), envir = .GlobalEnv)
+  assign(paste0("bb_",d ), modiscloud::unlist_df(t(res_bb)), envir = .GlobalEnv)
   assign(paste0("mmkh_", d), as.data.frame(res_mmkh), envir = .GlobalEnv )
   assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
 }}
+
+
 
 
 mk_tests = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
@@ -339,7 +341,6 @@ cat(round((i/(ncol(ts_data)*length(raw_data))), 4), "% & i =", i, "\n" )
   assign(paste0("mmkh_", d,"_list"), res_mmkh, envir = .GlobalEnv )
   assign(paste0("mmky_", d,"_list"), res_mmky, envir = .GlobalEnv )
 }}
-
 
 
 bbsmK_mod = function (x, ci = 0.95, nsim = 2000, eta = 1, bl.len = NULL) 
@@ -388,9 +389,9 @@ bbsmK_mod = function (x, ci = 0.95, nsim = 2000, eta = 1, bl.len = NULL)
     slp <- round(MK.orig["Sen's slope"], digits = 7)
     S <- MK.orig["S"]
     MKtau <- function(x) modifiedmk::mkttest(x)[["Tau"]]
-    boot.out <- boot::tsboot(x, MKtau, R = nsim, l = bl.len, sim = "fixed")
+    boot.out <- boot::tsboot(x, MKtau, R = nsim, l = bl.len, sim = "fixed") # add orig.t= TRUE
     Tau <- round(boot.out$t0, digits = 7)
-    bbs.ci <- boot::boot.ci(boot.out, conf = ci, type = "basic")$basic[4:5]
+    bbs.ci <- boot::boot.ci(boot.out, conf = ci, type = "basic")$basic[4:5] # change to perc
     lb <- round(bbs.ci[1], digits = 7)
     ub <- round(bbs.ci[2], digits = 7)
     res = matrix(nrow=1, ncol=6)
