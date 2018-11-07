@@ -102,19 +102,6 @@ ssi_dec <- decompose(ssi_ts[,1])
 plot(ssi_dec)
 
 # drought attribution: SPI or SPEI? with linear regression ####
-lm_sci <- function(sci="spi_v1"){
-  data <- get(sci)
-  res <- matrix(nrow=catch_n, ncol=4)
-for(g in 1:catch_n){
-  fm <- lm(ssi[,g] ~ data[,g]) %>% summary()
-  res[g,1] <- coef(fm) 
-}
-  return(res)
-}
-reg_spi_ssi <- lm_sci(sci="spi_v1")
-
-spi_ssi_reg <- sci_reg(pred="spi_2", resp="ssi_1",  additive = FALSE)
-spei_ssi_reg <- sci_reg(pred= "spei_2", resp="ssi_1", additive = FALSE)
 
 
 spi_ssi = spi_spei_reg(sci = "spi_") 
@@ -125,14 +112,14 @@ value_spi = c()
 for(r in 1:catch_n){
  best_spi[r] = spi_ssi[[3]][r,] %>% which.max()
  value_spi[r] = spi_ssi[[3]][r,] %>% max()}
-gauges$spi_n = best_spi
-gauges$spi_n_cor = value_spi
+gauges$reg_spi_n = best_spi
+gauges$reg_spi_n = value_spi
 for(r in 1:catch_n){
  best_spei[r] = spei_ssi[[3]][r,] %>% which.max()
  value_spei[r] = spei_ssi[[3]][r,] %>% max()}
 
-gauges$spei_n = best_spei
-gauges$spei_n_value =value_spei
+gauges$reg_spei_n = best_spei
+gauges$reg_spei_n =value_spei
 
 pdf("./plots/spi_spei_reg.pdf")
 plot(best_spi - best_spei)
@@ -167,8 +154,8 @@ for(r in 1:catch_n){
  best_spei[r] = cor_spei_ssi[r,] %>% which.max()
  value_spei[r] = cor_spei_ssi[r,] %>% max()}
 
-gauges$spei_n = best_spei
-gauges$spi_n = best_spi
+gauges$cor_spei_n = best_spei
+gauges$cor_spi_n = best_spi
 gauges$cor_spi = value_spi
 gauges$cor_spei = value_spei
 
@@ -235,17 +222,17 @@ my_palette <- colorRampPalette(c("red", "blue"))(n = 199)
 
 
 # boxplot(spi_ssi_c, horizontal = F)
-opt_spei_n <- c()
-for (i in 1:length(spei_ssi_c[,1])){
-opt_spei_n[i] <- which.max(spei_ssi_c[i,])
-}
-opt_spi_n <- c()
-for (i in 1:length(spi_ssi_c[,1])){
-opt_spi_n[i] <- which.max(spi_ssi_c[i,])
-}
-gauges$optim_spi_p  <- opt_spi_n
-gauges$optim_spei_p <- opt_spei_n
-spplot(gauges, "optim_spi_p")
+# opt_spei_n <- c()
+# for (i in 1:length(spei_ssi_c[,1])){
+# opt_spei_n[i] <- which.max(spei_ssi_c[i,])
+# }
+# opt_spi_n <- c()
+# for (i in 1:length(spi_ssi_c[,1])){
+# opt_spi_n[i] <- which.max(spi_ssi_c[i,])
+# }
+# gauges$optim_spi_p  <- opt_spi_n
+# gauges$optim_spei_p <- opt_spei_n
+# spplot(gauges, "optim_spi_p")
 
 # pdf("./plots/opt_spei_n.pdf")
 # plot(x=1:length(spei_ssi_c[,1]), y=opt_spei_n, xlab="Catchments", ylab="SPI-n with highest cor")
@@ -255,7 +242,7 @@ spplot(gauges, "optim_spi_p")
 # pdf("./plots/opt_spi-spei_n._spearman.pdf")
 # plot(x=1:length(spei_ssi_c[,1]), y=opt_spi_n-opt_spei_n, xlab="Catchments", ylab="optim. SPI-n - optim. SPEI-n")
 # dev.off()
-
+gauges$
 
 
 
@@ -275,7 +262,9 @@ lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.
 
 # monthly correlation values for SPI/SPEI####
   
-summer_cor_spi = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=4, end=10) 
+
+#function has to be changed doesn't calculate only summer due to |
+summer_cor_spi = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=5, end=10) 
   
 c = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_", ssi="ssi_1", begin=4, end=10) 
 
