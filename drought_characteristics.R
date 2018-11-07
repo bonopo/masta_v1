@@ -9,7 +9,89 @@ source("./R/masta_v1/data_handling.R")
 
 
 # seasonal data ####
-summer_ave_q = seas_cl(data_source = "mt_mn_q", method = "mean", value = "q_mean", begin =4, end=10) 
+#7 day moving average in summer than calculate :
+  # min for every year
+  # date of min
+q_wide_summer = q_long %>% 
+    filter(month(date) >= 5 & month(date)<= 11) %>% 
+    group_by(gauge, year(date)) %>% 
+  ungroup() %>% 
+  spread(key=gauge, value=q) %>% 
+  as.data.frame() %>% 
+  dplyr::select(-`date`, -`year(date)`)
+
+ms7 = rollapply(q_wide_summer, FUN = mean, width = 7, align="right", by.column=TRUE, fill=NA)
+
+int= rep(c(1:40*214),each =7)-c(207:213)#where the rollapply result hast to be NA because it calculates moving average continues (ie end of 1970 will be partially used to calculate moving average for beginning 1971)
+
+ms7[int,] = NA 
+ms7_df = as.data.frame(ms7)
+
+ms7_min_temp = q_long %>% 
+    filter(month(date) >= 5 & month(date)<= 11) %>% 
+    group_by(gauge, year(date)) %>% 
+  ungroup() %>% 
+  spread(key=gauge, value=q) %>% 
+  as.data.frame() %>% 
+  dplyr::select(`date`, `year(date)`) 
+
+ms7_min = cbind(ms7_min_temp, ms7) %>% 
+  gather(key=gauge, value=ms7, -`date`, -`year(date)`) %>% 
+  group_by( as.integer(gauge),year(date)) %>% 
+  summarise(ms7_min = min(ms7, na.rm=T), ms7_date = yday(date[which.min(ms7)] )) %>% 
+  ungroup() %>% 
+  as.data.frame()
+
+colnames(ms7_min) = c("gauge", "year", "ms7_min", "ms7_date")
+remove(ms7_min_temp)
+
+ms7_date = ms7_min %>% 
+  dplyr::select(gauge, ms7_date, year) %>% 
+  spread(key=gauge, value=ms7_date) %>% 
+  dplyr::select(-year)
+
+ms7_min %<>%  dplyr::select(gauge, ms7_min, year) %>% 
+  spread(key=gauge, value=ms7_min) %>% 
+  dplyr::select(-year) 
+
+
+#30 day moving average in summer than calculate :
+  # min for every year
+  # date of min
+
+
+ms30 = rollapply(q_wide, FUN = mean, width = 30, align="right", by.column=TRUE, fill=NA)
+
+ms30_df = ms30 %>% 
+  as.data.frame() 
+
+ms30_df$date = ymd(q_long$date[q_long$gauge == 1])
+
+ms30_summer = ms30_df %>% 
+  filter(ymd(paste0("1960-",month(date),"-",day(date))) >= ymd("1960-5-30") & month(date)<= 11) %>% 
+  mutate(year= year(date)) %>% 
+  as.tbl() %>% 
+  gather(key=gauge, value=ms30, -year, -date) %>% 
+  group_by(gauge, year) %>% 
+  summarise(ms30_min = min(ms30, na.rm=T), ms30_date = yday(date[which.min(ms30)]))%>%   ungroup() %>% 
+  mutate(gauge= as.integer(gauge))
+
+  
+class(ms30_summer$gauge) 
+
+ms30_date = ms30_summer %>% 
+  dplyr::select(gauge, ms30_date, year) %>% 
+  spread(key=gauge, value=ms30_date) %>% 
+  dplyr::select(-year) %>% 
+  as.data.frame()
+
+ms30_min = ms30_summer %>% 
+  dplyr::select(gauge, ms30_min, year) %>% 
+  spread(key=gauge, value=ms30_min) %>% 
+  dplyr::select(-year) %>% 
+  as.data.frame()
+
+summer_ave_q = seas_cl(data_source = "mt_mn_q", method = "mean", value = "q_mean", begin =5, end=10) 
 summer_min_q = seas_cl(data_source = "mt_mn_q", method = "min", value = "q_mean", begin =4, end=10) #summer mnq30
 
 summer_sum_p = seas_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum")
@@ -38,26 +120,30 @@ winter_q = mt_mn_q %>%
 
 
 #yearly data ####
-yearly_mean_q = mt_mn_q %>% 
+yearly_mean_q = q_long %>% 
+  mutate(year= year(date)) %>% 
   group_by(gauge, year) %>% 
-  summarise(yearly_mean = mean(q_mean)) %>% 
+  summarise(yearly_mean = mean(q)) %>% 
   spread(key=gauge, value=yearly_mean) %>% 
   dplyr::select(-year) %>% 
   as.data.frame()
 
-yearly_min_q = mt_mn_q %>%  #same as mnq30
+yearly_min_q = q_long %>%  #same as mnq30
+  mutate(year= year(date)) %>% 
   group_by(gauge, year) %>% 
-  summarise(yearly_min = min(q_mean)) %>% 
+  summarise(yearly_min = min(q)) %>% 
   spread(key=gauge, value=yearly_min) %>% 
   dplyr::select(-year) %>% 
   as.data.frame()
 
-yearly_q10 = mt_mn_q %>%  #same as mnq30
+yearly_q10 = q_long %>% 
+  mutate(year= year(date)) %>% 
   group_by(gauge, year) %>% 
-  summarise(yearly_min = quantile(q_mean,.1)) %>% 
+  summarise(yearly_min = round(quantile(q,.1),4)) %>% 
   spread(key=gauge, value=yearly_min) %>% 
   dplyr::select(-year) %>% 
   as.data.frame()
+q_long
 
 
 #month with max drought overall####
@@ -119,6 +205,7 @@ dr_length_1_5 <- dr_n(severity = -1.5) #min value is -1.97
 
 dr_event_no_1<- dr_count(severity = -1)
 
+dsi_1.5<- dr_severity(severity = -1.5)
 dsi_1<- dr_severity(severity = -1)
 
 dsi_1_yearly = list()
@@ -129,6 +216,8 @@ dsi_1_yearly[[i]] = dsi_1[[i]] %>%
   summarise(mean_dsi = mean(dsi), mean_length = mean(dr_length), mean_inten = mean(dr_intens))
 
 }
+
+ssi_1_long$ssi
 
 
   
