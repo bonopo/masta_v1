@@ -39,21 +39,15 @@ legend("topleft", col=c(1,2), pch=c(1, NA), lty=c(NA, 2), c("ACF", "p value"), b
 dev.off()
 }
 #mann kendall with AR correction ####
-yearly_mean_q
-yearly_min_q#
-summer_ave_q#
-summer_min_q#
-summer_q_q10
-nq_monthly
+
 
 mk_tests_par(raw_data = c("yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10","nq_monthly", "yearly_mean_q"))
 
 
-mk_tests_par(raw_data = "yearly_mean_q")
-#problem of sqrt(VS) = na produced
+mk_tests_par(raw_data = c("ms30_min", "ms30_date"))
 
-mmkh_nq_monthly = t(sapply(c(nq_monthly[,1:ncol(nq_monthly)]), FUN =mmkh))
-mmkh_yearly_q10 = t(sapply(c(yearly_q10[,1:ncol(yearly_q10)]), FUN =mmkh)) %>% as.data.frame()
+
+#problem of sqrt(VS) = na produced
 
 mmkh_summer_q10 = t(sapply(c(summer_q_q10[,1:ncol(summer_q_q10)]), FUN =mmkh))
 
@@ -79,10 +73,10 @@ data_mmkh = as.data.frame(mmkh_yearly_q10)
 
 colnames(data_mmkh) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "Tau", "sen_slope", "old_var", "new_var")
 
-data_bb = modiscloud::unlist_df(bb_yearly_min_q_df)
+data_bb = modiscloud::unlist_df(bb_ms7_min_df)
 plot(mmkh_summer_ave_q_df$Tau ~ mmkh_summer_min_q_df$Tau)
 
-ggsave("yearly_q10_significance.png")
+ggsave("q_mean_mk_nq7.png")
 
 ggplot()+
   geom_point(data = data_mmkh, aes(y=Tau, x=as.factor(gauges$mnq30_month), col= gauges$bfi),inherit.aes = FALSE)+
@@ -104,11 +98,10 @@ ggplot()+
   scale_color_discrete("Significance")
 
 ggplot()+
-  geom_point(data = data_mmkh, aes(y=Tau, x=gauges$saar ,col=as.factor(gauges$sr)),inherit.aes = FALSE)+
-  xlab("SAAR [mm]")+
-  ylab("mk tau of yearly q10")+
-  scale_color_manual("Seasonality",labels = c("summer", "no clear seasonality", "winter"), values = c(2, 3,4))
-
+  geom_point(data = data_bb, aes(y=tau, x=gauges$q_mean ,col=gauges$cor_spi))+
+  xlab("q mean [unit???]")+
+  ylab("mk tau of nq7 summer")+
+  scale_color_continuous("Correlation of \n SPI-n")
 
 
 ggplot()+
@@ -170,6 +163,8 @@ ggplot()+
   ylab("mmkh tau q10 yearly")+
   xlab("mk tau drought intensity")+
   scale_color_discrete("Significance of \n q10 trend")
+
+gauges$spi_n_cor
 
 
 plot(trend_len$sl ~ trend_len_mmkh$new.P.value)
