@@ -1,8 +1,8 @@
 # Startin script
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-save.image(file="./data/r_temp_image/version_4.Rdata")
-load(file="./data/r_temp_image/version_2.Rdata")
+#save.image(file="./data/r_temp_image/version_4.Rdata")
+load(file="./data/r_temp_image/version_4.Rdata")
 
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
