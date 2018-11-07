@@ -135,7 +135,7 @@ spi_spei_reg <- function(sci="spi_", sci_n = c(1,2,3,6,12,24)){
       x <- get(paste0(sci,n))
       y <- get("ssi_1")
       for (g in 1:catch_n){
-        temp <- lm(x[,g]~y[,g], na.action = na.exclude)
+        temp <- lm(y[,g]~x[,g], na.action = na.exclude)
         lm_intercept[g,i]  <- temp$coefficients[1]
         lm_slope[g,i] <- temp$coefficients[2]
         lm_rsq[g,i] <- summary(temp)$adj.r.squared
