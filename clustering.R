@@ -110,6 +110,7 @@ max_drought_sev = c()
 
 gauges$max_dr_sev  =max_drought_sev
 
+
 #total number of events####
 
 n_events = c()
@@ -119,6 +120,14 @@ n_events = c()
 
 gauges$n_events = n_events
 
+#average q ####
+
+q_mean = q_long %>% 
+  filter(year(date) >1970 & year(date) < 2001) %>% 
+  group_by(gauge) %>% 
+  summarise(mean = mean(q))
+
+gauges$q_mean = c(q_mean$mean)
 #clustered plots #### 
 #see barker et al
 
