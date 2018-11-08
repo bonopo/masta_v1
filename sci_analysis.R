@@ -263,36 +263,26 @@ lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.
 # monthly correlation values for SPI/SPEI####
   
 
-#function has to be changed doesn't calculate only summer due to |
-summer_cor_spi = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=5, end=10) 
+summer_cor_spi = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=5, end=11) 
   
-c = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_", ssi="ssi_1", begin=4, end=10) 
+summer_cor_spei = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_", ssi="ssi_1", begin=5, end=11) 
 
-winter_cor_spi = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=11, end=3) 
-
-winter_cor_spei = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_", ssi="ssi_1", begin=11, end=3) 
 
 best_spi_summer=c()
 best_spei_summer =c()
 value_spei_summer = c()
 value_spi_summer=c()
-best_spi_winter=c()
-best_spei_winter =c()
-value_spei_winter = c()
-value_spi_winter=c()
 
 for(r in 1:catch_n){
- best_spi_summer[r] = summer_cor_spi[r,] %>% which.max()
- value_spi_summer[r] = summer_cor_spi[r,] %>% max()}
+ best_spei_summer[r] = summer_cor_spei[r,] %>% which.max()
+ value_spei_summer[r] = summer_cor_spei[r,] %>% max()}
 
-for(r in 1:catch_n){
- best_spi_winter[r] = winter_cor_spi[r,] %>% which.max()
- value_spi_winter[r] = winter_cor_spi[r,] %>% max()}
 
-gauges$best_spi_winter = best_spi_winter
-gauges$best_spei_winter = best_spei_winter
+gauges$best_spei_summer = best_spei_summer
+gauges$cor_spei_summer = value_spei_summer
 
-plot(best_spei -best_spei_summer)
+
+
 
 # stepwise regression ####
 g=228
@@ -301,27 +291,16 @@ res = step(lm(ssi_1[,g]~spei_1[,g]+ spi_1[,g] + spei_2[,g]+ spi_2[,g]+ spei_3[,g
 
 summary(res)
   extractAIC()
-# (OLD) SPEI vs. SPI comparison with regression (OLD)-------------------------------------------------
-
-lm_spei_ssi <- spi_spei_reg(pred = "spei_v2") #[1]intercept, [2]slope [3] r²
-lm_spi_ssi <- spi_spei_reg(pred="spi_v2")
-
-sci_4_i <- sci_reg(sci_n = 4, interaction = T)
-
-
-stat <- c()
-for (i in 1:338){
-  stat[i] <- sci_4_i[[i]]$adj.r.squared
-}
-
-pdf("./plots/sci_4_i_r2.pdf") #i interaction, ni no interaction
-plot(stat, t="p")
-dev.off()
-
-#plots
-# pdf("./plots/spi-ssi_regression.pdf")
-# par(mfrow=c(1,3))
-# boxplot(lm_spi_ssi[[1]], ylab="intercept", xlab="spi-n" ) #intercept
-# boxplot(lm_spi_ssi[[2]], ylab="slope", xlab="spi-n") #slope
-# boxplot(lm_spi_ssi[[3]], ylab="r²", xlab="spi-n") #r²
-# dev.off()
+#plots####
+  gauges_df = gauges %>% as.data.frame()
+  
+  ggplot() +
+      geom_point(data= gauges_df, aes(x=bfi,y=mnq30_month,  col=as.factor(sr)))+
+    ylab("average month of lowest flow")+
+    scale_color_discrete("Seasonality \n ratio", label=c("summer", "unclear", "winter"))+
+    scale_y_continuous(breaks = seq(1,12,1), labels=month.abb)
+  
+  ggsave("bfi_lf_month.png")
+    
+  gauges$mnq30_month
+  
