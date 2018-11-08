@@ -30,15 +30,6 @@ output[[i]] <- spi_temp
  return(output)
 }
 
-# dist_fitt <- function(distry, monthy){ #similar as above, old version, not used in script
-#   q_by_month <- data.frame()
-#     for (i in monthy){
-#     q_by_month <- month_ext(monthx = monthy)
-#     assign(str_to_lower(month.abb[i]), q_by_month)
-#     }
-#     temp <- fitSCI(q_by_month$V1, first.mon = 1, distr = distx, time.scale = agg_n, p0 =p0x)
-#   assign(paste0("params_", disrty), temp)
-# }
 
 spei_vec <- function(data, spei=FALSE, gaugex=mt_mn_temp$gauge){ #to transform spei or spi list into vector
   output <-  vector()
@@ -111,9 +102,9 @@ cor_sci_ssi_sea <- function(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ss
   for (n in sci_n){
   x_data <- get(paste0(sci,n)) %>% 
     mutate(yr_mt = as.Date(yr_mt, origin = "1970-01-01")) %>% 
-    filter(month(yr_mt) >= begin | month(yr_mt)<= end) 
+    filter(month(yr_mt) >= begin & month(yr_mt)<= end) 
   y_data <- get(ssi) %>% 
-    filter(month(yr_mt) >= begin | month(yr_mt)<= end) 
+    filter(month(yr_mt) >= begin & month(yr_mt)<= end) 
   for (g in 1:catch_n){
     mat[g,i] <- cor(x= x_data[,g], y_data[,g], method = cor_met, use="na.or.complete" )
      }
@@ -315,6 +306,8 @@ for(d in raw_data){
   res_mmkh = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmkh))
   res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky))
   assign(paste0("bb_",d ), modiscloud::unlist_df(t(res_bb)), envir = .GlobalEnv)
+  colnames(res_mmkh) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
+  colnames(res_mmky) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
   assign(paste0("mmkh_", d), as.data.frame(res_mmkh), envir = .GlobalEnv )
   assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
 }}
@@ -389,9 +382,9 @@ bbsmK_mod = function (x, ci = 0.95, nsim = 2000, eta = 1, bl.len = NULL)
     slp <- round(MK.orig["Sen's slope"], digits = 7)
     S <- MK.orig["S"]
     MKtau <- function(x) modifiedmk::mkttest(x)[["Tau"]]
-    boot.out <- boot::tsboot(x, MKtau, R = nsim, l = bl.len, sim = "fixed") # add orig.t= TRUE
+    boot.out <- boot::tsboot(x, MKtau, R = nsim, l = bl.len, sim = "fixed", orig.t = TRUE) 
     Tau <- round(boot.out$t0, digits = 7)
-    bbs.ci <- boot::boot.ci(boot.out, conf = ci, type = "basic")$basic[4:5] # change to perc
+    bbs.ci <- boot::boot.ci(boot.out, conf = ci, type = "perc")$perc[4:5] 
     lb <- round(bbs.ci[1], digits = 7)
     ub <- round(bbs.ci[2], digits = 7)
     res = matrix(nrow=1, ncol=6)
@@ -456,12 +449,12 @@ ken_trend <- function(agg_mn= c(1,2,3,6,9,12,24), data_source="spi_", sci=TRUE){
   return(ken_tot)
 }
 
-## extracting seasonal data 
-seas_cl = function(data_source = "mt_mn_temp", method="mean", value = "temp_m", begin =4, end=10){
+# extracting seasonal data ####
+summer_cl = function(data_source = "mt_mn_temp", method="mean", value = "temp_m", begin =5, end=11){
  data = get(data_source)
   if(method=="mean"){
   res <- data %>% 
-  filter(month(yr_mt) >= begin | month(yr_mt)<= end) %>% 
+  filter(between(month(yr_mt), begin , end)) %>% 
   group_by(gauge, year(yr_mt)) %>% 
   summarise(mean = get(method)(get(value)))  %>% 
   ungroup() %>% 
@@ -469,7 +462,7 @@ seas_cl = function(data_source = "mt_mn_temp", method="mean", value = "temp_m", 
   as.data.frame()
 }else{
 res <- data %>% 
-  filter(month(yr_mt) >= begin | month(yr_mt)<= end) %>% 
+  filter(month(yr_mt) >= begin &month(yr_mt)<= end) %>% 
   group_by(gauge, year(yr_mt)) %>% 
   summarise(value = get(method)(get(value))) %>% 
   ungroup() %>% 
@@ -528,6 +521,6 @@ if(data$z_anom_start[data$gauge == g][d+d_start-1] < 0){
 data$z_anom_end[data$gauge == g]
 
 }
-# plot(y= data$z_anom[data$gauge==1],x = data$date[data$gauge==1],t="l")
+
 
 
