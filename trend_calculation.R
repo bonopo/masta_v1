@@ -5,16 +5,6 @@ source("./R/masta_v1/functions.R")
 source("./R/masta_v1/data_handling.R")
 
 
-
-#seasonal mk test ####
-ken_summer_min_q = ken_trend(data_source = "summer_min_q", sci=FALSE)
-gauges$ken_summer_min_q =ken_summer_min_q[,1]
-
-gauges$summer_ave_q = ken_trend(data_source = "summer_ave_q", sci=FALSE)[,1]
-gauges$summer_sum_p = ken_trend(data_source = "summer_sum_p", sci=FALSE)[,1]
-gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
-
-
 #acf####
 res = matrix(nrow=catch_n, ncol=6)
 c=1
@@ -38,19 +28,24 @@ abline(h=c(1.96/sqrt(length(acf_df[,i])), -1.96/sqrt(length(acf_df[,i]))), lty=2
 legend("topleft", col=c(1,2), pch=c(1, NA), lty=c(NA, 2), c("ACF", "p value"), bty="n")
 dev.off()
 }
+#seasonal mk test ####
+ken_summer_min_q = ken_trend(data_source = "summer_min_q", sci=FALSE)
+gauges$ken_summer_min_q =ken_summer_min_q[,1]
+
+gauges$summer_ave_q = ken_trend(data_source = "summer_ave_q", sci=FALSE)[,1]
+gauges$summer_sum_p = ken_trend(data_source = "summer_sum_p", sci=FALSE)[,1]
+gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
+
+
+
 #mann kendall with AR correction ####
+bb_
 
-
-mk_tests_par(raw_data = c("yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10","nq_monthly", "yearly_mean_q"))
-
-
-mk_tests_par(raw_data = c("ms30_min", "ms30_date"))
-
+mk_tests_par(raw_data = c("monthly_mean"))
 
 #problem of sqrt(VS) = na produced
 
-mmkh_summer_q10 = t(sapply(c(summer_q_q10[,1:ncol(summer_q_q10)]), FUN =mmkh))
-
+mmkh_summer_q10 = t(sapply(c(summer_q10[,1:ncol(summer_q10)]), FUN =mmkh))
 
 # mann- kendall test ------------------------------------------------------
 
@@ -59,13 +54,6 @@ ken_spei <- ken_trend(agg_mn= c(1,2,3,6,9,12,24), data_source =  "spei_", sci = 
 ken_spi <- ken_trend(agg_mn= c(1,2,3,6,9,12,24), sci = TRUE, data_source =  "spi_")
 ken_ssi <- ken_trend(data_source =  "ssi_1", sci = FALSE )
 
-mnq30_df = mnq30[,c(1:catch_n+1)]
-ken_mnq30 = ken_trend(data_source = "mnq30_df", sci=FALSE)
-gauges$mnq30_yearly_trend = ken_mnq30[,1]
-
-plot(ken_ssi[,1])#, log="y",)
-
-which.min(ken_mnq30[,1])
 
 # quantil trend ####
 
