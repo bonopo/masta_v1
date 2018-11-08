@@ -4,9 +4,9 @@
 
 #plotting mann-kendall ####
 
-data_mmkh = as.data.frame(mmkh_yearly_q10)
+mmkh_winter_q10 = as.data.frame(mmkh_winter_q10)
 
-colnames(data_mmkh) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "Tau", "sen_slope", "old_var", "new_var")
+colnames(mmkh_winter_q10) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
 
 data_bb = modiscloud::unlist_df(bb_ms7_min_df)
 plot(mmkh_summer_ave_q_df$Tau ~ mmkh_summer_min_q_df$Tau)
@@ -49,9 +49,13 @@ ggplot()+
 
 
 ggplot()+
-  geom_point(data = data_bb[1:50,], aes(y=tau, x=1:50),inherit.aes = FALSE)
+  geom_point(aes(y=mmkh_summer_q10$tau , x=mmkh_winter_q10$tau, col=as.factor(gauges_df$sr)))+
+  geom_abline(slope = 1, intercept =  0)+
+  ylab("summer q10 mmkh tau")+
+  xlab("winter q10 mmkh tau")+
+  scale_color_discrete("Season of \n low flow", label=c("summer", "unclear", "winter"))
 
-
+ggsave("winter_summer_q10.png")
 # trends in drought charachteristics --------------------------------------
 
 #looking only at the catchments that have a negative trend in q10 values:
