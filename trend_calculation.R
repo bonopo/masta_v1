@@ -39,13 +39,20 @@ gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
 
 
 #mann kendall with AR correction ####
-bb_
 
-mk_tests_par(raw_data = c("monthly_mean"))
 
 #problem of sqrt(VS) = na produced
 
-mmkh_summer_q10 = t(sapply(c(summer_q10[,1:ncol(summer_q10)]), FUN =mmkh))
+mmkh_ms7_min = t(sapply(c(ms7_min[,1:ncol(ms7_min)]), FUN =mmkh))
+mmkh_ms7_date = t(sapply(c(ms7_date[,1:ncol(ms7_date)]), FUN =mmkh)) %>% as.data.frame()
+mmkh_ms7_min %<>% as.data.frame() 
+
+for ( i in 1:12) res[i] =paste0(str_to_lower(month.abb[i]),"_mean_df")
+mmkh_par(raw_data = c(res))
+
+
+
+
 
 # mann- kendall test ------------------------------------------------------
 
