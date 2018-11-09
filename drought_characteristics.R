@@ -190,13 +190,28 @@ monthly_mean = q_long %>%
   dplyr::select(-yr_mt) %>% 
   as.data.frame()
 
+monthly_mean_t = q_long %>% 
+  mutate(yr_mt = ymd(paste0(year(date),"-",month(date),"-15"))) %>% 
+  group_by(gauge, yr_mt) %>% 
+  summarise(monthly_mean = mean(q)) %>% 
+  mutate(month= month(yr_mt))
+
+ res =  plyr::dlply(monthly_mean_t, c("gauge", "month"))
+ int = seq(1,4045,12)
+ for(i in 1:12){
+ df=  Reduce(rbind,res[int]) %>% spread(key=gauge,value= monthly_mean) %>% dplyr::select(-yr_mt, -month)
+ assign(paste0(str_to_lower(month.abb[i]),"_mean_df"),df)
+ int = int+1
+ }
+remove(res, int, monthly_mean_t)
+
 #number of months in a year affected by drought ####
 
 
 dr_length_1 <- dr_n()
 dr_length_1_5 <- dr_n(severity = -1.5) #min value is -1.97
 
- 
+ boot.ci()
 
 
 #drought severity & intensity####
