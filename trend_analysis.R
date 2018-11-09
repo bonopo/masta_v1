@@ -114,6 +114,7 @@ spplot(gauges, c("mmkh_q10"), col.regions = rainbow(100, start = 4/6, end = 1),
         )
     )
 )
+
 # negative trend detail examination ####
 
 
@@ -124,3 +125,15 @@ neg_tau_q10 = mmkh_yearly_q10 %>%
 neg_q10 = which(mmkh_yearly_q10$Tau < 0)
 
 
+
+#monthly trend analysis ####
+
+for ( i in 1:12) res[i] =paste0("mmkh_",str_to_lower(month.abb[i]),"_mean_df")
+
+monthly_mmkh_tau = get(res[1:12])$tau
+
+monthly_mmkh_tau = sapply(1:12, function(x) get(res[x])$tau) %>% as.data.frame()
+
+png("monthly_mmkh_bxplt.png")
+boxplot(monthly_mmkh_tau, names = month.abb, ylab="mmkh tau of monthly mean" )
+dev.off()
