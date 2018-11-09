@@ -142,9 +142,11 @@ dev.off()
 # drought attribution: SPI or SPEI? with correlation ####
 
 cor_spi_ssi = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1")
-cor_spei_ssi = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_", ssi="ssi_1")
+cor_spei_ssi = cor_sci_ssi(sci_n= c(2), cor_met="p", sci="spei_", ssi="ssi_1")
 
 
+best_spi = c()
+  value_spi = c()
 
 for(r in 1:catch_n){
  best_spi[r] = cor_spi_ssi[r,] %>% which.max()
@@ -158,6 +160,27 @@ gauges$cor_spei_n = best_spei
 gauges$cor_spi_n = best_spi
 gauges$cor_spi = value_spi
 gauges$cor_spei = value_spei
+
+ggplot()+
+  geom_point(aes(y= mmkh_ms7_min$Tau, x=value_spi, col= gauges_df$bfi))+
+  ylab("mmkh tau of mnq7 summer")+
+  xlab("correlation spi-n")+
+  scale_color_continuous("BFI")
+
+ggsave("mnq7_summer_date_min.png")
+
+ggplot()+
+  geom_point(aes(x= mmkh_ms7_min$Tau , mmkh_ms7_date$Tau, col=gauges_df$bfi))+
+  geom_abline(slope=1, intercept = 0)+
+  ylab("mmkh mnq7 summer date")+
+  xlab("mmkh mnq7 summer")+
+  scale_color_continuous("BFI")
+
+ggplot()+
+  geom_point(aes(y= mmkh_ms7_min$Tau , x= cor_spei_ssi$`2`, col=gauges_df$bfi))+
+  ylab("mmkh mnq7 summer tau")+
+  xlab("corr. SPEI-2 ~ SSI-1")+
+  scale_color_continuous("BFI")
 
 # pdf("./plots/spi_spei_cor.pdf")
 # plot(value_spi, ylab="pearson correlation")
