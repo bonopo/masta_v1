@@ -312,6 +312,15 @@ for(d in raw_data){
   assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
 }}
 
+mmkh_par = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
+
+for(d in raw_data){
+  ts_data = get(d)
+  #modified mk test
+  res_mmkh = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmkh))
+  colnames(res_mmkh) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
+  assign(paste0("mmkh_", d), as.data.frame(res_mmkh), envir = .GlobalEnv )
+}}
 
 
 
