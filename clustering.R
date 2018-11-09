@@ -162,4 +162,10 @@ ggplot(data=gauges_df)+
   geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
 ggsave("max_dr_dur_med_dr_int_bfi.png")
 
+png("gauges_sr.png")
+spplot(gauges, "sr")
+dev.off()
+
+gauges$cor_spi_n
+
 gauges$sr
