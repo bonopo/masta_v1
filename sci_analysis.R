@@ -314,6 +314,24 @@ res = step(lm(ssi_1[,g]~spei_1[,g]+ spi_1[,g] + spei_2[,g]+ spi_2[,g]+ spei_3[,g
 
 summary(res)
   extractAIC()
+#longterm (lt) memory effect of catchments####
+lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_")
+lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_")
+
+ggplot()+
+  geom_point(aes(y=lt_cor_spi$`24`, x=gauges_df$bfi, col=as.factor(gauges_df$spi_n )))+
+  ylab("cor. SPI-24 ~ SSI-1")+
+  xlab("BFI")+
+  scale_color_discrete("optim. \n SPI-n")
+
+ggplot()+
+  geom_point(aes(y=lt_cor_spi$`12`, x=gauges_df$bfi, col=gauges_df$Enzgsg_ ))+
+  ylab("cor. SPI-12 ~ SSI-1")+
+  xlab("BFI")+
+  scale_color_continuous("Catchment \n Size [km²?]")
+ggsave("memoryeffect_24.png")
+
+    
 #plots####
   gauges_df = gauges %>% as.data.frame()
   
