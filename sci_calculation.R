@@ -7,14 +7,15 @@ source("./R/masta_v1/data_handling.R")
 # Distribution free calculation -------------------------------------------
 
 sci_np(sci_data="mt_sm_p_wide", agg_n=c(1,2,3,6,9,12,24), sci_name="spi")
-sci_np(sci_data="spei_data_mat", agg_n=c(1,2,3,6,9,12,24), sci_name="spei")  
+sci_np(sci_data="spei_data_mat", agg_n=c(2), sci_name="spei")  
 sci_np(sci_data="mt_mn_q_wide", agg_n=1, sci_name="ssi") 
 ssi_1_long = ssi_1 %>% 
 gather(key=gauge, value=ssi, -yr_mt) %>% 
   as.tbl()
 
-plot(order(spi_24$`1`))
-  
+png("spi_1.png")
+plot(sort(spi_1$`1`), xlab="month [n]", ylab="spi-1 value" )
+dev.off()  
 # Parametric method --------------------------------------------------------
 
 
