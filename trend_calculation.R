@@ -1,8 +1,8 @@
 
 # Trend analysis ----------------------------------------------------------
 
-source("./R/masta_v1/functions.R")
-source("./R/masta_v1/data_handling.R")
+source("./R/masta_v1/functions.R")# has to run before if not objects will be missin!
+source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
 
 
 #acf####
@@ -40,6 +40,7 @@ gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
 
 #mann kendall with AR correction ####
 
+mk_tests_par(raw_data = c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10"))
 
 #problem of sqrt(VS) = na produced
 
