@@ -192,8 +192,11 @@ sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
  erg <- erg[order(as.Date(erg[,(catch_n+1)])),] %>% as.data.frame()
  colnames(erg) <- c(1:catch_n,"yr_mt")
  erg$yr_mt = as.Date(erg$yr_mt, origin = "1970-01-01")
+  cat(paste0(sci_name,"_",a)," finished")
  assign(paste0(sci_name,"_",a), erg, envir = .GlobalEnv)
+
  }}
+
 
 # drought characteristics -------------------------------------------------
 
@@ -301,7 +304,7 @@ for(d in raw_data){
   cat("calculating bootstrapped MK Trend test: " , d, "\n")
   res_bb=parSapply(cl,c(ts_data[,1:ncol(ts_data)]),FUN=bbsmK_mod )
   stopCluster(cl) #to return memory ressources to the system
-  cat("finished bootstrapping starting modifed mk")
+  cat("finished bootstrapping starting modifed mk \n")
   #modified mk test
   res_mmkh = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmkh))
   res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky))
