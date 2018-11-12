@@ -1,7 +1,7 @@
 # Startin script
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#save.image(file="./data/r_temp_image/version_5.Rdata")
+save.image(file="./data/r_temp_image/basic_data+para+bb.Rdata")
 #load(file="./data/r_temp_image/version_5.Rdata")
 
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud"))
