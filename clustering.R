@@ -1,9 +1,9 @@
 
 # Clustering --------------------------------------------------------------
-source("./R/masta_v1/functions.R")
-source("./R/masta_v1/data_handling.R")
-source("./R/masta_v1/sci_calculation.R")
-source("./R/masta_v1/drought_characteristics.R")
+source("./R/masta_v1/functions.R")# has to run before if not objects will be missin!
+source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
+source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
+source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missin!
 
 #seasonality ratio (SR)####
 
@@ -169,3 +169,10 @@ dev.off()
 gauges$cor_spi_n
 
 gauges$sr
+
+#regionalisation####
+int = which(gauges$Hochwrt > 5900000)
+gauges$saar[int] %>% mean()
+gauges$saar %>%  which.max()
+
+spplot(gauges, "saar")
