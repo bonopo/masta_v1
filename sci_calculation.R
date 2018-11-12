@@ -1,28 +1,26 @@
 
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-source("./R/masta_v1/data_handling.R")
+source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missing!
 
 
 # Distribution free calculation -------------------------------------------
 
 sci_np(sci_data="mt_sm_p_wide", agg_n=c(1,2,3,6,9,12,24), sci_name="spi")
-sci_np(sci_data="spei_data_mat", agg_n=c(2), sci_name="spei")  
+sci_np(sci_data="spei_data_mat", agg_n=c(1,2,3,6,9,12,24), sci_name="spei")  
 sci_np(sci_data="mt_mn_q_wide", agg_n=1, sci_name="ssi") 
 ssi_1_long = ssi_1 %>% 
 gather(key=gauge, value=ssi, -yr_mt) %>% 
   as.tbl()
 
-png("spi_1.png")
-plot(sort(spi_1$`1`), xlab="month [n]", ylab="spi-1 value" )
-dev.off()  
+# png("spi_1.png")
+# plot(sort(spi_1$`1`), xlab="month [n]", ylab="spi-1 value" )
+# dev.off()  
 # Parametric method --------------------------------------------------------
 
 
 # SCI calculation ---------------------------------------------------------
-setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-source("./R/masta_v1/data_handling.R")
-source("./R/masta_v1/functions.R")
+
 
 # SPI calculation ---------------------------------------------------------
 #aggregating into montly sums
@@ -34,7 +32,7 @@ source("./R/masta_v1/functions.R")
 #calculating SPI with gamma distribution see paper McKee et al 1993
 # for (i in 1:agg_month){ #change to 24 later
 #   #SPI - n aggregation month 1 -24 month like in barker et al 2016
-# temp <- sci_calc(datax = precip_monthly$month_sum, gaugex =precip_monthly$gauge, distx = "gamma", agg_n = i )
+temp <- sci_calc(datax = mt_sm_p$month_sum, gaugex =mt_sm_p$gauge, distx = "gamma", agg_n = 6 )
 # spi_v <- spei_vec(temp)
 # m1 <- matrix(spi_v, nrow = 480, byrow =F)
 # spi_df <- as.data.frame(m1) 
@@ -43,7 +41,7 @@ source("./R/masta_v1/functions.R")
 
 #calculate SPI with spei package####
 
-for (n in 1:agg_month){ 
+for (n in c(1,2,3,6,12,24)){ 
 res <- SPEI::spi(data= mt_sm_p_wide, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
 if(any(is.infinite(m1))) {
@@ -56,7 +54,7 @@ assign(paste0("spi_v2_",n), as.data.frame(m1))
 # SPEI calculation with loglogistic distribution--------------------------------
 
 
-for (n in 1:agg_month){ 
+for (n in c(1,2,3,6,12,24)){ 
 res <- SPEI::spei(data= spei_data_mat, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
 if(any(is.infinite(m1))) {
@@ -64,7 +62,7 @@ if(any(is.infinite(m1))) {
 assign(paste0("spei_v2_",n), as.data.frame(m1))
 }
 
-remove(m1)
+
 # mean discharge extraction for every gauge -------------------------------
 # 
 # 
@@ -108,8 +106,14 @@ mean(ssi_sorted$V100)
 # Calculatin SPEI with different distributions ----------------------------
 
 # with Generalized Logistic Distribution
-spei_gl <- sci_calc(distx = "genlog")
+spei_gl <- sci_calc(distx = "genlog",datax = mt_sm_p$month_sum, gaugex =mt_sm_p$gauge,  agg_n = 6)
 
+png("spi_comparison.png")
+plot(y=temp[[338]], x= date_seq,  type="l", ylab="SPI-6", xlab="")
+lines(y=spei_gl[[338]],x= date_seq, col=3)
+lines(y=spi_6$`338`, x= date_seq,col=2)
+legend("bottomright", col=c(1,3,2), lty=c(1,1,1), c("gamma", "gen. logistic", "nonparametric"), bty="n")
+dev.off()
 #with Generalized extreme value distribution
 #spei_gev <- sci_calc(distx = "gev") #doesn't work
 
