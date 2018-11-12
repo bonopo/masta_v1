@@ -2,8 +2,7 @@
 # Drought Characteristics -------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 
-source("./R/masta_v1/functions.R")
-source("./R/masta_v1/data_handling.R")
+source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
 
 
 
@@ -111,13 +110,13 @@ summer_q10 =  q_long %>%
 summer_q = mt_mn_q %>% 
   filter(month(yr_mt) >= 4, month(yr_mt)<= 10) %>% 
   spread(key=gauge, value=q_mean) %>% 
-  dplyr::select(-yr_mt, -month, -year) %>% 
+  dplyr::select(-yr_mt, -month) %>% 
   as.data.frame()
 
 winter_q = mt_mn_q %>% 
   filter(month(yr_mt) < 4 | month(yr_mt) > 10) %>%
   spread(key=gauge, value=q_mean) %>% 
-   dplyr::select(-yr_mt, -month, -year) %>% 
+   dplyr::select(-yr_mt, -month) %>% 
    as.data.frame()
 
 winter_q10 = q_long %>% 
@@ -210,9 +209,6 @@ remove(res, int, monthly_mean_t)
 
 dr_length_1 <- dr_n()
 dr_length_1_5 <- dr_n(severity = -1.5) #min value is -1.97
-
- boot.ci()
-
 
 #drought severity & intensity####
 
