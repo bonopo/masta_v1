@@ -1,9 +1,9 @@
 
 # SCI Analysis ------------------------------------------------------------
 
-source("./R/masta_v1/functions.R")
-source("./R/masta_v1/data_handling.R")
-source("./R/masta_v1/sci_calculation.R")
+source("./R/masta_v1/functions.R")# has to run before if not objects will be missin!
+source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
+source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
 # autocorrelation ---------------------------------------------------------
 acf(spei_1)
 
@@ -15,25 +15,25 @@ ccf_spi <- sci_ccf(sci= c(1,2,3,6,12,24),sci_namex = "spi_", sci_namey="ssi_1")
 ccf_spei <- sci_ccf(sci= c(1,2,3,6,12,24), sci_namex="spei_", sci_namey="ssi_1")
 
 #one can see that advancing the spei value leads to considerly less correlation after the spei_n lag (positive) the correlation drops dramatically. retropespective the correlation decreases slower. Meaning that spei leads ssi. 
-
-plot(x=1:catch_n, y=ccf_spei[[1]][,2])
-points(x=1:catch_n, y=ccf_spi[[1]][,3], col=2)
-
-pdf("./plots/boxplot_ccf_spei_acf_new.pdf")
-boxplot(ccf_spei[[1]], xlab="SPEI-n", ylab="acf")
-dev.off()
-
-pdf("./plots/boxplot_ccf_spei_lag_new.pdf")
-boxplot(ccf_spei[[2]], xlab="SPEI-n", ylab="lag")
-dev.off()
-
-pdf("./plots/boxplot_ccf_spi_acf_new.pdf")
-boxplot(ccf_spi[[1]], xlab="SPI-n", ylab="acf")
-dev.off()
-
-pdf("./plots/boxplot_ccf_spi_lag_new.pdf")
-boxplot(ccf_spi[[2]], xlab="SPI-n", ylab="lag")
-dev.off()
+# 
+# plot(x=1:catch_n, y=ccf_spei[[1]][,2])
+# points(x=1:catch_n, y=ccf_spi[[1]][,3], col=2)
+# 
+# pdf("./plots/boxplot_ccf_spei_acf_new.pdf")
+# boxplot(ccf_spei[[1]], xlab="SPEI-n", ylab="acf")
+# dev.off()
+# 
+# pdf("./plots/boxplot_ccf_spei_lag_new.pdf")
+# boxplot(ccf_spei[[2]], xlab="SPEI-n", ylab="lag")
+# dev.off()
+# 
+# pdf("./plots/boxplot_ccf_spi_acf_new.pdf")
+# boxplot(ccf_spi[[1]], xlab="SPI-n", ylab="acf")
+# dev.off()
+# 
+# pdf("./plots/boxplot_ccf_spi_lag_new.pdf")
+# boxplot(ccf_spi[[2]], xlab="SPI-n", ylab="lag")
+# dev.off()
 
 #gauge 72 has high lag why? its real catchment number is 94
 unique(mt_mn_temp$gauge)[72]
@@ -108,6 +108,8 @@ spi_ssi = spi_spei_reg(sci = "spi_")
 spei_ssi = spi_spei_reg(sci = "spei_") 
 best_spi = c()
 value_spi = c()
+best_spei = c()
+value_spei = c()
 
 for(r in 1:catch_n){
  best_spi[r] = spi_ssi[[3]][r,] %>% which.max()
@@ -121,21 +123,21 @@ for(r in 1:catch_n){
 gauges$reg_spei_n = best_spei
 gauges$reg_spei_n =value_spei
 
-pdf("./plots/spi_spei_reg.pdf")
-plot(best_spi - best_spei)
-dev.off()
-
-pdf("./plots/spi_spei_reg_rsq.pdf")
-plot(value_spi, ylab="best r²")
-points(value_spei, col=2)
-legend("bottomleft", col=c(1,2), pch=c(1,1), c("spi", "spei"), bty="n")
-dev.off()
-
-pdf("./plots/spi_spei_opt_agg_n.pdf")
-plot(best_spi, ylab="SPI-/SPEI-n with lowest r²")
-points(x=which(best_spei != best_spi), y=best_spei[best_spei != best_spi], col=2)
-legend("topleft", c("spi", "spei(only if diff. to spi)"), col=c(1,2), pch=c(1,1), bty="n")
-dev.off()
+# pdf("./plots/spi_spei_reg.pdf")
+# plot(best_spi - best_spei)
+# dev.off()
+# 
+# pdf("./plots/spi_spei_reg_rsq.pdf")
+# plot(value_spi, ylab="best r²")
+# points(value_spei, col=2)
+# legend("bottomleft", col=c(1,2), pch=c(1,1), c("spi", "spei"), bty="n")
+# dev.off()
+# 
+# pdf("./plots/spi_spei_opt_agg_n.pdf")
+# plot(best_spi, ylab="SPI-/SPEI-n with lowest r²")
+# points(x=which(best_spei != best_spi), y=best_spei[best_spei != best_spi], col=2)
+# legend("topleft", c("spi", "spei(only if diff. to spi)"), col=c(1,2), pch=c(1,1), bty="n")
+# dev.off()
 
 
 
@@ -147,7 +149,8 @@ cor_spei_ssi = cor_sci_ssi(sci_n= c(2), cor_met="p", sci="spei_", ssi="ssi_1")
 
 best_spi = c()
   value_spi = c()
-
+best_spei = c()
+  value_spei = c()
 for(r in 1:catch_n){
  best_spi[r] = cor_spi_ssi[r,] %>% which.max()
  value_spi[r] = cor_spi_ssi[r,] %>% max()}
@@ -299,12 +302,14 @@ value_spi_summer=c()
 for(r in 1:catch_n){
  best_spei_summer[r] = summer_cor_spei[r,] %>% which.max()
  value_spei_summer[r] = summer_cor_spei[r,] %>% max()}
-
+for(r in 1:catch_n){
+ best_spi_summer[r] = summer_cor_spi[r,] %>% which.max()
+ value_spi_summer[r] = summer_cor_spi[r,] %>% max()}
 
 gauges$best_spei_summer = best_spei_summer
 gauges$cor_spei_summer = value_spei_summer
-
-
+gauges$best_spi_summer = best_spi_summer
+gauges$cor_spi_summer = value_spi_summer
 
 
 # stepwise regression ####
@@ -343,5 +348,5 @@ ggsave("memoryeffect_24.png")
   
   ggsave("bfi_lf_month.png")
     
-  gauges$mnq30_month
+
   
