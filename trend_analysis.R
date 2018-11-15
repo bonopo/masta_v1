@@ -117,10 +117,10 @@ spplot(gauges, c("mmkh_q10"), col.regions = rainbow(100, start = 4/6, end = 1),
 
 # negative trend detail examination ####
 
-
-neg_tau_q10 = mmkh_yearly_q10 %>% 
-  as.data.frame() %>% 
-  filter(Tau <0)
+mmkh_ms7_min
+mmkh_ms7_min
+neg_tau_ms7 =   which(mmkh_ms7_min$tau <0 & mmkh_ms7_min$new_p < .05) 
+  
 
 neg_q10 = which(mmkh_yearly_q10$Tau < 0)
 
