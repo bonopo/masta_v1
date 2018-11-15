@@ -16,9 +16,12 @@ ccf_spei <- sci_ccf(sci= c(1,2,3,6,12,24), sci_namex="spei_", sci_namey="ssi_1")
 
 #one can see that advancing the spei value leads to considerly less correlation after the spei_n lag (positive) the correlation drops dramatically. retropespective the correlation decreases slower. Meaning that spei leads ssi. 
 # 
-# plot(x=1:catch_n, y=ccf_spei[[1]][,2])
-# points(x=1:catch_n, y=ccf_spi[[1]][,3], col=2)
-# 
+
+png("")
+plot(x=1:catch_n, y=ccf_spi_v2[[1]][,2])
+points(x=1:catch_n, y=ccf_spi[[1]][,2], col=2)
+
+
 # pdf("./plots/boxplot_ccf_spei_acf_new.pdf")
 # boxplot(ccf_spei[[1]], xlab="SPEI-n", ylab="acf")
 # dev.off()
@@ -104,12 +107,15 @@ plot(ssi_dec)
 # drought attribution: SPI or SPEI? with linear regression ####
 
 
-spi_ssi = spi_spei_reg(sci = "spi_") 
+spi_ssi = spi_spei_reg(sci = "spi_") #1 =intercept 2= slope 3 = rsq
 spei_ssi = spi_spei_reg(sci = "spei_") 
 best_spi = c()
 value_spi = c()
 best_spei = c()
 value_spei = c()
+
+plot(spi_ssi[[3]][,3])
+points(spi_ssi_v2[[3]][,3], col=2)
 
 for(r in 1:catch_n){
  best_spi[r] = spi_ssi[[3]][r,] %>% which.max()
@@ -143,9 +149,16 @@ gauges$reg_spei_n =value_spei
 
 # drought attribution: SPI or SPEI? with correlation ####
 
-cor_spi_ssi = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1")
+cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_v2_", ssi="ssi_1")
 cor_spei_ssi = cor_sci_ssi(sci_n= c(2), cor_met="p", sci="spei_", ssi="ssi_1")
 
+cor_spi_ssi
+
+png("cor_spi_v2_spi_np.png")
+plot(cor_spi_ssi[,3],ylab="correlation of SPI-3" )
+points(cor_spi_ssi_v2[,3], col=2)
+legend("bottomleft", col=c(1,2), pch=c(1,1), c("non-paramatric", "parametric"), bty="n")
+dev.off()
 
 best_spi = c()
   value_spi = c()
