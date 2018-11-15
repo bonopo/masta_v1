@@ -217,9 +217,8 @@ dr_length_1_5 <- dr_n(severity = -1.5) #min value is -1.97
 #intensity: it is the average value of a drought parameter below the critical level. It is measured as the drought severity divided by the duration.
 
 
-dr_event_no_1<- dr_count(severity = -1)
-
-dsi_1.5<- dr_severity(severity = -1.5)
+dr_event_no_1<- dr_count(severity = -1) #returns every month affected by drought
+dsi_1.5<- dr_severity(severity = -1.5) #returns all drought events by counting consecutive month affected by drought
 dsi_1<- dr_severity(severity = -1)
 
 dsi_1_yearly = list()
@@ -227,10 +226,37 @@ for (i in 1:catch_n){
 dsi_1_yearly[[i]] = dsi_1[[i]] %>% 
   mutate(year = year(dr_start)) %>% 
   group_by(year) %>% 
-  summarise(mean_dsi = mean(dsi), mean_length = mean(dr_length), mean_inten = mean(dr_intens))
+  summarise(sum_dsi = sum(dsi), sum_length = sum(dr_length), sum_inten = sum(dr_intens), n = n())
 
 }
 
 
 
+
+
+#drought frequency####
+
+mat_dsi= matrix(0, nrow=40, ncol=catch_n)
+for (i in 1:catch_n){
+int = pmatch(c(dsi_1_yearly[[i]][,1])$year,c(1970:2009 ) )
+  mat_dsi[int,i] = c(dsi_1_yearly[[i]][,2])$sum_dsi
+}
+
+mat_n= matrix(0, nrow=40, ncol=catch_n)
+for (i in 1:catch_n){
+int = pmatch(c(dsi_1_yearly[[i]][,1])$year,c(1970:2009 ) )
+  mat_n[int,i] = c(dsi_1_yearly[[i]][,5])$n
+}
+
+
+mat_dsi[,23] %>% plot(t="l")
+
+#per 5 year
+
+dr_freq_5yr = rollapply(mat_n, width=5, by= 5, FUN=sum, by.column=TRUE)
+dr_dsi_5yr = rollapply(mat_dsi, width=5, by= 5, FUN=sum, by.column=TRUE)
+#per decade
+dr_freq_10yr = rollapply(mat_n, width=10, by= 10, FUN=sum, by.column=TRUE)
+dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
+#drought free time####
 
