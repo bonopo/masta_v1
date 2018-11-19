@@ -8,13 +8,21 @@ mmkh_winter_q10 = as.data.frame(mmkh_winter_q10)
 
 colnames(mmkh_winter_q10) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
 
-data_bb = modiscloud::unlist_df(bb_ms7_min_df)
-plot(mmkh_summer_ave_q_df$Tau ~ mmkh_summer_min_q_df$Tau)
+bb_jun_mean_df
+bb_mar_mean_df
+bb_summer_ave_q
+bb_ms7_min
+data_bb = as.data.frame(bb_jun_mean_df)
+plot(unlist(data_bb$`Sen's slope`)~mmkh_jun_mean_df$sen_slope)
+      plot(mmkh_jun_mean_df$corrected_z  ~ mmkh_jun_mean_df$new_p)
+which(mmkh_jun_mean_df$new_p < .05) %>% length()
+
+  plot(mmkh_summer_ave_q_df$Tau ~ mmkh_summer_min_q_df$)
 
 ggsave("q_mean_mk_nq7.png")
 
 ggplot()+
-  geom_point(data = data_mmkh, aes(y=Tau, x=as.factor(gauges$mnq30_month), col= gauges$bfi),inherit.aes = FALSE)+
+  geom_point(data = data_bb, aes(y=new_tau, x=as.factor(gauges$mnq30_month), col= gauges$bfi),inherit.aes = FALSE)+
   xlab("month of mnq30")+
   ylab("mk tau of yearly q10")+
   scale_color_continuous("BFI")
@@ -127,7 +135,7 @@ neg_q10 = which(mmkh_yearly_q10$Tau < 0)
 
 
 #monthly trend analysis ####
-
+res=c()
 for ( i in 1:12) res[i] =paste0("mmkh_",str_to_lower(month.abb[i]),"_mean_df")
 
 monthly_mmkh_tau = get(res[1:12])$tau
@@ -137,3 +145,15 @@ monthly_mmkh_tau = sapply(1:12, function(x) get(res[x])$tau) %>% as.data.frame()
 png("monthly_mmkh_bxplt.png")
 boxplot(monthly_mmkh_tau, names = month.abb, ylab="mmkh tau of monthly mean" )
 dev.off()
+
+aov
+
+#new trend analysis####
+mmkh_mar_mean_df$sen_slope
+ggplot()+
+  geom_point(data = mmkh_mar_mean_df, aes(y=sen_slope, x=mmkh_jun_mean_df$sen_slope),inherit.aes = FALSE)+  
+  geom_point( aes(y=mmkh_mar_mean_df$sen_slope[which(mmkh_mar_mean_df$new_p<.05 & mmkh_jun_mean_df$new_p < .05)], x=mmkh_jun_mean_df$sen_slope[which(mmkh_mar_mean_df$new_p<.05 & mmkh_jun_mean_df$new_p < .05)], col="p<0.05"))+
+  xlab("june mean sen's slope")+
+  ylab("march mean sen's slope")+
+  scale_color_discrete("Significance")
+ggsave("june_march_sens.png")
