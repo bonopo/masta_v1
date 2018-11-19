@@ -295,6 +295,11 @@ dev.off()
 
 
 # trend calculaton --------------------------------------------------------
+# ts_data=yearly_mean_q[,1:6]
+# 
+ bbsmK_mod(c(jan_mean_df[,1]))
+mmkh_jan_mean_df[1,]
+
 mk_tests_par = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
 
 for(d in raw_data){
@@ -308,7 +313,7 @@ for(d in raw_data){
   #modified mk test
   res_mmkh = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmkh))
   res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky))
-  assign(paste0("bb_",d ), modiscloud::unlist_df(t(res_bb)), envir = .GlobalEnv)
+  assign(paste0("bb_",d ), t(res_bb), envir = .GlobalEnv)
   colnames(res_mmkh) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
   colnames(res_mmky) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
   assign(paste0("mmkh_", d), as.data.frame(res_mmkh), envir = .GlobalEnv )
@@ -346,6 +351,7 @@ cat(round((i/(ncol(ts_data)*length(raw_data))), 4), "% & i =", i, "\n" )
   assign(paste0("mmkh_", d,"_list"), res_mmkh, envir = .GlobalEnv )
   assign(paste0("mmky_", d,"_list"), res_mmky, envir = .GlobalEnv )
 }}
+
 
 
 bbsmK_mod = function (x, ci = 0.95, nsim = 2000, eta = 1, bl.len = NULL) 
@@ -395,22 +401,104 @@ bbsmK_mod = function (x, ci = 0.95, nsim = 2000, eta = 1, bl.len = NULL)
     S <- MK.orig["S"]
     MKtau <- function(x) modifiedmk::mkttest(x)[["Tau"]]
     boot.out <- boot::tsboot(x, MKtau, R = nsim, l = bl.len, sim = "fixed", orig.t = TRUE) 
-    Tau <- round(boot.out$t0, digits = 7)
+    new_tau <- mean(boot.out$t, digits = 7)
+    new_se = sd(boot.out$t)
     bbs.ci <- boot::boot.ci(boot.out, conf = ci, type = "perc")$perc[4:5] 
     lb <- round(bbs.ci[1], digits = 7)
     ub <- round(bbs.ci[2], digits = 7)
-    res = matrix(nrow=1, ncol=6)
-    res[1,1] = z
-    res[1,2] = slp
-    res[1,3] = S
-    res[1,4] = Tau
-    res[1,5] = lb
-    res[1,6] = ub
+    res = matrix(nrow=1, ncol=10)
+    res[1,1:6] = MK.orig
+    res[1,7] = new_tau
+    res[1,8] = new_se
+    res[1,9] = lb
+    res[1,10] = ub
     res = as.data.frame(res)
-    colnames(res) = c("z_value", "sen_slope", "S", "tau", "lb", "ub")
+    colnames(res) = c(names(MK.orig), "bb_tau","bb_se","lb", "ub")
     return(res)
 }
-
+ # mmkh = function (x, ci = 0.95)
+   # {
+    x = x
+    z = NULL
+    z0 = NULL
+    pval = NULL
+    pval0 = NULL
+    S = 0
+    Tau = NULL
+    essf = NULL
+    ci = ci
+    if (is.vector(x) == FALSE) {
+        stop("Input data must be a vector")
+    }
+    if (any(is.finite(x) == FALSE)) {
+        x <- x[-c(which(is.finite(x) == FALSE))]
+        warning("The input vector contains non-finite numbers. An attempt was made to remove them")
+    }
+    n <- length(x)
+    V <- rep(NA, n * (n - 1)/2)
+    k = 0
+    for (i in 1:(n - 1)) {
+        for (j in (i + 1):n) {
+            k = k + 1
+            V[k] = (x[j] - x[i])/(j - i)
+        }
+    }
+    slp <- median(V, na.rm = TRUE)
+    t = 1:length(x)
+    xn <- (x[1:n]) - ((slp) * (t))
+    for (i in 1:(n - 1)) {
+        for (j in (i + 1):n) {
+            S = S + sign(x[j] - x[i])
+        }
+    }
+    ro <- acf(rank(xn), lag.max = (n - 1), plot = FALSE)$acf[-1]
+    sig <- qnorm((1 + ci)/2)/sqrt(n)
+    rof <- rep(NA, length(ro))
+    for (i in 1:(length(ro))) {
+        if (ro[i] > sig || ro[i] < -sig) {
+            rof[i] <- ro[i]
+        }
+        else {
+            rof[i] = 0
+        }
+    }
+    cte <- 2/(n * (n - 1) * (n - 2))
+    ess = 0
+    for (i in 1:(n - 1)) {
+        ess = ess + (n - i) * (n - i - 1) * (n - i - 2) * rof[i]
+    }
+    essf = 1 + ess * cte
+    var.S = n * (n - 1) * (2 * n + 5) * (1/18)
+    if (length(unique(x)) < n) {
+        aux <- unique(x)
+        for (i in 1:length(aux)) {
+            tie <- length(which(x == aux[i]))
+            if (tie > 1) {
+                var.S = var.S - tie * (tie - 1) * (2 * tie + 
+                  5) * (1/18)
+            }
+        }
+    }
+    VS = var.S * essf
+    if (S == 0) {
+        z = 0
+        z0 = 0
+    }
+    if (S > 0) {
+        z = (S - 1)/sqrt(VS)
+        z0 = (S - 1)/sqrt(var.S)
+    }
+    else {
+        z = (S + 1)/sqrt(VS)
+        z0 = (S + 1)/sqrt(var.S)
+    }
+    pval = 2 * pnorm(-abs(z))
+    pval0 = 2 * pnorm(-abs(z0))
+    Tau = S/(0.5 * n * (n - 1))
+    return(c(`Corrected Zc` = z, `new P-value` = pval, `N/N*` = essf, 
+        `Original Z` = z0, `old P.value` = pval0, Tau = Tau, 
+        `Sen's slope` = slp, old.variance = var.S, new.variance = VS))
+}
 
 qua_trend <- function(quantil=0.1, data_source = "q_long"){
   ken=matrix(nrow=catch_n, ncol=2)
