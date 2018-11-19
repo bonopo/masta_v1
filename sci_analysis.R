@@ -98,11 +98,6 @@ plot(x =spi_2[,1] , y=ssi_1[,1])
 #offensichtliche aussage: desto höher der spi, desto höher der spei 
 
 
-# decompose time series into trend and seasonal part ----------------------
-ssi_ts <- ts(ssi_sorted, start=c(1970,1), end=c(2009, 12), deltat = 1/12 )
-
-ssi_dec <- decompose(ssi_ts[,1])
-plot(ssi_dec)
 
 # drought attribution: SPI or SPEI? with linear regression ####
 
@@ -152,7 +147,7 @@ gauges$reg_spei_n =value_spei
 cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_v2_", ssi="ssi_1")
 cor_spei_ssi = cor_sci_ssi(sci_n= c(2), cor_met="p", sci="spei_", ssi="ssi_1")
 
-cor_spi_ssi
+plot(cor_spi_ssi[,3] ~ spi_ssi[[2]][,3])
 
 png("cor_spi_v2_spi_np.png")
 plot(cor_spi_ssi[,3],ylab="correlation of SPI-3" )
