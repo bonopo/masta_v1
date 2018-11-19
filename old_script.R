@@ -59,6 +59,12 @@ mean(ssi_sorted$V100)
 
 
 
+# decompose time series into trend and seasonal part ----------------------
+ssi_ts <- ts(ssi_sorted, start=c(1970,1), end=c(2009, 12), deltat = 1/12 )
+
+ssi_dec <- decompose(ssi_ts[,1])
+plot(ssi_dec)
+
 # Calculatin SPEI with different distributions ----------------------------
 
 # with Generalized Logistic Distribution
@@ -228,6 +234,42 @@ dev.off()
 
 
 
+# mann- kendall test ------------------------------------------------------
+
+
+ken_spei <- ken_trend(agg_mn= c(1,2,3,6,9,12,24), data_source =  "spei_", sci = TRUE)
+ken_spi <- ken_trend(agg_mn= c(1,2,3,6,9,12,24), sci = TRUE, data_source =  "spi_")
+ken_ssi <- ken_trend(data_source =  "ssi_1", sci = FALSE )
+res=sapply(ms7_min[,1:338], FUN=mkttest)
+res %>% t() %>% head()
+bb_ms7_min %>% head()
+plot(x = res[6,], y=unlist(bb_ms7_min[,4]))
+
+
+# quantil trend ####
+
+
+quant_trend_1 <- qua_trend(quantil = 0.1, data_source = "q_long")
+quant_trend_05 <- qua_trend(quantil = 0.05, data_source = "q_long") # wie schweizer defnition Q347
+
+pdf("./plots/mk_quant.pdf")
+plot(quant_trend_05$tau, ylab="tau", xlab="catchments", ylim=c(-0.65, .45))
+points(quant_trend_1$tau, col=2)
+legend("bottomleft", pch=c(1,1), col=c(1,2), c("quantil = .05", "quantil = .1"), bty="n")
+abline(h=0, lty=2, col=4)
+dev.off()
+
+
+#seasonal mk test ####
+ken_summer_min_q = ken_trend(data_source = "summer_min_q", sci=FALSE)
+gauges$ken_summer_min_q =ken_summer_min_q[,1]
+
+gauges$summer_ave_q = ken_trend(data_source = "summer_ave_q", sci=FALSE)[,1]
+gauges$summer_sum_p = ken_trend(data_source = "summer_sum_p", sci=FALSE)[,1]
+gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
+
+
+
 # functions ---------------------------------------------------------------
 
 dist_fitt <- function(distry, monthy){ #similar as above, old version, not used in script
@@ -239,4 +281,5 @@ dist_fitt <- function(distry, monthy){ #similar as above, old version, not used 
     temp <- fitSCI(q_by_month$V1, first.mon = 1, distr = distx, time.scale = agg_n, p0 =p0x)
   assign(paste0("params_", disrty), temp)
 }
+
 
