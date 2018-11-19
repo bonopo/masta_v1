@@ -1,4 +1,3 @@
-
 # Trend analysis ----------------------------------------------------------
 
 source("./R/masta_v1/functions.R")# has to run before if not objects will be missing!
@@ -28,51 +27,24 @@ abline(h=c(1.96/sqrt(length(acf_df[,i])), -1.96/sqrt(length(acf_df[,i]))), lty=2
 legend("topleft", col=c(1,2), pch=c(1, NA), lty=c(NA, 2), c("ACF", "p value"), bty="n")
 dev.off()
 }
-#seasonal mk test ####
-ken_summer_min_q = ken_trend(data_source = "summer_min_q", sci=FALSE)
-gauges$ken_summer_min_q =ken_summer_min_q[,1]
-
-gauges$summer_ave_q = ken_trend(data_source = "summer_ave_q", sci=FALSE)[,1]
-gauges$summer_sum_p = ken_trend(data_source = "summer_sum_p", sci=FALSE)[,1]
-gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
-
-
 
 #mann kendall with AR correction ####
-
-mk_tests_par(raw_data = c("dr_freq_5yr", "dr_freq_10yr"))
+mk_tests_par(raw_data = "jun_mean_df")
+mk_tests_par(raw_data = c("mar_mean_df","jul_mean_df"))
+mmkh_ms7_date = t(sapply(c(ms7_date[,1:ncol(ms7_date)]), FUN =mmkh)) %>% as.data.frame()
 
 #problem of sqrt(VS) = na produced
+mmkh_par(raw_data = c("jun_mean_df", "mar_mean_df", "ms7_date", "ms7_min", "ms30_min", "yearly_q10"))
 
-mmkh_ms7_min = t(sapply(c(ms7_min[,1:ncol(ms7_min)]), FUN =mmkh))
-mmkh_ms7_date = t(sapply(c(ms7_date[,1:ncol(ms7_date)]), FUN =mmkh)) %>% as.data.frame()
-mmkh_ms7_min %<>% as.data.frame() 
 
 for ( i in 1:12) res[i] =paste0(str_to_lower(month.abb[i]),"_mean_df")
-mmkh_par(raw_data = c(res))
+mmkh_par(raw_data = c(mar_mean_df, jun_mean_df, aug_mean_df, ms7_min, ms7_date, ms30_min, ))
 
 
 
 
 
-# mann- kendall test ------------------------------------------------------
 
+#with no AR correction ####
 
-ken_spei <- ken_trend(agg_mn= c(1,2,3,6,9,12,24), data_source =  "spei_", sci = TRUE)
-ken_spi <- ken_trend(agg_mn= c(1,2,3,6,9,12,24), sci = TRUE, data_source =  "spi_")
-ken_ssi <- ken_trend(data_source =  "ssi_1", sci = FALSE )
-
-
-# quantil trend ####
-
-
-quant_trend_1 <- qua_trend(quantil = 0.1, data_source = "q_long")
-quant_trend_05 <- qua_trend(quantil = 0.05, data_source = "q_long") # wie schweizer defnition Q347
-
-pdf("./plots/mk_quant.pdf")
-plot(quant_trend_05$tau, ylab="tau", xlab="catchments", ylim=c(-0.65, .45))
-points(quant_trend_1$tau, col=2)
-legend("bottomleft", pch=c(1,1), col=c(1,2), c("quantil = .05", "quantil = .1"), bty="n")
-abline(h=0, lty=2, col=4)
-dev.off()
-
+mk_jun = sapply(c(jun_mean_df[,1:catch_n]), FUN= mkttest) %>% t()
