@@ -53,6 +53,7 @@ ms7_min %<>%  dplyr::select(gauge, ms7_min, year) %>%
   spread(key=gauge, value=ms7_min) %>% 
   dplyr::select(-year) 
 
+remove(ms7_df, ms7)
 
 #30 day moving average in summer than calculate :
   # min for every year
@@ -89,6 +90,19 @@ ms30_min = ms30_summer %>%
   spread(key=gauge, value=ms30_min) %>% 
   dplyr::select(-year) %>% 
   as.data.frame()
+
+
+#ms30_date and ms7_date do differ a lot see Plots
+for (i in sample(338)){
+plot(ms30_date[,i]~ms7_date[,i], main=i)
+  Sys.sleep(1)
+  }
+
+remove(ms30, ms30_df, ms30_summer)
+
+#comparing ms7 with ms30
+
+plot(ms30_min[,11] ~ ms7_min[,11])
 
 #summer mean q
 
@@ -259,4 +273,10 @@ dr_dsi_5yr = rollapply(mat_dsi, width=5, by= 5, FUN=sum, by.column=TRUE)
 dr_freq_10yr = rollapply(mat_n, width=10, by= 10, FUN=sum, by.column=TRUE)
 dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
 #drought free time####
+#visual plot checking ####
+for (i in sample(338, size=10)){
+plot(yearly_q10[,i]~summer_q10[,i], main=i)
+  Sys.sleep(1)
+  }
 
+#yearly_q10
