@@ -2,7 +2,7 @@
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 #save.image(file="./data/r_temp_image/basic_data+para+bb.Rdata")
-#load(file="./data/r_temp_image/basic_data+para+bb.Rdata")
+load(file="./data/r_temp_image/basic_data+para+bb.Rdata")
 
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
@@ -76,6 +76,8 @@ mt_mn_temp <- temp_long %>%
   group_by(gauge, yr_mt) %>%
   summarise(temp_m = mean(temp)) %>%
   ungroup()
+
+
 
 
 remove(precip, tempera,streamflow)
