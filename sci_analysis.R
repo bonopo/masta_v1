@@ -77,26 +77,6 @@ plot(y=ken[[1]][1,],x=1:agg_month, type="l", ylim=c(-.5, .5))
 for (i in 2:50) lines(y=ken[[1]][i,],x=1:agg_month, type="l")
 
 
-# kendall rank correlation -----------------------------------------------------
-
-mk_spi_tau <- list()
-mk_spi_S <- list()
-mk_spi_D <- list()
-mk_spi_p <- list()
-for (i in 1:ncol(spi_2)){
- mk_spi_tau[[i]] <-  Kendall(spi_2[,i], ssi_1[,i])$tau[1] 
- mk_spi_S[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$S[1] 
-mk_spi_D[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$D[1] 
-mk_spi_p[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$sl[1] 
-}
-
-Kendall(spi_1[,44], ssi_1[,44])
-#tau ist S/D
-#S anzahl an positiven - negativen trends
-#D value theoretisch mögliche maximale anzahl an trends
-plot(x =spi_2[,1] , y=ssi_1[,1])
-#offensichtliche aussage: desto höher der spi, desto höher der spei 
-
 
 
 # drought attribution: SPI or SPEI? with linear regression ####
@@ -145,7 +125,7 @@ gauges$reg_spei_n =value_spei
 # drought attribution: SPI or SPEI? with correlation ####
 
 cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_v2_", ssi="ssi_1")
-cor_spei_ssi = cor_sci_ssi(sci_n= c(2), cor_met="p", sci="spei_", ssi="ssi_1")
+cor_spei_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_v2_", ssi="ssi_1")
 
 plot(cor_spi_ssi[,3] ~ spi_ssi[[2]][,3])
 
@@ -160,8 +140,8 @@ best_spi = c()
 best_spei = c()
   value_spei = c()
 for(r in 1:catch_n){
- best_spi[r] = cor_spi_ssi[r,] %>% which.max()
- value_spi[r] = cor_spi_ssi[r,] %>% max()}
+ best_spi[r] = cor_spi_ssi_v2[r,] %>% which.max()
+ value_spi[r] = cor_spi_ssi_v2[r,] %>% max()}
 
 for(r in 1:catch_n){
  best_spei[r] = cor_spei_ssi[r,] %>% which.max()
@@ -172,6 +152,65 @@ gauges$cor_spi_n = best_spi
 gauges$cor_spi = value_spi
 gauges$cor_spei = value_spei
 
+# monthly correlation values for SPI/SPEI####
+  
+
+summer_cor_spi = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=5, end=11) 
+  
+summer_cor_spei = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_", ssi="ssi_1", begin=5, end=11) 
+
+
+best_spi_summer=c()
+best_spei_summer =c()
+value_spei_summer = c()
+value_spi_summer=c()
+
+for(r in 1:catch_n){
+ best_spei_summer[r] = summer_cor_spei[r,] %>% which.max()
+ value_spei_summer[r] = summer_cor_spei[r,] %>% max()}
+for(r in 1:catch_n){
+ best_spi_summer[r] = summer_cor_spi[r,] %>% which.max()
+ value_spi_summer[r] = summer_cor_spi[r,] %>% max()}
+
+boxplot(gauges$best_spei_summer ~ gauges$cor_spei_n)
+
+gauges$best_spei_summer = best_spei_summer
+gauges$cor_spei_summer = value_spei_summer
+gauges$best_spi_summer = best_spi_summer
+gauges$cor_spi_summer = value_spi_summer
+
+
+# stepwise regression ####
+g=228
+res = step(lm(ssi_1[,g]~spei_1[,g]+ spi_1[,g] + spei_2[,g]+ spi_2[,g]+ spei_3[,g]+spi_3[,g] + spei_6[,g] + spi_6[,g] + spi_12[,g] + spei_12[,g] + spi_24[,g] + spei_24[,g]),direction="both")
+
+
+summary(res)
+  extractAIC()
+#longterm (lt) memory effect of catchments####
+lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_")
+lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_")
+
+ggplot()+
+  geom_point(aes(y=lt_cor_spi$`24`, x=gauges_df$bfi, col=as.factor(gauges_df$spi_n )))+
+  ylab("cor. SPI-24 ~ SSI-1")+
+  xlab("BFI")+
+  scale_color_discrete("optim. \n SPI-n")
+
+ggplot()+
+  geom_point(aes(y=lt_cor_spi$`12`, x=gauges_df$bfi, col=gauges_df$Enzgsg_ ))+
+  ylab("cor. SPI-12 ~ SSI-1")+
+  xlab("BFI")+
+  scale_color_continuous("Catchment \n Size [km²?]")
+ggsave("memoryeffect_24.png")
+
+    
+# SCI indice when there is drought ####
+
+
+
+
+#other analysis ####
 ggplot()+
   geom_point(aes(y= mmkh_ms7_min$Tau, x=value_spi, col= gauges_df$bfi))+
   ylab("mmkh tau of mnq7 summer")+
@@ -276,7 +315,7 @@ my_palette <- colorRampPalette(c("red", "blue"))(n = 199)
 # pdf("./plots/opt_spi-spei_n._spearman.pdf")
 # plot(x=1:length(spei_ssi_c[,1]), y=opt_spi_n-opt_spei_n, xlab="Catchments", ylab="optim. SPI-n - optim. SPEI-n")
 # dev.off()
-gauges$
+
 
 
 
@@ -294,57 +333,6 @@ lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.
 
 
 
-# monthly correlation values for SPI/SPEI####
-  
-
-summer_cor_spi = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=5, end=11) 
-  
-summer_cor_spei = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_", ssi="ssi_1", begin=5, end=11) 
-
-
-best_spi_summer=c()
-best_spei_summer =c()
-value_spei_summer = c()
-value_spi_summer=c()
-
-for(r in 1:catch_n){
- best_spei_summer[r] = summer_cor_spei[r,] %>% which.max()
- value_spei_summer[r] = summer_cor_spei[r,] %>% max()}
-for(r in 1:catch_n){
- best_spi_summer[r] = summer_cor_spi[r,] %>% which.max()
- value_spi_summer[r] = summer_cor_spi[r,] %>% max()}
-
-gauges$best_spei_summer = best_spei_summer
-gauges$cor_spei_summer = value_spei_summer
-gauges$best_spi_summer = best_spi_summer
-gauges$cor_spi_summer = value_spi_summer
-
-
-# stepwise regression ####
-g=228
-res = step(lm(ssi_1[,g]~spei_1[,g]+ spi_1[,g] + spei_2[,g]+ spi_2[,g]+ spei_3[,g]+spi_3[,g] + spei_6[,g] + spi_6[,g] + spi_12[,g] + spei_12[,g] + spi_24[,g] + spei_24[,g]),direction="both")
-
-
-summary(res)
-  extractAIC()
-#longterm (lt) memory effect of catchments####
-lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_")
-lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_")
-
-ggplot()+
-  geom_point(aes(y=lt_cor_spi$`24`, x=gauges_df$bfi, col=as.factor(gauges_df$spi_n )))+
-  ylab("cor. SPI-24 ~ SSI-1")+
-  xlab("BFI")+
-  scale_color_discrete("optim. \n SPI-n")
-
-ggplot()+
-  geom_point(aes(y=lt_cor_spi$`12`, x=gauges_df$bfi, col=gauges_df$Enzgsg_ ))+
-  ylab("cor. SPI-12 ~ SSI-1")+
-  xlab("BFI")+
-  scale_color_continuous("Catchment \n Size [km²?]")
-ggsave("memoryeffect_24.png")
-
-    
 #plots####
   gauges_df = gauges %>% as.data.frame()
   
