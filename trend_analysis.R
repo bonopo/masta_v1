@@ -17,7 +17,7 @@ plot(unlist(data_bb$`Sen's slope`)~mmkh_jun_mean_df$sen_slope)
       plot(mmkh_jun_mean_df$corrected_z  ~ mmkh_jun_mean_df$new_p)
 which(mmkh_jun_mean_df$new_p < .05) %>% length()
 
-  plot(mmkh_summer_ave_q_df$Tau ~ mmkh_summer_min_q_df$)
+ # plot(mmkh_summer_ave_q_df$Tau ~ mmkh_summer_min_q_df$)
 
 ggsave("q_mean_mk_nq7.png")
 
@@ -138,17 +138,28 @@ neg_q10 = which(mmkh_yearly_q10$Tau < 0)
 res=c()
 for ( i in 1:12) res[i] =paste0("mmkh_",str_to_lower(month.abb[i]),"_mean_df")
 
-monthly_mmkh_tau = get(res[1:12])$tau
 
-monthly_mmkh_tau = sapply(1:12, function(x) get(res[x])$tau) %>% as.data.frame()
 
-png("monthly_mmkh_bxplt.png")
-boxplot(monthly_mmkh_tau, names = month.abb, ylab="mmkh tau of monthly mean" )
+
+monthly_mmkh_sen = sapply(1:12, function(x) get(res[x])$sen_slope[which(get(res[x])$new_p <.1)]) 
+#monthly_mmkh_sen = sapply(1:12, function(x) get(res[x])$sen_slope) 
+
+png("./plots/further_investigate/monthly_mmkh_bxplt.png", width=1000, height = 500)
+boxplot(monthly_mmkh_sen, names = month.abb, ylab="mmkh significant sen's slope of monthly mean" )
 dev.off()
 
-aov
+monthly_mmkh_aov = sapply(1:12, function(x) get(res[x])$sen_slope[which(get(res[x])$new_p <.1)]) 
 
-#new trend analysis####
+ aov_data = matrix(ncol=2, nrow=0)
+ for (i in 1:12){
+   aov_data = rbind(aov_data, cbind(monthly_mmkh_aov[[i]], rep(i, times=length(monthly_mmkh_aov[[i]]))))
+  }  
+aov_data %<>% as.data.frame()
+colnames(aov_data)= c("sen_slope", "month")
+head(aov_data)
+aov(sen_slope ~ month, data=aov_data)%>% summary()
+
+#trend analysis with sen's slope####
 mmkh_mar_mean_df$sen_slope
 ggplot()+
   geom_point(data = mmkh_mar_mean_df, aes(y=sen_slope, x=mmkh_jun_mean_df$sen_slope),inherit.aes = FALSE)+  
@@ -156,4 +167,50 @@ ggplot()+
   xlab("june mean sen's slope")+
   ylab("march mean sen's slope")+
   scale_color_discrete("Significance")
-ggsave("june_march_sens.png")
+
+
+
+sig_plot = function(p_value = .1, x_data = "mmkh_mar_mean_df", y_data = "mmkh_yearly_q10", output = "sr"){
+
+sr = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
+    annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
+
+saar= ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$saar[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+    annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("SAAR [mm]")
+
+bfi = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$bfi[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+  annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("BFI")
+
+ezgg = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$Enzgsg_[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+    annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("Einzugsgebiet [km²]")
+
+return(get(output))
+}
+
+# "jun_mean_df", "mar_mean_df", "ms7_date", "ms7_min", "ms30_min", "yearly_q10"
+
+sig_plot(x_data = "mmkh_winter_q10", y_data = "mmkh_jun_mean_df", output = "sr", p_value = .1) 
+ggsave("./plots/further_investigate/wint_jun_sens.png")
+
+dev.off()
+ggplot()+
+  geom_point(aes(y=mmkh_ms7_min$sen_slope[which(mmkh_ms7_min$new_p<p_value)], x=gauges$cor_spi_n[which(mmkh_ms7_min$new_p<p_value)], col=as.factor(gauges$sr[which(mmkh_ms7_min$new_p<p_value)])))+
+  scale_color_discrete("Einzugsgebiet [km²]")
+
+
