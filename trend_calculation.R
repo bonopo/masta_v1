@@ -31,16 +31,17 @@ dev.off()
 #mann kendall with AR correction ####
 mk_tests_par(raw_data = "jun_mean_df")
 mk_tests_par(raw_data = c("mar_mean_df","jul_mean_df"))
-mmkh_ms7_date = t(sapply(c(ms7_date[,1:ncol(ms7_date)]), FUN =mmkh)) %>% as.data.frame()
+
 
 #problem of sqrt(VS) = na produced
-mmkh_par(raw_data = c("jun_mean_df", "mar_mean_df", "ms7_date", "ms7_min", "ms30_min", "yearly_q10"))
+mmkh_par(raw_data = c("jun_mean_df", "mar_mean_df", "ms7_date", "ms7_min", "ms30_min", "yearly_q10","summer_q10", "winter_q10"))
+
+mmkh_par("summer_q10")
 
 
 for ( i in 1:12) res[i] =paste0(str_to_lower(month.abb[i]),"_mean_df")
-mmkh_par(raw_data = c(mar_mean_df, jun_mean_df, aug_mean_df, ms7_min, ms7_date, ms30_min, ))
 
-
+mmkh_par(raw_data = res)
 
 
 
