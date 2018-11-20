@@ -1,8 +1,8 @@
 # Startin script
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-#save.image(file="./data/r_temp_image/basic_data+para+bb.Rdata")
-load(file="./data/r_temp_image/basic_data+para+bb.Rdata")
+save.image(file="./data/r_temp_image/basic.Rdata")
+#load(file="./data/r_temp_image/basic_data+para+bb.Rdata")
 
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
@@ -71,6 +71,11 @@ mt_mn_q_wide <- spread(mt_mn_q, key = gauge, value = q_mean) %>% dplyr::select(-
 colnames(tempera) <- 1:catch_n
 temp_long <- load_file(file=tempera, value_name = "temp", origin = "1950-01-01")
 temp_long %<>% filter(date>= "1970-01-01" & date <= "2009-12-31") 
+da_temp_wide = temp_long %>% 
+  spread(key=gauge, value=temp) %>% 
+  dplyr::select(-date) %>% 
+  as.data.frame()
+
 mt_mn_temp <- temp_long %>%
   mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>%
   group_by(gauge, yr_mt) %>%
@@ -131,7 +136,7 @@ colnames(spei_data_mat) <- 1:catch_n
 
 
 remove(spei_data,pet_th, latitude,pet_th_vec)
-
+remove(data, i, res_ts, xy_gk, xy_wgs84)
 #von Neumann homogenity test ####
 #Under the null hypothesis of constant mean, i.e., homogenous time series, the expected value of the von Neumann ratio is 2. However, it tends to be < 2 for the non-homogenous time series 
 n72 = mt_mn_q_wide[,72]
