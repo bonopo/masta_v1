@@ -270,6 +270,28 @@ gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
 
 
 
+
+# kendall rank correlation -----------------------------------------------------
+
+mk_spi_tau <- list()
+mk_spi_S <- list()
+mk_spi_D <- list()
+mk_spi_p <- list()
+for (i in 1:ncol(spi_2)){
+ mk_spi_tau[[i]] <-  Kendall(spi_2[,i], ssi_1[,i])$tau[1] 
+ mk_spi_S[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$S[1] 
+mk_spi_D[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$D[1] 
+mk_spi_p[[i]] <- Kendall(spi_2[,i], ssi_1[,i])$sl[1] 
+}
+
+Kendall(spi_1[,44], ssi_1[,44])
+#tau ist S/D
+#S anzahl an positiven - negativen trends
+#D value theoretisch mögliche maximale anzahl an trends
+plot(x =spi_2[,1] , y=ssi_1[,1])
+#offensichtliche aussage: desto höher der spi, desto höher der spei 
+
+
 # functions ---------------------------------------------------------------
 
 dist_fitt <- function(distry, monthy){ #similar as above, old version, not used in script
