@@ -1,7 +1,7 @@
 
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missing!
+# source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missing!
 
 
 # Distribution free calculation -------------------------------------------
@@ -34,7 +34,9 @@ res <- SPEI::spi(data= mt_sm_p_wide, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
 if(any(is.infinite(m1))) {
      m1[which(is.infinite(m1))] <- NA}
-assign(paste0("spi_v2_",n), as.data.frame(m1))
+m1 %<>% as.data.frame()
+colnames(m1)=1:catch_n
+assign(paste0("spi_v2_",n),m1)
 }
 
 
@@ -58,23 +60,25 @@ res <- SPEI::spei(data= spei_data_mat, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
 if(any(is.infinite(m1))) {
      m1[which(is.infinite(m1))] <- NA}
-assign(paste0("spei_v2_",n), as.data.frame(m1))
+m1 %<>% as.data.frame()
+colnames(m1)=1:catch_n
+assign(paste0("spei_v2_",n),m1)
 }
 
 
- 
+ remove(m1)
 
 
 
 #comparison
 
-plot(x=date_seq, y=spi_v3_12$V1, t="l")
-lines(y=spi_v2_12$V1, x=date_seq,col=2)
-
-png("para_nonpara.png", width = 1000, height=500)
-plot(x=spi_v3_12$V1 ,y= spi_12$`1`, xlab="parametric spi-12", ylab="non-parametric spi-12")
-abline(a=0, b=1)
-dev.off()
+# plot(x=date_seq, y=spi_v3_12$V1, t="l")
+# lines(y=spi_v2_12$V1, x=date_seq,col=2)
+# 
+# png("para_nonpara.png", width = 1000, height=500)
+# plot(x=spi_v3_12$V1 ,y= spi_12$`1`, xlab="parametric spi-12", ylab="non-parametric spi-12")
+# abline(a=0, b=1)
+# dev.off()
 
 #v2 (with spei package) has lower values vor negative spi but very similar to v3
 #v1 (non parametric) less neagtive values, doesn't represent extremes
