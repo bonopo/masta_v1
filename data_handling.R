@@ -1,19 +1,14 @@
 # Startin script
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
-save.image(file="./data/r_temp_image/basic.Rdata")
+# save.image(file="./data/r_temp_image/basic.Rdata")
 #load(file="./data/r_temp_image/basic_data+para+bb.Rdata")
 
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
-#install.packages("boot")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud"), require, character.only = T)
+#install.packages("car")
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car"), require, character.only = T)
 #install.packages("climtrends", repos="http://R-Forge.R-project.org")
-# User defined constants --------------------------------------------------
-
-date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
-catch_n <- 338 # number of catchments
-no_cores = detectCores()-1 #for parallel computing
 
 
 # Load data ---------------------------------------------------------------
@@ -24,10 +19,21 @@ load("./data/catchments/eobs_temp_part.Rdata")
 load("./data/catchments/streamflow.Rdata")
 #gauges  <- readOGR(dsn="./data/raster/gauges", layer= "gauges")
 gauges  <- shapefile("./data/raster/gauges")
+legende <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(1,5)]
+legende2 <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(1,3:5)]
+landuse_v1 <- read.csv("./data/geo_landuse/LaNu_per_EZG.csv")
+hydrogeo <- read.csv("./data/geo_landuse/hydrogeo.csv")
+# User defined constants --------------------------------------------------
 
+date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
+date_seq_long =seq.Date(from= ymd("1970-01-01"), to = ymd("2009-12-31"), by= "day")
+catch_n <- 338 # number of catchments
+no_cores = detectCores()-1 #for parallel computing
+my_catch = colnames(precip)
+agg_month =c(1, 2, 3, 6, 12, 24)
 # transforming data ----------------------------------------------------------------
 
-#precip
+#precip####
 colnames(precip) <- 1:catch_n
 precip_long <- load_file(precip, "sum_mm")
 unique(precip_long$gauge)
@@ -40,13 +46,12 @@ mt_sm_p <- precip_long %>%
 
 mt_sm_p_wide <- spread(mt_sm_p, key=gauge, value=month_sum, drop=F) %>% dplyr::select(-yr_mt) %>% as.data.frame()
 
-
 # precip_long %>% 
 #   filter(gauge < 10) %>%
 #   ggplot()+
 #     geom_smooth(aes(x=date, y=sum_mm, colour=as.factor(gauge), group=gauge), se=F)
 
-#discharge
+#discharge####
 q_long <- load_file(streamflow, "q")
 q_wide <- spread(q_long, key= gauge, value = q)
 q_wide %<>% dplyr::select(-date) %>% as.data.frame()
@@ -61,13 +66,12 @@ mt_mn_q <- q_long %>%
 mt_mn_q_wide <- spread(mt_mn_q, key = gauge, value = q_mean) %>% dplyr::select(-c(yr_mt,month)) %>% as.data.frame()
  #the gauge numbers are not equal to the gauge numbers in temperature and discharge 
 
-
 # q_long %>% 
 #   filter(gauge < 10) %>%
 # ggplot()+
 #   geom_smooth(aes(x=date, y=q, colour=as.factor(gauge), group=gauge), se=F)
 
-#temperature
+#temperature####
 colnames(tempera) <- 1:catch_n
 temp_long <- load_file(file=tempera, value_name = "temp", origin = "1950-01-01")
 temp_long %<>% filter(date>= "1970-01-01" & date <= "2009-12-31") 
@@ -91,6 +95,41 @@ remove(precip, tempera,streamflow)
 # ggplot()+
 #   geom_smooth(aes(x=date, y=temp, colour=as.factor(gauge), group=gauge), se=F)
 
+#landuse####
+colnames(legende) <- c("ID","LaNu")
+landuse_v1 <- cbind(0:255,landuse_v1)
+colnames(landuse_v1)[1] <- "ID"
+gesamt <- merge(legende,landuse_v1, by="ID", all=F)[,-1]
+colnames(gesamt)[-1] <- unlist(strsplit(colnames(gesamt)[-1],split=".N.10.0"))
+summen <- colSums(gesamt[,-1])
+gesamt[,-1] <- gesamt[,-1]/rep(summen, each=dim(gesamt)[1])
+aussort <- which(rowSums(gesamt[,-1])==0)
+gesamt <- gesamt[-aussort,]
+ebenen <- merge(legende2,gesamt, by.x="LABEL3", by.y="LaNu") #choosing the label 1, it has the least levels (7) vs label 1 that has 19. Creating a too big variance
+verallge <- function(x,ind){
+  tapply(x,ebenen[,ind],sum)
+}
+ebene3 <- apply(ebenen[,-(1:4)],MARGIN = 2,verallge, ind=3)
+landuse <- cbind(colnames(ebene3),apply(ebene3,MARGIN = 2,function(x) rownames(ebene3)[which.max(x)])) #selecting the dominating land use form
+
+
+int= pmatch(my_catch,landuse[,1])
+gauges$landuse = landuse[int,2]
+# na_ign = is.na(int) %>% which() %>% my_catch[.] 
+# na_ign %in% colnames(gesamt) # three catchments have no landuse
+remove(legende, landuse_v1, summen, gesamt, legende2, ebenen,aussort, int)
+
+#hydro geology #####
+gauges$hydrogeo = hydrogeo$Hydrogeologie #K= klüfte P= poren alles andere ist gemisch KA= karst M=what is 
+gauges$hydrogeo_simple = "other"
+gauges$hydrogeo_simple[which(hydrogeo$Hydrogeologie == "P")] = "P"
+gauges$hydrogeo_simple[which(hydrogeo$Hydrogeologie == "K")] = "K"
+
+
+# plot(gauges$hydrogeo)
+
+#extending of time series ####
+sum(ymd(hydrogeo$Ztrhnbg.C.80)<ymd("1960-1-2")) #if time series would be extended to 1.1.1960 there would be 201 catchments
 
 
 # SPEI Preperation --------------------------------------------------------
@@ -139,10 +178,10 @@ remove(spei_data,pet_th, latitude,pet_th_vec)
 remove(data, i, res_ts, xy_gk, xy_wgs84)
 #von Neumann homogenity test ####
 #Under the null hypothesis of constant mean, i.e., homogenous time series, the expected value of the von Neumann ratio is 2. However, it tends to be < 2 for the non-homogenous time series 
-n72 = mt_mn_q_wide[,72]
-ts72 = as.ts(n72, deltat= 1/12, start=c(1970,1))
-
-(sum((n72[1:(length(n72)-1)]-n72[2:length(n72)])^2))/(sum((n72-mean(n72))^2))
-
-VonNeumannRatio(ts72)
- 
+# n72 = mt_mn_q_wide[,72]
+# ts72 = as.ts(n72, deltat= 1/12, start=c(1970,1))
+# 
+# (sum((n72[1:(length(n72)-1)]-n72[2:length(n72)])^2))/(sum((n72-mean(n72))^2))
+# 
+# VonNeumannRatio(ts72)
+#  
