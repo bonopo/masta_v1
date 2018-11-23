@@ -127,13 +127,13 @@ gauges$reg_spei_n =value_spei
 cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_v2_", ssi="ssi_1")
 cor_spei_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_v2_", ssi="ssi_1")
 
-plot(cor_spi_ssi[,3] ~ spi_ssi[[2]][,3])
+# plot(cor_spi_ssi[,3] ~ spi_ssi[[2]][,3])
 
-png("cor_spi_v2_spi_np.png")
-plot(cor_spi_ssi[,3],ylab="correlation of SPI-3" )
-points(cor_spi_ssi_v2[,3], col=2)
-legend("bottomleft", col=c(1,2), pch=c(1,1), c("non-paramatric", "parametric"), bty="n")
-dev.off()
+# png("cor_spi_v2_spi_np.png")
+# plot(cor_spi_ssi[,3],ylab="correlation of SPI-3" )
+# points(cor_spi_ssi_v2[,3], col=2)
+# legend("bottomleft", col=c(1,2), pch=c(1,1), c("non-paramatric", "parametric"), bty="n")
+# dev.off()
 
 best_spi = c()
   value_spi = c()
