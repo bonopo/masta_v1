@@ -1,9 +1,9 @@
 
 # Clustering --------------------------------------------------------------
-source("./R/masta_v1/functions.R")# has to run before if not objects will be missin!
-source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
-source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
-source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missin!
+# source("./R/masta_v1/functions.R")# has to run before if not objects will be missin!
+# source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
+# source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
+# source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missin!
 
 #seasonality ratio (SR)####
 
@@ -32,6 +32,8 @@ q_sr$sr_value[which(q_sr$sr > 1.1)] <- 2 #winter NAs are produced in 9 time seri
 q_sr$sr_value[which(q_sr$sr >= .9 & q_sr$sr <= 1.1)] = 1 #no clear seasonality 
 
 gauges$sr <- as.numeric(q_sr$sr_value)
+
+remove(q_sr, q_sr_s, q_sr_w)
 #spplot(gauges, "sr")
 
 # ind <- which(is.na(q_sr$sr_value))
@@ -60,6 +62,7 @@ bfi[i] <- BFI(basefl)
 }
 plot(bfi)
 gauges$bfi <- bfi
+remove(bfi, lf_obj, basefl)
 
 #SAAR ####
 #standart climate period 1971 bis 2000 (see DWD)
@@ -70,6 +73,7 @@ saar <- precip_long %>%
   summarise(sum_mm_yr = sum(sum_mm)/30)
 
 gauges$saar <- saar$sum_mm_yr
+remove(saar)
 
 #median drought duration ####
   median_drought_duration = c()
@@ -78,6 +82,7 @@ gauges$saar <- saar$sum_mm_yr
   }
 
 gauges$med_dr_dur = median_drought_duration
+remove(median_drought_duration)
 
 #maximum duration ####
 max_drought_duration = c()
@@ -86,6 +91,7 @@ max_drought_duration = c()
   }
 
 gauges$max_dr_dur = max_drought_duration
+remove(max_drought_duration)
 #median severity####
 median_drought_severity = c()
   for (g in 1:catch_n){
@@ -93,7 +99,7 @@ median_drought_severity = c()
   }
 
 gauges$med_dr_sev = median_drought_severity
-
+remove(median_drought_severity)
 #median intensity ####
 
 median_drought_inten = c()
@@ -102,6 +108,7 @@ median_drought_inten = c()
   }
 
 gauges$med_dr_int  =median_drought_inten
+remove(median_drought_inten)
 #maximum severity####
 max_drought_sev = c()
   for (g in 1:catch_n){
@@ -109,7 +116,7 @@ max_drought_sev = c()
   }
 
 gauges$max_dr_sev  =max_drought_sev
-
+remove(max_drought_sev)
 
 #total number of events####
 
@@ -119,7 +126,7 @@ n_events = c()
   }
 
 gauges$n_events = n_events
-
+remove(n_events)
 #average q ####
 
 q_mean = q_long %>% 
@@ -128,51 +135,52 @@ q_mean = q_long %>%
   summarise(mean = mean(q))
 
 gauges$q_mean = c(q_mean$mean)
+remove(q_mean)
 #clustered plots #### 
 #see barker et al
 
-gauges_df = as.data.frame(gauges)
-
-head(gauges_df)
-
-ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= n_events, alpha= bfi))
-
-ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= best_spi, alpha= bfi))
-
-
-ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= best_spei, col= bfi))
-
-ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= cor_spi, alpha= bfi))
-ggsave("best_spi_cor_spi_saar.png")
-
-ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= cor_spei, col= bfi))
-ggsave("bfi_cor_spei_saar.png")
-ggplot(data=gauges_df)+
-  geom_point(aes(x=Enzgsg_, y= med_dr_sev, col= bfi))
-
-ggplot(data=gauges_df)+
-  geom_point(aes(x=max_dr_sev, y= n_events, col= bfi))
-
-ggplot(data=gauges_df)+
-  geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
-ggsave("max_dr_dur_med_dr_int_bfi.png")
-
-png("gauges_sr.png")
-spplot(gauges, "sr")
-dev.off()
-
-gauges$cor_spi_n
-
-gauges$sr
+# gauges_df = as.data.frame(gauges)
+# 
+# head(gauges_df)
+# 
+# ggplot(data=gauges_df)+
+#   geom_point(aes(x=saar, y= n_events, alpha= bfi))
+# 
+# ggplot(data=gauges_df)+
+#   geom_point(aes(x=saar, y= best_spi, alpha= bfi))
+# 
+# 
+# ggplot(data=gauges_df)+
+#   geom_point(aes(x=saar, y= best_spei, col= bfi))
+# 
+# ggplot(data=gauges_df)+
+#   geom_point(aes(x=saar, y= cor_spi, alpha= bfi))
+# ggsave("best_spi_cor_spi_saar.png")
+# 
+# ggplot(data=gauges_df)+
+#   geom_point(aes(x=saar, y= cor_spei, col= bfi))
+# ggsave("bfi_cor_spei_saar.png")
+# ggplot(data=gauges_df)+
+#   geom_point(aes(x=Enzgsg_, y= med_dr_sev, col= bfi))
+# 
+# ggplot(data=gauges_df)+
+#   geom_point(aes(x=max_dr_sev, y= n_events, col= bfi))
+# 
+# ggplot(data=gauges_df)+
+#   geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
+# ggsave("max_dr_dur_med_dr_int_bfi.png")
+# 
+# png("gauges_sr.png")
+# spplot(gauges, "sr")
+# dev.off()
+# 
+# gauges$cor_spi_n
+# 
+# gauges$sr
 
 #regionalisation####
-int = which(gauges$Hochwrt > 5900000)
-gauges$saar[int] %>% mean()
-gauges$saar %>%  which.max()
-
-spplot(gauges, "saar")
+# int = which(gauges$Hochwrt > 5900000)
+# gauges$saar[int] %>% mean()
+# gauges$saar %>%  which.max()
+# 
+# spplot(gauges, "saar")
