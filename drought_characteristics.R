@@ -2,7 +2,7 @@
 # drought Characteristics -------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 
-source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
+# source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
 
 
 
@@ -24,7 +24,7 @@ data_by <- data %>% group_by(year(yr_mt)) %>%
 
 gauges$mnq30_month = mnq30_month
 
-
+remove(data, data_by, mnq30_month)
 #number of months in a year affected by drought ####
 
 
@@ -81,10 +81,10 @@ dr_freq_10yr = rollapply(mat_n, width=10, by= 10, FUN=sum, by.column=TRUE)
 dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
 #drought free time####
 #visual plot checking ####
-for (i in sample(338, size=10)){
-plot(yearly_q10[,i]~summer_q10[,i], main=i)
-  Sys.sleep(1)
-  }
+# for (i in sample(338, size=10)){
+# plot(yearly_q10[,i]~summer_q10[,i], main=i)
+#   Sys.sleep(1)
+#   }
 
 
 
