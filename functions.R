@@ -318,7 +318,7 @@ for(d in raw_data){
   assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
 }}
 
-mmkh_par = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
+mmkh_par = function(raw_data =c("ms7_min")){
 
 for(d in raw_data){
   ts_data = get(d)
@@ -328,7 +328,16 @@ for(d in raw_data){
   assign(paste0("mmkh_", d), as.data.frame(res_mmkh), envir = .GlobalEnv )
 }}
 
+mmky_par = function(raw_data =c("ms7_min")){
 
+for(d in raw_data){
+  ts_data = get(d)
+  #modified mk test
+  res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky))
+  colnames(res_mmky) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
+  assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
+}
+  }
 
 mk_tests = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
 res_bb = data.frame()
@@ -415,7 +424,7 @@ bbsmK_mod = function (x, ci = 0.95, nsim = 2000, eta = 1, bl.len = NULL)
     return(res)
 }
 
-
+# x=ms7_min[,229]
 # mmkh = function (x, ci = 0.95)
 #  {
 #     x = x
