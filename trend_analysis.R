@@ -8,10 +8,7 @@ mmkh_winter_q10 = as.data.frame(mmkh_winter_q10)
 
 colnames(mmkh_winter_q10) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
 
-bb_jun_mean_df
-bb_mar_mean_df
-bb_summer_ave_q
-bb_ms7_min
+
 data_bb = as.data.frame(bb_jun_mean_df)
 plot(unlist(data_bb$`Sen's slope`)~mmkh_jun_mean_df$sen_slope)
       plot(mmkh_jun_mean_df$corrected_z  ~ mmkh_jun_mean_df$new_p)
@@ -170,11 +167,12 @@ ggplot()+
 
 
 
-sig_plot = function(p_value = .1, x_data = "mmkh_mar_mean_df", y_data = "mmkh_yearly_q10", output = "sr"){
+sig_plot = function(p_value = .1, x_data = "mmkh_mar_mn", y_data = "mmkh_yearly_q10", output = "sr"){
 
 sr = ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
     annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
   xlab(paste(x_data, "sen's slope"))+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
@@ -182,6 +180,7 @@ sr = ggplot()+
 saar= ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$saar[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
     annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
   xlab(paste(x_data, "sen's slope"))+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_continuous("SAAR [mm]")
@@ -189,6 +188,7 @@ saar= ggplot()+
 bfi = ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$bfi[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
   annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
   xlab(paste(x_data, "sen's slope"))+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_continuous("BFI")
@@ -196,21 +196,66 @@ bfi = ggplot()+
 ezgg = ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$Enzgsg_[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
     annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+   annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
   xlab(paste(x_data, "sen's slope"))+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_continuous("Einzugsgebiet [km²]")
 
+geo =  ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$hydrogeo_simple[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
+    annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_discrete("Hydro Geo.")
+
 return(get(output))
 }
 
-# "jun_mean_df", "mar_mean_df", "ms7_date", "ms7_min", "ms30_min", "yearly_q10"
+which(is.na(mmkh_wi_q10$new_p))
 
-sig_plot(x_data = "mmkh_winter_q10", y_data = "mmkh_jun_mean_df", output = "sr", p_value = .1) 
-ggsave("./plots/further_investigate/wint_jun_sens.png")
+p=sig_plot(y_data = "mmky_jun_mn_q", x_data = "mmky_mar_mn_q", output = "sr", p_value = .1) 
+p
+mmky_ma
+p+geom_abline(slope=-1, intercept = 0)
+p+annotate(geom="text", x=)
+ggsave(plot = p, "./plots/further_investigate/final/mmky_1.png")
 
 dev.off()
 ggplot()+
-  geom_point(aes(y=mmkh_ms7_min$sen_slope[which(mmkh_ms7_min$new_p<p_value)], x=gauges$cor_spi_n[which(mmkh_ms7_min$new_p<p_value)], col=as.factor(gauges$sr[which(mmkh_ms7_min$new_p<p_value)])))+
+  geom_point(aes(y=mmkh_ms7_min$sen_slope, x=mmkh_su_sm_p$sen_slope, col=as.factor(gauges$sr)))+
   scale_color_discrete("Einzugsgebiet [km²]")
 
+p_value=.1
+for (i in c(  "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10")){
+  data_plot= get(paste0("mmky_", i))
+  p = ggplot()+
+  geom_point(aes(y=data_plot$sen_slope[which(data_plot$new_p<p_value & data_plot$new_p < p_value)], x=gauges$saar[which(data_plot$new_p<p_value & data_plot$new_p < p_value)],col=as.factor(gauges$hydrogeo_simple[which(data_plot$new_p<p_value & data_plot$new_p < p_value)])))+
+    ylab(paste(i))+
+    xlab("SAAR [mm]")+
+    scale_color_discrete("seasonality")+
+    annotate(geom="text", -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(data_plot$new_p<p_value & data_plot$new_p < p_value))))+
+  annotate(geom="text", -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))
+  print(p)
+  #Sys.sleep(15)
+  
+  
+}
+
+
+ggsave("bbo.png")
+ggplot()+
+  geom_point(aes(y=mmkh_mar_mn_q$sen_slope[which(mmkh_mar_mn_q$new_p<.05)], x=gauges$bfi[which(mmkh_mar_mn_q$new_p<.05)], 
+                 col=as.factor(gauges$sr[which(mmkh_mar_mn_q$new_p<.05)])))+
+  scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))+
+  xlab("BFI")+
+  ylab("Sens's slope March mean at p =.05")
+
+ggplot()+
+  geom_point(aes(y=mmkh_mar_mn_q$sen_slope[which(mmkh_mar_mn_q$new_p<.05)], x=mmkh_wi_sm_p$sen_slope[which(mmkh_mar_mn_q$new_p<.05)], 
+                 col=gauges$bfi[which(mmkh_mar_mn_q$new_p<.05)]))+
+  scale_color_continuous("bfi")+
+  xlab("BFI")+
+  ylab("Sens's slope March mean at p =.05")
+hist(gauges$bfi)
 
