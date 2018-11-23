@@ -1,7 +1,11 @@
 # Trend analysis ----------------------------------------------------------
-
+setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 source("./R/masta_v1/functions.R")# has to run before if not objects will be missing!
 source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missing!
+source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
+source("./R/masta_v1/climate_characteristics.R")
+source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missin!
+source("./R/masta_v1/clustering.R", echo = TRUE, print.eval=TRUE)
 
 
 #acf####
@@ -29,23 +33,49 @@ dev.off()
 }
 
 #mann kendall with AR correction ####
-mk_tests_par(raw_data = "jun_mean_df")
-mk_tests_par(raw_data = c("mar_mean_df","jul_mean_df"))
-
-
-#problem of sqrt(VS) = na produced
-mmkh_par(raw_data = c("jun_mean_df", "mar_mean_df", "ms7_date", "ms7_min", "ms30_min", "yearly_q10","summer_q10", "winter_q10"))
-
-mmkh_par("summer_q10")
-
-
-for ( i in 1:12) res[i] =paste0(str_to_lower(month.abb[i]),"_mean_df")
-
-mmkh_par(raw_data = res)
+# mk_tests_par(raw_data = "jun_mean_df")
+# mk_tests_par(raw_data = c("mar_mean_df","jul_mean_df"))
 
 
 
+mmkh_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"))
 
+mmky_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"))
+
+png("./plots/further_investigate/final/sen_vs_p_value.png", width=1000, height=500)
+par(mfrow=c(2,1))
+plot(mmky_ms7_min$sen_slope ~ mmky_ms7_min$new_p, ylab="mmky sen's slope")
+plot(mmkh_ms7_min$sen_slope ~ mmkh_ms7_min$new_p, ylab="mmkh sen's slope")
+
+dev.off()
+
+monthly_q=c()
+for ( i in 1:12) monthly_q[i] =paste0(str_to_lower(month.abb[i]),"_mn_q")
+
+mmky_par(raw_data = monthly_q)
+
+monthly_t= c()
+for ( i in 1:12) monthly_t[i] =paste0(str_to_lower(month.abb[i]),"_mn_t")
+
+mmky_par(raw_data = monthly_t)
+remove(monthly_q, monthly_t)
+remove(res,  int, df )
+
+#why NAs? ####
+#problem of sqrt(VS) = na produced 
+which(is.na(mmkh_ms7_min$new_p ))
+
+plot(ms7_min[,229], t="p", ylim=c(0,1))
+points(ms7_min[,70], col=2)
+
+mmkh(ms7_min[,229])
+
+mmky(ms7_min[,229])
+  which.max(gauges$q_mean)
+
+mkttest(ms7_min[,229])
+
+#problem occurs in the essf part of the function it is negative, which is negative because of rof, which becomes negative if the acf at lag one is outside the 95 confidence interval
 #with no AR correction ####
 
-mk_jun = sapply(c(jun_mean_df[,1:catch_n]), FUN= mkttest) %>% t()
+# mk_jun = sapply(c(jun_mean_df[,1:catch_n]), FUN= mkttest) %>% t()
