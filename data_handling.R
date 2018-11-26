@@ -2,12 +2,12 @@
 # Preambel ----------------------------------------------------------------
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 # save.image(file="./data/r_temp_image/basic.Rdata")
-#load(file="./data/r_temp_image/basic_data+para+bb.Rdata")
+load(file="./data/r_temp_image/basic.Rdata")
 
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
-#install.packages("car")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car"), require, character.only = T)
+#install.packages("sn")
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn","randomForest"), require, character.only = T)
 #install.packages("climtrends", repos="http://R-Forge.R-project.org")
 
 
@@ -115,6 +115,8 @@ landuse <- cbind(colnames(ebene3),apply(ebene3,MARGIN = 2,function(x) rownames(e
 
 int= pmatch(my_catch,landuse[,1])
 gauges$landuse = landuse[int,2]
+
+
 # na_ign = is.na(int) %>% which() %>% my_catch[.] 
 # na_ign %in% colnames(gesamt) # three catchments have no landuse
 remove(legende, landuse_v1, summen, gesamt, legende2, ebenen,aussort, int)
