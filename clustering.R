@@ -3,7 +3,7 @@
 # source("./R/masta_v1/functions.R")# has to run before if not objects will be missin!
 # source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
 # source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
-# source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missin!
+# source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missing!
 
 #seasonality ratio (SR)####
 
@@ -63,26 +63,6 @@ bfi[i] <- BFI(basefl)
 plot(bfi)
 gauges$bfi <- bfi
 remove(bfi, lf_obj, basefl)
-
-#SAAR ####
-#standart climate period 1971 bis 2000 (see DWD)
-# standart period averae annual rainfall
-saar <- precip_long %>% 
-  filter(year(date) >1970 & year(date) < 2001) %>% 
-  group_by(gauge) %>% 
-  summarise(sum_mm_yr = sum(sum_mm)/30)
-
-gauges$saar <- saar$sum_mm_yr
-remove(saar)
-
-#median drought duration ####
-  median_drought_duration = c()
-  for (g in 1:catch_n){
-    median_drought_duration[g] = dsi_1[[g]]$dr_length %>% median()
-  }
-
-gauges$med_dr_dur = median_drought_duration
-remove(median_drought_duration)
 
 #maximum duration ####
 max_drought_duration = c()
