@@ -4,7 +4,32 @@
 
 # source("./R/masta_v1/functions.R")# has to run before if not objects will be missing!
 # source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missing!
+#SAAR ####
+#standart climate period 1971 bis 2000 (see DWD)
+# standart period averae annual rainfall
+saar <- precip_long %>% 
+  filter(year(date) >1970 & year(date) < 2001) %>% 
+  group_by(gauge) %>% 
+  summarise(sum_mm_yr = sum(sum_mm)/30)
 
+gauges$saar <- saar$sum_mm_yr
+remove(saar)
+
+#summer and winter climate data ####
+
+
+
+
+
+remove(summer_temp,summer_precip)
+#median drought duration ####
+  median_drought_duration = c()
+  for (g in 1:catch_n){
+    median_drought_duration[g] = dsi_1[[g]]$dr_length %>% median()
+  }
+
+gauges$med_dr_dur = median_drought_duration
+remove(median_drought_duration)
 # q seasonal data ####
 #7 day moving average in summer than calculate :
   # min for every year
@@ -233,6 +258,9 @@ su_mn_t = mt_mn_temp %>%
   dplyr::select(-`year(yr_mt)`) %>% 
   as.data.frame()
 
+summer_temp = summer_cl(data_source = "mt_mn_temp", method="mean", value = "temp_m", begin =5, end=11) %>% colMeans() %>% c()
+gauges$su_mn_t = summer_temp
+
 wi_mn_t = mt_mn_temp %>% 
   filter(month(yr_mt) < 5 | month(yr_mt) > 11) %>% 
   group_by(gauge, year(yr_mt)) %>% 
@@ -240,6 +268,8 @@ wi_mn_t = mt_mn_temp %>%
   spread(key=gauge, value=mean_temp) %>% 
   dplyr::select(-`year(yr_mt)`) %>% 
   as.data.frame()
+
+gauges$wi_mn_t = colMeans(wi_mn_t)
 
 
 #temp yearly####
@@ -274,7 +304,7 @@ remove(d30_mn_t)
 
 su_sm_p = summer_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin =5, end=11)
 
-
+gauges$su_sm_p = colMeans(su_sm_p)
 
 wi_sm_p = mt_sm_p %>% 
   filter(month(yr_mt) <= 4 | month(yr_mt) >= 12) %>% 
@@ -283,6 +313,8 @@ wi_sm_p = mt_sm_p %>%
   spread(key=gauge, value=sum_mm) %>% 
   dplyr::select(-`year(yr_mt)`) %>% 
   as.data.frame()
+
+gauges$wi_sm_p = colMeans(wi_sm_p)
 
 # precipitation yearly ####
 
