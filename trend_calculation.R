@@ -42,6 +42,8 @@ mmkh_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_m
 
 mmky_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"))
 
+mmky_par("yearly_max_t")
+
 png("./plots/further_investigate/final/sen_vs_p_value.png", width=1000, height=500)
 par(mfrow=c(2,1))
 plot(mmky_ms7_min$sen_slope ~ mmky_ms7_min$new_p, ylab="mmky sen's slope")
