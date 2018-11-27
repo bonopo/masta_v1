@@ -81,3 +81,9 @@ mkttest(ms7_min[,229])
 #with no AR correction ####
 
 # mk_jun = sapply(c(jun_mean_df[,1:catch_n]), FUN= mkttest) %>% t()
+
+
+
+  
+
+
