@@ -60,10 +60,26 @@ mean(ssi_sorted$V100)
 
 
 # decompose time series into trend and seasonal part ----------------------
-ssi_ts <- ts(ssi_sorted, start=c(1970,1), end=c(2009, 12), deltat = 1/12 )
 
+ts = ts(mt_mn_q_wide, start=c(1970,1), end=c(2009,12), deltat=1/12)
 ssi_dec <- decompose(ssi_ts[,1])
 plot(ssi_dec)
+res=decompose(ts)
+plot(res)
+res$trend[,1] %>% plot()
+
+
+#compare to mmky#
+resi = list()
+for (i in 1:catch_n){
+resi[[i]] = mmky(c(res$trend[,i]))
+
+
+}
+ pp = do.call("rbind",resi) %>% as.data.frame()
+ plot(pp$`Sen's slope`)
+
+
 
 # Calculatin SPEI with different distributions ----------------------------
 
