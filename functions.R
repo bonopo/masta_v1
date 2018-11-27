@@ -337,7 +337,24 @@ for(d in raw_data){
   colnames(res_mmky) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
   assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
 }
-  }
+}
+
+#mmky subset
+
+mmky_sbst = function(raw_data =ms7_min, width = 10, start_y=1970){
+  n=nrow(raw_data)
+  mat = matrix(nrow=catch_n, ncol=(n-width))
+  for ( i in 1:(n-width)){
+  sbst = raw_data[i:(i+width-1),]
+  #modified mk test
+  mat[,i] = t(sapply(c(sbst[,1:ncol(sbst)]), FUN =mmky))[,7] #only interested in sen's slope sigificance is not important since the amount of data is too little to be significant
+    }
+  mat %<>% as.data.frame()
+  colnames(mat) = c(start_y:(start_y+n-width-1))
+  return(mat)
+}
+
+
 
 mk_tests = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
 res_bb = data.frame()
