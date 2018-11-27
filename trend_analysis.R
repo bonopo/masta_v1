@@ -124,7 +124,7 @@ spplot(gauges, c("mmkh_q10"), col.regions = rainbow(100, start = 4/6, end = 1),
 
 mmkh_ms7_min
 mmkh_ms7_min
-neg_tau_ms7 =   which(mmkh_ms7_min$tau <0 & mmkh_ms7_min$new_p < .05) 
+  neg_ms7 =   which(mmkh_ms7_min$sen_slope <0 & mmkh_ms7_min$new_p < .05) 
   
 
 neg_q10 = which(mmkh_yearly_q10$Tau < 0)
@@ -258,4 +258,64 @@ ggplot()+
   xlab("BFI")+
   ylab("Sens's slope March mean at p =.05")
 hist(gauges$bfi)
+
+
+#trend moving window ####
+
+ms7_sbst = mmky_sbst(raw_data = ms7_min, width=10)
+ms7_sbst30 = mmky_sbst(raw_data = ms7_min, width=30)
+
+res= lapply(1:catch_n, FUN= function(x) summary(lm(as.numeric(ms7_sbst[x,])~c(1:30)))$coefficients[,c(1,4)])
+
+
+hist(as.numeric(ms7_sbst30[2,]))
+plot(mmky_ms7_min$sen_slope)
+plot(y=ms7_sbst30[1,], x=1:10, t="l")
+
+sum(ms7_sbst30[2,], na.rm=T)/ncol(ms7_sbst30)
+mean(as.numeric(ms7_sbst30[2,]))
+mmky_ms7_min$sen_slope[2]
+ms7_sbst_long = ms7_sbst %>% 
+  mutate(gauge= as.numeric(rownames(ms7_sbst))) %>% 
+  gather(key=year, value=mmky, -gauge)
+
+ms7_sbst30_long = ms7_sbst30 %>% 
+  mutate(gauge= as.numeric(rownames(ms7_sbst30))) %>% 
+  gather(key=year, value=mmky, -gauge)
+
+data_plot = ms7_sbst30_long %>% 
+  filter(gauge %in% neg_ms7) %>% 
+  group_by(gauge = as.integer(gauge)) %>% 
+  summarise(lb=min(mmky), ub=max(mmky)) %>% 
+  mutate(mmky_true = mmky_ms7_min[neg_ms7,]$sen_slope) %>% 
+  mutate(gauge = 1:length(neg_ms7))
+
+data_plot2 =ms7_sbst30_long %>% 
+    filter(gauge %in% neg_ms7) %>% 
+   mutate(gauge= rep(1:length(neg_ms7), times=10))
+
+ggplot(data_plot, aes(x=gauge, fill=as.numeric(year), y=mmky))+
+  #geom_point(aes(y= mmky_ms7_min$sen_slope, x=gauges$saar))
+  geom_bar(position = "fill", stat = "identity", width = 10)+
+  scale_color_continuous("Starting year")
+
+ggplot(data= data_plot)+
+  geom_pointrange(aes(x=gauge,y=mmky_true, ymin=lb, ymax=ub))+
+  ylab("mmky")
+ggsave("./30_year_moving_window.png")
+  
+data_plot2 %<>% as.tbl()
+
+ggplot()+
+  geom_point(data= data_plot2, aes(x=gauge, y=mmky, color=as.numeric(year)))+
+  geom_point(data=data_plot, aes(x=gauge, y= mmky_true), pch=3, col=2)+
+  scale_color_continuous("Year")+
+  xlab("all neg. sen's slope catchments with p<.05")
+ggsave("./30_year_moving_window2.png")
+
+
+geom_line
+
+head(data_plot2)
+
 
