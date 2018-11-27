@@ -202,7 +202,7 @@ glm_spei_resid = lapply(1:catch_n, function (x) summary(lm(residuals ~ best_spei
 
 p_value=matrix(nrow=catch_n, ncol = 2)
 for(i in 1:catch_n){
-# plot(residuals ~ best_spei, data = glm_resid_final[[i]])
+ plot(glm_resid_final[[]]$residuals)# ~ best_spei, data = glm_resid_final[[i]])
 #   Sys.sleep(.1)
    p_value[i,]= glm_spei_resid[[i]]$coefficients[,4]  
  
@@ -212,7 +212,7 @@ spei_expl = which(p_value[,1]<.1& p_value[,2]<.1)
 
 for(i in spei_expl){
 
-plot(residuals ~ best_spei, data = glm_resid_final[[i]])
+plot(glm_resid_final[[i]]$residuals )
  # Sys.sleep(.1)
 
  
