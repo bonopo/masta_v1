@@ -180,13 +180,6 @@ gauges$best_spi_summer = best_spi_summer
 gauges$cor_spi_summer = value_spi_summer
 
 
-# stepwise regression ####
-g=228
-res = step(lm(ssi_1[,g]~spei_1[,g]+ spi_1[,g] + spei_2[,g]+ spi_2[,g]+ spei_3[,g]+spi_3[,g] + spei_6[,g] + spi_6[,g] + spi_12[,g] + spei_12[,g] + spi_24[,g] + spei_24[,g]),direction="both")
-
-
-summary(res)
-  extractAIC()
 #longterm (lt) memory effect of catchments####
 lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_")
 lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_")
