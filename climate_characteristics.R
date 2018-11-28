@@ -280,7 +280,8 @@ yearly_mn_t = mt_mn_temp %>%
   dplyr::select(-`year(yr_mt)`) %>% 
   as.data.frame()
 
-
+gauges$mean_t = colMeans(yearly_mn_t)
+save(gauges , file="./output/gauges.Rdata")
 
 d30_mn_t = rollapply(data = da_temp_wide,FUN= mean, width=30, by.column=TRUE, fill=NA, align="center") 
 d30_mn_t %<>% as.data.frame()
@@ -325,54 +326,3 @@ yearly_sm_p = mt_sm_p %>%
   dplyr::select(-`year(yr_mt)`) %>% 
   as.data.frame()
 
-#80th percentile approach of van loon &laaha####
-mov_mn_q = rollapply(q_wide, width=30, by.column=T, align= "center", FUN=mean, fill=NA) %>% as.data.frame()
-mov_mn_q_long = mov_mn_q %>% 
-  mutate(date=date_seq_long) %>% 
-  gather(key=gauge, value=mov_mn_q, -date) %>% 
-  mutate(gauge = as.numeric(gauge)) %>% 
-  as.tbl()
-  
-
-q80_q = mov_mn_q %>% 
-  mutate(date=date_seq_long) %>% 
-  gather(key=gauge, value=mov_mn_q, -date)  %>% 
-  mutate(gauge=as.numeric(gauge)) %>% 
-  mutate(num_day = yday(date)) %>% 
-  group_by(gauge, num_day) %>% 
-  summarise(q80= quantile(mov_mn_q,.8, na.rm=T)) %>% 
-  ungroup() 
-  
-temp_val = filter(mov_mn_q_long, gauge == 1) %>% 
-  mutate(num_day = yday(date)) 
-temp_q80 = filter(q80_q, gauge==1)
-res= match(temp_val$num_day, temp_q80$num_day)
-
-for (c in 1:catch_n){
-   
-temp_q80 = filter(q80_q, gauge==c)
-temp_val = filter(mov_mn_q_long, gauge == c) %>% 
-  mutate(q80_q = temp_q80$q80[res])
-  
-}
-#defining drought as below q80 value
-
-temp_val$drought = as.numeric(temp_val$mov_mn_q< temp_val$q80_q) #1 = drought 0=no drought
-
-# temp_val_wide = temp_val %>% 
-#   spread(key=gauge, value= drought)
-
-for (c in 1:catch_n){ 
-    temp= filter(temp_val, gauge==c)
-    res<- list()
-n <- 1
-for (i in 1:length(temp$drought)){
-  if(is.na(temp$drought[i])){
-    next}
-  if(temp$drought[i] == 1){
-  temp$event_n[i] <- n}else{
-    n=n+1
-  }}
-}
-
-temp$event_n
