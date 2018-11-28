@@ -31,7 +31,12 @@ q_sr$sr_value[which(q_sr$sr < .9)] <- 0 #summer
 q_sr$sr_value[which(q_sr$sr > 1.1)] <- 2 #winter NAs are produced in 9 time series that are very altered or have no clear seasonality
 q_sr$sr_value[which(q_sr$sr >= .9 & q_sr$sr <= 1.1)] = 1 #no clear seasonality 
 
-gauges$sr <- as.numeric(q_sr$sr_value)
+q_sr$sr_value_new = NA
+q_sr$sr_value_new[which(q_sr$sr <= 1)] <- 0 #summer
+q_sr$sr_value_new[which(q_sr$sr > 1)] <- 2 #winter NAs are produced in 9 time series that are very altered or have no clear seasonality
+
+which(gauges$sr_new == 2)
+gauges$sr_new <- as.numeric(q_sr$sr_value_new)
 
 remove(q_sr, q_sr_s, q_sr_w)
 #spplot(gauges, "sr")
@@ -163,4 +168,13 @@ remove(q_mean)
 # gauges$saar[int] %>% mean()
 # gauges$saar %>%  which.max()
 # 
-# spplot(gauges, "saar")
+spplot(gauges, "sr_new", identify=T)
+which(gauges$sr_new==2)
+
+
+#alpine rivers####
+gauges$alpine = 0
+gauges$alpine[which(gauges$sr_new==2)] = 1
+#after visual check removing following catchments: 221 238 42 305
+gauges$alpine[c(42,221,238,305)] = 0
+spplot(gauges, "alpine", identify=T)
