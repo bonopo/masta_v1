@@ -170,7 +170,7 @@ ggplot()+
 sig_plot = function(p_value = .1, x_data = "mmkh_mar_mn", y_data = "mmkh_yearly_q10", output = "sr"){
 
 sr = ggplot()+
-  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr_new[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
     annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
   annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
   xlab(paste(x_data, "sen's slope"))+
@@ -260,7 +260,9 @@ ggplot()+
 hist(gauges$bfi)
 
 
-#trend moving window ####
+
+
+#trend moving window #### 
 
 ms7_sbst = mmky_sbst(raw_data = ms7_min, width=10)
 ms7_sbst30 = mmky_sbst(raw_data = ms7_min, width=30)
