@@ -114,6 +114,27 @@ colnames(df) = sci_n
 return(df)
 }
 
+
+#monthly sci analysis ####
+monthly_sci = function(month=3){
+res.array = array(dim=c(40,13,catch_n))  
+for (c in 1:catch_n){
+  
+int= which(month(date_seq)==month)
+res.array[,,c] = cbind(ssi_1[c(int),c], spi_v2_1[c(int),c], spi_v2_2[c(int),c], spi_v2_3[c(int),c], spi_v2_6[c(int),c], spi_v2_12[c(int),c], spi_v2_24[c(int),c], spei_v2_1[c(int),c], spei_v2_2[c(int),c], spei_v2_3[c(int),c], spei_v2_6[c(int),c], spei_v2_12[c(int),c], spei_v2_24[c(int),c]) %>% as.matrix()
+
+
+
+
+}
+cat("colnames: [,1] = ssi-1, [,2]= spi-1, [,3]= spi-2,... ,[,7] =spi-24 , [,8]=spei-1 ,..., [,13] = spei-24")
+return(res.array)
+
+}
+
+
+
+
 #regression ####
 
 spi_spei_reg <- function(sci="spi_", sci_n = c(1,2,3,6,12,24)){
