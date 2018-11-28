@@ -88,3 +88,151 @@ dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
 
 
 
+
+#80th percentile approach of van loon &laaha####
+#for discharge discharge ####
+mov_mn_q = rollapply(q_wide, width=30, by.column=T, align= "center", FUN=mean, fill=NA) %>% as.data.frame %>% as.tbl()
+mov_mn_q_long = mov_mn_q %>% 
+  mutate(date=date_seq_long) %>% 
+  gather(key=gauge, value=mov_mn_q, -date) %>% 
+  mutate(gauge = as.numeric(gauge)) %>% 
+  as.tbl()
+#   
+# 
+# LQ <- q80_q2$mov_mn_q
+# quantile(LQ, .2, na.rm=T)
+# 
+# LQ_sort <- sort(LQ, decreasing = T, na.last = T)
+# n <- length(LQ)
+# Femp <- 1:n/(n+1)
+# plot(Femp, LQ_sort)
+# 
+# q80_q = mov_mn_q %>% 
+#   mutate(date=date_seq_long) %>% 
+#   gather(key=gauge, value=mov_mn_q, -date)  %>% 
+#   mutate(gauge=as.numeric(gauge)) %>% 
+#   mutate(num_day = yday(date)) %>% 
+#   group_by(gauge, num_day) %>% 
+#   summarise(q80= quantile(mov_mn_q,.2, na.rm=T)) %>% #is the equivilent of the 80th percentile of the flow duration curve
+#   ungroup() %>% 
+#   as.tbl()
+# 
+#   
+
+output = matrix(nrow=0, ncol=7) %>% as.data.frame()
+for (c in 1:catch_n){ 
+lf_obj <- mov_mn_q_long %>% 
+  filter(gauge == c) %>% 
+  mutate( flow= mov_mn_q,day = day(date), month=month(date), year = year(date)) %>% 
+  dplyr::select(-date, -gauge, -mov_mn_q) %>% 
+  createlfobj(., baseflow=F, hyearstart=1) %>% 
+  as.xts()
+#flowunit(lf_obj)<-'m³/s' default is m³/s so no new default definition is needed
+
+res= find_droughts(lf_obj, threshold = "Q80", varying="daily") #same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
+
+#problem: droughts of less than 4 days are still defined as drought: But I am intested in droughts that have a long lasting effect with it's deficit in water
+
+for (i in 1:max(res$event.no)){
+  if(length(which(res$event.no == i)) <= 3 ){ #removing droughts of less than 4 days
+    res$event.no[res$event.no == i] = 0
+  }  
+}
+new.drought.no = 1:(length(unique(res$event.no))-1) #because 0 is not an event -1
+n=1
+
+for (i in unique(res$event.no)[-1]){#because 0 is not an event -1
+  res$event.no[res$event.no == i] = new.drought.no[n]
+  n=n+1
+}
+
+#creating a matrix with drought event results
+res %<>% as.data.frame()
+drought_t = matrix(nrow = max(res$event.no), ncol=7) %>% as.data.frame()
+drought_t[,1]=as.numeric(c)
+for (i in 1:max(res$event.no)){
+drought_t[i,2]= rownames(res)[res$event.no == i][1] #drought start
+drought_t[i,3]=tail(rownames(res)[res$event.no == i], n=1) #drought end
+drought_t[i,4] = sum(res$def.increase[res$event.no == i]) # deficit vol
+drought_t[i,5] = mean(res$threshold[res$event.no == i]) #mean threshhold
+drought_t[i,6] = mean(res$discharge[res$event.no == i], na.rm=T) #mean disscharge
+drought_t[i,7] = i #event no
+}
+
+output = rbind(output, drought_t)
+
+cat(100*round(c/catch_n,2),"%", "\n")
+
+}
+#warings are due to assuming the default in the deficit unit (default is correct) and because of Na valus that exist because the mean deficit is calculated from 30 day moving centere average
+colnames(output) = c("catchment", "dr_start", "dr_end", "def_vol", "threshhold", "mn_q","event_no")
+head(output)
+save(output, file="./output/drought_q.Rdata")
+
+remove(lf_obj, res,  drought_t, new.drought.no, mov_mn_q, mov_mn_q_long)
+
+
+#for precipitation (not completed)####
+
+  mov_sm_p = rollapply(precip, width=30, by.column=T, align= "center(not", FUN=sum, fill=NA) %>% as.data.frame() %>% as.tbl()
+mov_sm_p_long = mov_sm_p %>% 
+  mutate(date=date_seq_long) %>% 
+  gather(key=gauge, value=sum_mm, -date) %>% 
+  mutate(gauge = as.numeric(gauge)) %>% 
+  as.tbl()
+
+
+output = matrix(nrow=0, ncol=7) %>% as.data.frame()
+for (c in 1:catch_n){ 
+lf_obj <- mov_mn_q_long %>% 
+  filter(gauge == c) %>% 
+  mutate( flow= mov_mn_q,day = day(date), month=month(date), year = year(date)) %>% 
+  dplyr::select(-date, -gauge, -mov_mn_q) %>% 
+  createlfobj(., baseflow=F, hyearstart=1) %>% 
+  as.xts()
+#flowunit(lf_obj)<-'m³/s' default is m³/s so no new default definition is needed
+
+res= find_droughts(lf_obj, threshold = "Q80", varying="daily") #same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
+
+#problem: droughts of less than 4 days are still defined as drought: But I am intested in droughts that have a long lasting effect with it's deficit in water
+
+for (i in 1:max(res$event.no)){
+  if(length(which(res$event.no == i)) <= 3 ){ #removing droughts of less than 4 days
+    res$event.no[res$event.no == i] = 0
+  }  
+}
+new.drought.no = 1:(length(unique(res$event.no))-1) #because 0 is not an event -1
+n=1
+
+for (i in unique(res$event.no)[-1]){#because 0 is not an event -1
+  res$event.no[res$event.no == i] = new.drought.no[n]
+  n=n+1
+}
+
+#creating a matrix with drought event results
+res %<>% as.data.frame()
+drought_t = matrix(nrow = max(res$event.no), ncol=7) %>% as.data.frame()
+drought_t[,1]=as.numeric(c)
+for (i in 1:max(res$event.no)){
+drought_t[i,2]= rownames(res)[res$event.no == i][1] #drought start
+drought_t[i,3]=tail(rownames(res)[res$event.no == i], n=1) #drought end
+drought_t[i,4] = sum(res$def.increase[res$event.no == i]) # deficit vol
+drought_t[i,5] = mean(res$threshold[res$event.no == i]) #mean threshhold
+drought_t[i,6] = mean(res$discharge[res$event.no == i], na.rm=T) #mean disscharge
+drought_t[i,7] = i #event no
+}
+
+output = rbind(output, drought_t)
+
+cat(100*round(c/catch_n,2),"%", "\n")
+
+}
+#warings are due to assuming the default in the deficit unit (default is correct) and because of Na valus that exist because the mean deficit is calculated from 30 day moving centere average
+colnames(output) = c("catchment", "dr_start", "dr_end", "def_vol", "threshhold", "mn_q","event_no")
+head(output)
+save(output, file="./output/drought_q.Rdata")
+
+remove(lf_obj, res,  drought_t, new.drought.no)
+
+
+
