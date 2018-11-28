@@ -200,6 +200,46 @@ ggsave("memoryeffect_24.png")
     
 # SCI indice when there is drought ####
 
+#-----> see script drought attribution
+
+
+#monthly correlation ####
+
+mar_sci = monthly_sci(month=3) 
+jun_sci = monthly_sci(month=6)
+mat = matrix(nrow=catch_n, ncol=12)
+for (n in 2:13){
+mat[,(n-1)]= sapply(1:catch_n, function(c) cor(x= mar_sci[,1,c],y= mar_sci[,n,c], use="na.or.complete"))
+}
+mar_sci_cor = mat %>% as.data.frame()
+colnames(mar_sci_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
+mar_sci_cor = cbind(mar_sci_cor,gauge= 1:catch_n,sr=  gauges$sr_new,saar= gauges$saar) %>% as.tbl()
+for (n in 2:13){
+mat[,(n-1)]= sapply(1:catch_n, function(c) cor(x= jun_sci[,1,c],y= jun_sci[,n,c], use="na.or.complete"))
+}
+jun_sci_cor = mat %>% as.data.frame()
+colnames(jun_sci_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
+jun_sci_cor = cbind(jun_sci_cor, gauge= 1:catch_n, sr= gauges$sr_new,saar=  gauges$saar)
+
+data_plot = gather(jun_sci_cor, key=sci_type, value=cor, -gauge, -sr, -saar) %>% as.tbl()
+
+ggplot()+
+  geom_point(data=data_plot %>% filter(str_detect(sci_type, "spi"), sr==2) , aes(x=saar, y= cor, col=sci_type))
+
+#one can see big gap between all winter catchments: further definition with catchments with higher precipitation than 1200mm (alpine vs Harz/Blackforest)
+int = which(gauges$sr_new == 2)
+png("./plots/further_investigate/final/cor_mar_jun_ssi.png", width=1000, height=500)
+par(mfrow=c(1,2))
+boxplot(jun_sci_cor[int,7:12], ylab="pearson correlation with june ssi-1 (only winter lf)", ylim=c(-.2,.9))
+boxplot(mar_sci_cor[int,7:12], ylab="pearson correlation with march ssi-1 (only winter lf)", ylim=c(-.2,.9))
+dev.off()
+
+png("./plots/further_investigate/final/cor_mar_jun_ssi_all.png", width=1000, height=500)
+par(mfrow=c(1,2))
+boxplot(jun_sci_cor[,7:12], ylab="pearson correlation with march ssi-1", ylim=c(-.3,.9))
+boxplot(mar_sci_cor[,7:12], ylab="pearson correlation with march ssi-1", ylim=c(-.3,.9))
+dev.off()
+
 
 
 
