@@ -46,10 +46,6 @@ mt_sm_p <- precip_long %>%
 
 mt_sm_p_wide <- spread(mt_sm_p, key=gauge, value=month_sum, drop=F) %>% dplyr::select(-yr_mt) %>% as.data.frame()
 
-# precip_long %>% 
-#   filter(gauge < 10) %>%
-#   ggplot()+
-#     geom_smooth(aes(x=date, y=sum_mm, colour=as.factor(gauge), group=gauge), se=F)
 
 #discharge####
 q_long <- load_file(streamflow, "q")
@@ -64,12 +60,6 @@ mt_mn_q <- q_long %>%
   mutate(month = month(yr_mt))
 
 mt_mn_q_wide <- spread(mt_mn_q, key = gauge, value = q_mean) %>% dplyr::select(-c(yr_mt,month)) %>% as.data.frame()
- #the gauge numbers are not equal to the gauge numbers in temperature and discharge 
-
-# q_long %>% 
-#   filter(gauge < 10) %>%
-# ggplot()+
-#   geom_smooth(aes(x=date, y=q, colour=as.factor(gauge), group=gauge), se=F)
 
 #temperature####
 colnames(tempera) <- 1:catch_n
