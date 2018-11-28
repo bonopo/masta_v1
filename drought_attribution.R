@@ -220,17 +220,39 @@ plot(glm_resid_final[[i]]$residuals )
 
 #speichertransfer ####
 
-hist(gauges$bfi) # normal
-hist(mmky_mar_mn_q$sen_slope) #not normal
-hist(mmky_jun_mn_q$sen_slope)
+hist(gauges$sr_new) # normal
+hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==0]) #not normal
+hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==2]) # not normal
 
-y = mmky_jun_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
-x= mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
-x2 = gauges$sr[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
+y = mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
+x= mmky_mar_mn_t$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
+x2 = gauges$sr_new[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
+x2_s = gauges$sr[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
+alpine = gauges$alpine[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
+
+#transformation to normal
+
+x_norm= (x+abs(min(x)))
+
+x_norm[which(x_norm == 0)] = 0.01
+wi_mn
+
+hist(log10(x_norm))
 data_plot = cbind.data.frame(y, x, x2)
 #problem one variable is normal the other is positivly skewed
-fm = lm(y ~ x*x2)
+fm = lm(y ~ log10(x_norm)*x2, family = gaussian)
+fm2 = lm(y ~ x*x2_s)
 summary(fm)
+summary(fm3)
+plot(fm)
+hist(residuals(fm))
+#still bad residuals
+#problem residuals are not normal distributed, low variance for high fitted values and vice versa 
+# and high leverage through few points
+influence.measures(fm) #with threshhold =1
+ range(cooks.distance(fm)); range(cooks.distance(fm3))
+
+
 logLik(fm)
 str(fm)
 summary(fm)$adj.r.squared
@@ -242,19 +264,21 @@ summary(fm_sn) #higher log likelihood therefore better
 predict(fm_sn)
 
 
-data_plot = cbind.data.frame(y, x, x2)
+
+data_plot = cbind.data.frame(y, x, x2, alpine)
 ggplot(data= data_plot, aes(y=y, x=x, col=as.factor(x2)))+
   geom_point()+
-  geom_smooth(method="lm", se = TRUE)+
+  geom_smooth(method="lm", se = TRUE, show.legend = F)+
+ geom_point(data=  data_plot[data_plot$alpine==0 & x2 == 2,] , aes(y=y, x=x), col="blue", show.legend = F)+
   annotate(geom="text", -Inf, Inf,  hjust = -0.2, vjust = 2, label=paste("n = ", length(y)))+
   annotate(geom="text", -Inf, Inf,  hjust = -0.2, vjust = 4, label=paste("p = 0.05"))+
   annotate(geom="text", -Inf, Inf,  hjust =-0.2, vjust = 6, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))+
-  xlab(paste("mmky March mean q sen's slope"))+
-  ylab(paste("mmky June mean q sen's slope"))+
-  scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
+  ylab(paste("mmky March mean q sen's slope"))+
+  xlab(paste("mmky March mean t sen's slope"))+
+  scale_color_discrete("Seasonality", label=c("summer", "winter"))
 #this is linear model with normal distribution not with selm and skewed normal distr
 
-ggsave("./plots/further_investigate/final/lm_sr_wi_su_q10.png")
+ggsave("./plots/further_investigate/final/march_temp_q.png")
 
 hist(mmky_su_q10$sen_slope) #normal
 hist(mmky_wi_q10$sen_slope) #normal
@@ -344,3 +368,6 @@ ggplot()+
   ylab(paste("mmky Wintzer q10 sen's slope"))+
   scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
 
+
+  
+  
