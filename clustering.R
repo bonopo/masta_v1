@@ -11,14 +11,14 @@
 #calculating q95 for both parts
 q_sr_w <- q_long %>%
   mutate(month = month(date)) %>%
-  filter(month > 11 | month <4) %>%  #definitin of winter from Laaha et al 2006
+  filter(month > 11 | month <5) %>%  #changed definitin of winter from Laaha et al 2006 to stahl so it is consistent for all!
   group_by(gauge) %>%
   mutate(qt = quantile(q, 0.05)) %>%
   summarise(q95_w = mean(qt))
 
 q_sr_s <- q_long %>%
   mutate(month = month(date)) %>%
-  filter(month < 12 | month > 3) %>%
+  filter(month < 12 & month > 4) %>%
   group_by(gauge) %>%
   mutate(qt = quantile(q, 0.05)) %>%
   summarise(q95_s = mean(qt))
@@ -35,8 +35,8 @@ q_sr$sr_value_new = NA
 q_sr$sr_value_new[which(q_sr$sr <= 1)] <- 0 #summer
 q_sr$sr_value_new[which(q_sr$sr > 1)] <- 2 #winter NAs are produced in 9 time series that are very altered or have no clear seasonality
 
-which(gauges$sr_new == 2)
-gauges$sr_new <- as.numeric(q_sr$sr_value_new)
+gauges$sr <- as.numeric(q_sr$sr_value) # 0 = summer, 1= no clear seasonality 2=winter
+gauges$sr_new <- as.numeric(q_sr$sr_value_new) # 2= winter 12- 0= summer low flow
 
 remove(q_sr, q_sr_s, q_sr_w)
 #spplot(gauges, "sr")
@@ -177,4 +177,4 @@ gauges$alpine = 0
 gauges$alpine[which(gauges$sr_new==2)] = 1
 #after visual check removing following catchments: 221 238 42 305
 gauges$alpine[c(42,221,238,305)] = 0
-spplot(gauges, "alpine", identify=T)
+#spplot(gauges, "alpine", identify=T)
