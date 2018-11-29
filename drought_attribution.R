@@ -126,6 +126,8 @@ return(result)
 }
 
 drought_sci = dr_corr(threshhold = -1)
+drought_sci_0 = dr_corr(threshhold = 0)
+
 
 #correlation of ssi-1 with spi-/spei-n in drought periods####
 
@@ -142,8 +144,12 @@ cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "p")
 }
 #plot(y= drought_sci[[3]]$ssi , x= drought_sci[[3]]$spi_3)
 
+png("./plots/3_choice/bxplt_dr_spi_1.png", width=1000, height=500)
+par(mfrow=c(1,2))
+boxplot(cor_spi, names=agg_month, xlab="SPI-n", ylab="pearson correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
+boxplot(cor_spei, names=agg_month, xlab="SPEI-n", ylab="pearson correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
+dev.off()
 
-boxplot(cor_spi, names=agg_month, xlab="SPI-n", ylab="pearson correlation")
 #negative trend??? bad correlation
 #which aggregation month has the highest cor####
 gauges$best_spi_n = apply(cor_spi, 1, which.max)
@@ -224,23 +230,32 @@ hist(gauges$sr_new) # normal
 hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==0]) #not normal
 hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==2]) # not normal
 
-y = mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
-x= mmky_mar_mn_t$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
-x2 = gauges$sr_new[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
-x2_s = gauges$sr[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
-alpine = gauges$alpine[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)]
+y= mmky_mar_mn_q
+x1= mmky_jun_mn_q
+x2= gauges$sr_new #or gauges$sr
+alpine = gauges$alpine
 
+lm_y = y$sen_slope[which(x1$new_p<.05 & y$new_p<.05)]
+lm_x1 = x1$sen_slope[which(x1$new_p<.05 & y$new_p<.05)]
+lm_x2 = x2[which(x1$new_p<.05 & y$new_p<.05)]
+alp = alpine[which(x1$new_p<.05 & y$new_p<.05)]
+data_plot = cbind.data.frame(lm_y,lm_x1, lm_x2, alp)
 #transformation to normal
+lm_x1_w = lm_x1[which(lm_x2 == 2)] #winter lf
+lm_x1_s = lm_x1[which(lm_x2 != 2)] #not winter low flows
+hist(lm_x1_w)
+hist(lm_x1_s)
+lm_x1_w_norm= (lm_x1_w+abs(min(lm_x1_w))) 
+lm_x1_s_norm= (lm_x1_s+abs(min(lm_x1_w))) #adding the minima of winter (!) to both summer and winter
+#lm_x1_w_norm[which(lm_x1_w_norm == 0)] = 0.01
+hist(exp(lm_x1_s_norm)) #normal
+hist(exp(lm_x1_w_norm))#normal
 
-x_norm= (x+abs(min(x)))
-
-x_norm[which(x_norm == 0)] = 0.01
-wi_mn
-
-hist(log10(x_norm))
-data_plot = cbind.data.frame(y, x, x2)
+lm_x1_norm= lm_x1+abs(min(lm_x1))
+data_lm = cbind.data.frame(lm_y,lm_x1_norm, lm_x2, alp)
+#head(data_df)
 #problem one variable is normal the other is positivly skewed
-fm = lm(y ~ log10(x_norm)*x2, family = gaussian)
+fm = lm(lm_y ~ exp(lm_x1_norm)*lm_x2, data=data_lm)
 fm2 = lm(y ~ x*x2_s)
 summary(fm)
 summary(fm3)
@@ -261,24 +276,20 @@ fm_sn = selm(y~x*x2, family= "SN", data=data_plot)
 summary(fm_sn) #higher log likelihood therefore better
 # new_data = predict.selm(fm_sn, newdata = data_plot$x, param.type = "cp", interval = "prediction" ) # With the "CP" option (that is, the 'centred
 #parametrization'), the residuals are centred around 0, at least approximately; 
-predict(fm_sn)
 
-
-
-data_plot = cbind.data.frame(y, x, x2, alpine)
-ggplot(data= data_plot, aes(y=y, x=x, col=as.factor(x2)))+
+ggplot(data= data_plot, aes(y=lm_x1, x=lm_y, col=as.factor(lm_x2)))+
   geom_point()+
   geom_smooth(method="lm", se = TRUE, show.legend = F)+
- geom_point(data=  data_plot[data_plot$alpine==0 & x2 == 2,] , aes(y=y, x=x), col="blue", show.legend = F)+
-  annotate(geom="text", -Inf, Inf,  hjust = -0.2, vjust = 2, label=paste("n = ", length(y)))+
-  annotate(geom="text", -Inf, Inf,  hjust = -0.2, vjust = 4, label=paste("p = 0.05"))+
-  annotate(geom="text", -Inf, Inf,  hjust =-0.2, vjust = 6, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))+
-  ylab(paste("mmky March mean q sen's slope"))+
-  xlab(paste("mmky March mean t sen's slope"))+
+ geom_point(data=  data_plot[data_plot$alp==0 & lm_x2 == 2,] , aes(x=lm_y, y=lm_x1), col="blue", show.legend = F)+
+  annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -2.5, label=paste("n = ", length(lm_y)))+
+  annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -1, label=paste("p = 0.05"))+
+  annotate(geom="text", -Inf, -Inf,  hjust =-0.2, vjust = -4, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))+
+  ylab(paste("mmky June mean q sen's slope"))+
+  xlab(paste("mmky March mean q sen's slope"))+
   scale_color_discrete("Seasonality", label=c("summer", "winter"))
 #this is linear model with normal distribution not with selm and skewed normal distr
 
-ggsave("./plots/further_investigate/final/march_temp_q.png")
+ggsave("./plots/3_choice/jun_march_v3.png")
 
 hist(mmky_su_q10$sen_slope) #normal
 hist(mmky_wi_q10$sen_slope) #normal
