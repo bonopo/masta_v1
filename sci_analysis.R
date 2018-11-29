@@ -236,7 +236,7 @@ dev.off()
 
 png("./plots/further_investigate/final/cor_mar_jun_ssi_all.png", width=1000, height=500)
 par(mfrow=c(1,2))
-boxplot(jun_sci_cor[,7:12], ylab="pearson correlation with march ssi-1", ylim=c(-.3,.9))
+boxplot(jun_sci_cor[,7:12], ylab="pearson correlation with march ssi-1 (not winter lf)", ylim=c(-.3,.9))
 boxplot(mar_sci_cor[,7:12], ylab="pearson correlation with march ssi-1", ylim=c(-.3,.9))
 dev.off()
 
@@ -377,5 +377,28 @@ lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.
   
   ggsave("bfi_lf_month.png")
     
+
+  
+  #skewness#### 
+  res=matrix(nrow = catch_n, ncol=length(agg_month))
+  i=1
+  for ( n in agg_month){
+res[,i]= sapply(1:catch_n, function(x) moments::skewness(get(paste0("spei_v2_",n))[,x],na.rm = T ))
+i=i+1
+  }
+  
+  colMeans(res)
+  
+  #number of droughts of every catchment ####
+  
+which(spi_v2_24[,c(1:338)]< -1) %>% length()/338
+  
+  ssi_1_long %>% 
+    filter(month(yr_mt) ==1) %>% 
+    group_by(gauge) %>% 
+    summarise(below = length(which(ssi < -1)))
+    6/40
+    
+    spi_v2_1[,1] %>% mean()
 
   
