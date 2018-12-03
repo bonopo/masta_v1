@@ -4,10 +4,10 @@ setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 # save.image(file="./data/r_temp_image/basic.Rdata")
 load(file="./data/r_temp_image/basic.Rdata")
 
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest", "gridExtra"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
-#install.packages("sn")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn","randomForest"), require, character.only = T)
+#install.packages("gridExtra")
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn","randomForest", "gridExtra"), require, character.only = T)
 #install.packages("climtrends", repos="http://R-Forge.R-project.org")
 
 
@@ -79,7 +79,7 @@ mt_mn_temp <- temp_long %>%
 
 
 
-remove(precip, tempera,streamflow)
+remove(tempera,streamflow)
 # temp %>% 
 #   filter(gauge < 10) %>%
 # ggplot()+
