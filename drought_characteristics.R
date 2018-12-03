@@ -97,27 +97,6 @@ mov_mn_q_long = mov_mn_q %>%
   gather(key=gauge, value=mov_mn_q, -date) %>% 
   mutate(gauge = as.numeric(gauge)) %>% 
   as.tbl()
-#   
-# 
-# LQ <- q80_q2$mov_mn_q
-# quantile(LQ, .2, na.rm=T)
-# 
-# LQ_sort <- sort(LQ, decreasing = T, na.last = T)
-# n <- length(LQ)
-# Femp <- 1:n/(n+1)
-# plot(Femp, LQ_sort)
-# 
-# q80_q = mov_mn_q %>% 
-#   mutate(date=date_seq_long) %>% 
-#   gather(key=gauge, value=mov_mn_q, -date)  %>% 
-#   mutate(gauge=as.numeric(gauge)) %>% 
-#   mutate(num_day = yday(date)) %>% 
-#   group_by(gauge, num_day) %>% 
-#   summarise(q80= quantile(mov_mn_q,.2, na.rm=T)) %>% #is the equivilent of the 80th percentile of the flow duration curve
-#   ungroup() %>% 
-#   as.tbl()
-# 
-#   
 
 output = matrix(nrow=0, ncol=7) %>% as.data.frame()
 for (c in 1:catch_n){ 
@@ -174,7 +153,7 @@ remove(lf_obj, res,  drought_t, new.drought.no, mov_mn_q, mov_mn_q_long)
 
 #for precipitation (not completed)####
 
-  mov_sm_p = rollapply(precip, width=30, by.column=T, align= "center(not", FUN=sum, fill=NA) %>% as.data.frame() %>% as.tbl()
+  mov_sm_p = rollapply(precip, width=30, by.column=T, align= "center", FUN=sum, fill=NA) %>% as.data.frame() %>% as.tbl()
 mov_sm_p_long = mov_sm_p %>% 
   mutate(date=date_seq_long) %>% 
   gather(key=gauge, value=sum_mm, -date) %>% 
@@ -184,15 +163,15 @@ mov_sm_p_long = mov_sm_p %>%
 
 output = matrix(nrow=0, ncol=7) %>% as.data.frame()
 for (c in 1:catch_n){ 
-lf_obj <- mov_mn_q_long %>% 
+lf_obj <- mov_sm_p_long %>% 
   filter(gauge == c) %>% 
-  mutate( flow= mov_mn_q,day = day(date), month=month(date), year = year(date)) %>% 
-  dplyr::select(-date, -gauge, -mov_mn_q) %>% 
+  mutate( flow= sum_mm,day = day(date), month=month(date), year = year(date)) %>% 
+  dplyr::select(-date, -gauge, -sum_mm) %>% 
   createlfobj(., baseflow=F, hyearstart=1) %>% 
   as.xts()
-#flowunit(lf_obj)<-'m³/s' default is m³/s so no new default definition is needed
+flowunit(lf_obj)<-"l/d" #default is m³/s so new default definition is needed
 
-res= find_droughts(lf_obj, threshold = "Q80", varying="daily") #same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
+res= lfstat::find_droughts(lf_obj, threshold = "Q80", varying="daily") #same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
 
 #problem: droughts of less than 4 days are still defined as drought: But I am intested in droughts that have a long lasting effect with it's deficit in water
 
@@ -224,15 +203,30 @@ drought_t[i,7] = i #event no
 
 output = rbind(output, drought_t)
 
-cat(100*round(c/catch_n,2),"%", "\n")
+cat(100*round(c/catch_n,3),"%", "\n")
 
 }
-#warings are due to assuming the default in the deficit unit (default is correct) and because of Na valus that exist because the mean deficit is calculated from 30 day moving centere average
-colnames(output) = c("catchment", "dr_start", "dr_end", "def_vol", "threshhold", "mn_q","event_no")
+#warings are due to assuming the default in the deficit unit (the default is correct!!) and because of Na values. NA values exist because the mean deficit is calculated from 30 day moving centered average (creating 14 NAs at the beginning at at the end of each time series)
+colnames(output) = c("catchment", "dr_start", "dr_end", "def_vol", "threshhold", "mn_sm_p","event_no")
 head(output)
-save(output, file="./output/drought_q.Rdata")
+save(output, file="./output/drought_p.Rdata")
 
 remove(lf_obj, res,  drought_t, new.drought.no)
 
 
+
+
+
+#80th percentile approach analysis####
+load("./output/drought_q.Rdata", verbose = TRUE)
+drought_q= output
+load("./output/drought_p.Rdata", verbose = TRUE)
+drought_p = output
+
+head(drought_p)
+
+sum_q = drought_q %>% 
+  as.tbl %>% 
+  mutate(dr_start = ymd(dr_start), dr_end=ymd(dr_end), catchment= as.integer(catchment)) %>%   group_by(catchment, year(dr_start)) %>% 
+  summarise(n_events = n(), sm_length = sum(dr_end-dr_start), mn_defi = mean(def_vol))
 
