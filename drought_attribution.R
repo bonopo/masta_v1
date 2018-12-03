@@ -11,13 +11,18 @@ clust_ana2 = cbind(mmkh_su_mn_t$sen_slope, mmkh_wi_mn_t$sen_slope,mmkh_yearly_mn
 
 colnames(clust_ana2)= c( "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p","mar_mn_t","jun_mn_t")
 
-png("./plots/further_investigate/final/cluster_response.png", width=1000, height=500)
+clust_ana3 = cbind( gauges$alpine, gauges$sr_new, as.factor(gauges$hydrogeo_simple), as.factor(gauges$landuse), gauges$q_mean, gauges$saar, gauges$bfi, gauges$Enzgsg_) %>% as.data.frame()
+
+colnames(clust_ana3) =c("alpine",  "seasonality","hydro_geo","landuse","q_mean","saar","BFI","catchment_km")
 library(scales)
-plot(Hmisc::varclus(~., data=clust_ana2), las=1, cex.lab=1.5)
+data_clus = cbind(clust_ana2, clust_ana3)#[,-c(3,4)]
+
+pdf("./plots/3_choice/cluster_response.pdf" )
+plot(Hmisc::varclus(~., data=data_clus), las=1, cex.lab=1.5)
 abline(h=.5, lty=2)
 dev.off()
-
-pca <- prcomp(clust_ana2, scale=T)
+options(na.action)
+pca <- prcomp(cbind(clust_ana2, clust_ana3), scale=T, na.action= na.omit)
 summary(pca)
 screeplot(pca)
 biplot(pca)
@@ -29,11 +34,13 @@ ggplot2::autoplot(stats::prcomp(clust_ana2, scale=TRUE), label = FALSE, loadings
 remove(clust_ana)
 #collinearity ####
 
-round(cor(clust_ana2),2)
+cor_mat = round(cor(data_clus, use="na.or.complete", method="p"),2)
+xtable::xtable(cor_mat)
 #rule of thumb .7 (dorman)
+glm
 
 #variance inflation factor ####
-fm = glm(mmkh_ms7_min$sen_slope ~ ., data=clust_ana2)
+fm = glm(mmkh_ms7_min$sen_slope ~ ., data=cbind(clust_ana2, clust_ana3))
 summary(fm)
 car::vif(fm)
 #schwellenwert von 10 (dorman)
@@ -74,42 +81,6 @@ for(i in 1:length(agg_month)){ #for every aggregation month
 
   int= pmatch(droughts_q_catch$yr_mt,spei_d_catch$`ymd(date_seq)`) #getting the value of spi or spei of every month with drought (discharge) 
 
-  
-  # time= Sys.time()
-  #   int_spei= lapply(1:10, FUN= function(x) pmatch(droughts_q[droughts_q$gauge==x,1],spei_d[[i]]$`ymd(date_seq)` ))
-  #   end= Sys.time()-time # for loop is faster!!
-  
-   
-# 
-#   install.packages("lm4")
-#   lm4::
-#   time= Sys.time()
-#    i=1
-#    vec = 1:10
-#   cl = makeCluster(no_cores)
-#   x= c(1:10)
-#   clusterExport(cl=cl, "x")
-#   res = clusterEvalQ(cl=cl, function(x)
-#         pmatch(droughts_q[droughts_q$gauge==x,1],spei_d[[1]]$`ymd(date_seq)`))
-#   
-#   resPp= parallel::parLapply(cl=cl,1:10,droughts_q, fun= f)
-#   
-#   
-#                              fun= function(x)
-#         pmatch(droughts_q[droughts_q$gauge==x,1],spei_d[[1]]$`ymd(date_seq)`, envir = .GlobalEnv))
-#    stopCluster(cl) #to return memory ressources to the system
-#      Sys.time()-time # for loop is faster!!
-#      clusterEvalQ(cl=cl, function(x) pmatch(droughts_q[droughts_q$gauge==x,1],spei_d[[1]]$`ymd(date_seq)`))
-# # 
-# #      
-#      f= function(x) {
-#         pmatch(droughts_q[droughts_q$gauge==x,1],spei_d[[i]]$`ymd(date_seq)`)
-#        }
-# #      
-# # clusterApply(cl, 1:2, get("+"), 3)
-
-
-  
 catch_res = droughts_q_catch %>%  
     mutate(spi= spi_d_catch$spi[int], spei= spei_d_catch$spei[int], date_sci= spei_d_catch$`ymd(date_seq)`[int])
   
@@ -138,17 +109,83 @@ for (a in 1:length(drought_sci)){
 for (g in 1:catch_n){
 temp= drought_sci[[a]] %>% 
   filter(gauge== g)
-cor_spi[g, a] = cor(y= temp$ssi , x= temp$spi, use="c", method = "p") 
-cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "p")
+cor_spi[g, a] = cor(y= temp$ssi , x= temp$spi, use="c", method = "spearman") 
+cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
 }
 }
 #plot(y= drought_sci[[3]]$ssi , x= drought_sci[[3]]$spi_3)
 
-png("./plots/3_choice/bxplt_dr_spi_1.png", width=1000, height=500)
+
+
+png("./plots/3_choice/bxplt_dr_spi_1_spear.png", width=1000, height=500)
 par(mfrow=c(1,2))
-boxplot(cor_spi, names=agg_month, xlab="SPI-n", ylab="pearson correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
-boxplot(cor_spei, names=agg_month, xlab="SPEI-n", ylab="pearson correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
+boxplot(cor_spi, names=agg_month, xlab="SPI-n", ylab="spearman correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
+boxplot(cor_spei, names=agg_month, xlab="SPEI-n", ylab="spearman correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
 dev.off()
+
+colnames(cor_spi) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24")
+colnames(cor_spei) = c("spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
+
+boxplot(cor_spi)
+
+int= which(cor_spi[,4] > .5)
+gauges$bfi[int]
+gauges$Hochwrt[int]
+
+gauges$cor_spi_6 = cor_spi[,3]
+
+spplot(gauges, "cor_spi_6")
+
+
+cor_spi_long = cor_spi %>% 
+  as.data.frame() %>% 
+  mutate(sr = gauges$sr_new, hydro_geo = gauges$hydrogeo_simple, landuse= gauges$landuse, bfi= gauges$bfi, saar = gauges$saar, gauge= 1:catch_n) %>% 
+  gather(key=spi_type, value= spear_cor,  factor_key = T, -saar, -sr, -landuse, -hydro_geo, -bfi, -gauge) %>% 
+  as.tbl() 
+
+cor_spei_long = cor_spei %>% 
+  as.data.frame() %>% 
+  mutate(sr = gauges$sr_new, hydro_geo = gauges$hydrogeo_simple, landuse= gauges$landuse, bfi= gauges$bfi, saar = gauges$saar, gauge= 1:catch_n) %>% 
+  gather(key=spei_type, value= spear_cor,  factor_key = T, -saar, -sr, -landuse, -hydro_geo, -bfi, -gauge) %>% 
+  as.tbl() 
+
+winter = ggplot()+
+  geom_boxplot(data=cor_spi_long %>% filter(spi_type == "spi_3", sr==2), aes(x=saar, y = spear_cor)) +
+  ylim(c(0,.75))+
+  xlab("Winter low flows")+
+  ylab("spearman correlation ssi-1 ~ x (<-1)")
+summer = ggplot()+
+  geom_boxplot(data=cor_spi_long %>% filter(spi_type == "spi_3", sr==0), aes(x=saar, y=spear_cor))+
+  ylim(c(0,.75))+
+  xlab("Summer low flows")+
+  ylab("spearman correlation ssi-1 ~ x (<-1) ")
+grid.arrange(winter, summer, ncol=2)
+             
+ggplot(data= cor_spi_long %>% filter(spi_type == "spi_3"))+
+  geom_point(aes(col=as.factor(sr), y= spear_cor, x=landuse))
+
+cor_jun_mar_spei= sapply(1:catch_n , function(c) cor(x= jun_mn_q[,c], y= mar_sci[,10,c], method = "pearson", use="na.or.complete")) #10 because i am interested in spei-3, mar_sci created in script: sci_analysis
+
+cor_jun_mar_spi= sapply(1:catch_n , function(c) cor(x= jun_mn_q[,c], y= mar_sci[,4,c], method = "pearson", use="na.or.complete")) #4 because i am interested in spi-3, mar_sci created in script: sci_analysis
+
+data_plot =cbind.data.frame(cor_jun_mar_spei, sr=gauges$sr_new)
+
+
+
+ggplot()+
+  geom_boxplot(data=data_plot, aes(x=as.factor(sr), y=cor_jun_mar_spei))+
+  ylim(c(0,.75))+
+  xlab("Lowflow season")+
+  scale_x_discrete(labels = c("summer", "winter"))+
+  ylab("pearson correlation of mean q june ~ spei-3 (march)")
+
+ggsave("./plots/3_choice/cor_jun_mar_spi.pdf")
+
+pdf("./plots/3_choice/cor_ssi_spei_winter_vs_summer.pdf")
+grid.arrange(winter, summer, ncol=2)
+dev.off()
+
+
 
 #negative trend??? bad correlation
 #which aggregation month has the highest cor####
@@ -230,8 +267,8 @@ hist(gauges$sr_new) # normal
 hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==0]) #not normal
 hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==2]) # not normal
 
-y= mmky_mar_mn_q
-x1= mmky_jun_mn_q
+y= mmky_mar_mn_q # mmky_mar_mn_q 
+x1= mmky_jun_mn_q # mmky_jun_mn_q
 x2= gauges$sr_new #or gauges$sr
 alpine = gauges$alpine
 
@@ -247,6 +284,11 @@ hist(lm_x1_w)
 hist(lm_x1_s)
 lm_x1_w_norm= (lm_x1_w+abs(min(lm_x1_w))) 
 lm_x1_s_norm= (lm_x1_s+abs(min(lm_x1_w))) #adding the minima of winter (!) to both summer and winter
+nnn = (lm_x1 - mean(lm_x1))/sd(lm_x1)
+hist(log(exp(lm_x1)))
+range(nnn)
+exp(nnn)
+
 #lm_x1_w_norm[which(lm_x1_w_norm == 0)] = 0.01
 hist(exp(lm_x1_s_norm)) #normal
 hist(exp(lm_x1_w_norm))#normal
@@ -313,6 +355,39 @@ ggplot(data= data_plot, aes(y=y, x=x, col=as.factor(x2)))+
   xlab(paste("mmky Summer q10 sen's slope"))+
   ylab(paste("mmky Wintzer q10 sen's slope"))+
   scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
+
+
+#lm of ms7_date####
+x1= mmky_ms7_date
+y = mmky_su_sm_p
+
+lm_y = y$sen_slope[which(x1$new_p<1 & y$new_p<1)]
+lm_x1 = x1$sen_slope[which(x1$new_p<1 & y$new_p<1)]
+#alp = alpine[which(x1$new_p<.05 & y$new_p<.05)]
+data_plot = cbind.data.frame(lm_y,lm_x1)
+
+#transformation to normal
+hist(lm_y)
+lm_y_norm= (lm_y+abs(min(lm_y))) 
+
+nnn = (lm_x1 - mean(lm_x1))/sd(lm_x1)
+hist((lm_y_norm))
+hist(exp(nnn))
+
+fm = lm(sqrt(lm_y_norm) ~ lm_x1)
+summary(fm)
+
+ggplot(data= data_plot, aes(y=lm_y, x=lm_x1))+
+  geom_point()+
+  geom_smooth(method="lm", se = TRUE)+
+  annotate(geom="text", Inf, Inf,  hjust = 1, vjust = 2, label=paste("n = ", length(y)))+
+  annotate(geom="text", Inf, Inf,  hjust = 1, vjust = 4, label=paste("p = 0.05"))+
+  annotate(geom="text", Inf, Inf,  hjust =1, vjust = 6, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))+
+  xlab(paste("mmky Summer q10 sen's slope"))+
+  ylab(paste("mmky Wintzer q10 sen's slope"))
+
+
+
 
 #stepwise regression ####
 mmky_ms7_min$sen_slope %>% hist()
