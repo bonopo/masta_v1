@@ -157,112 +157,24 @@ head(aov_data)
 aov(sen_slope ~ month, data=aov_data)%>% summary()
 
 #trend analysis with sen's slope####
-mmkh_mar_mean_df$sen_slope
-ggplot()+
-  geom_point(data = mmkh_mar_mean_df, aes(y=sen_slope, x=mmkh_jun_mean_df$sen_slope),inherit.aes = FALSE)+  
-  geom_point( aes(y=mmkh_mar_mean_df$sen_slope[which(mmkh_mar_mean_df$new_p<.05 & mmkh_jun_mean_df$new_p < .05)], x=mmkh_jun_mean_df$sen_slope[which(mmkh_mar_mean_df$new_p<.05 & mmkh_jun_mean_df$new_p < .05)], col="p<0.05"))+
-  xlab("june mean sen's slope")+
-  ylab("march mean sen's slope")+
-  scale_color_discrete("Significance")
 
 
 
-sig_plot = function(p_value = .1, x_data = "mmkh_mar_mn", y_data = "mmkh_yearly_q10", output = "sr"){
 
-sr = ggplot()+
-  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr_new[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
-    annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
-  annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
-  xlab(paste(x_data, "sen's slope"))+
-  ylab(paste(y_data, "sen's slope"))+
-  scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
 
-saar= ggplot()+
-  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$saar[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
-    annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
-  annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
-  xlab(paste(x_data, "sen's slope"))+
-  ylab(paste(y_data, "sen's slope"))+
-  scale_color_continuous("SAAR [mm]")
 
-bfi = ggplot()+
-  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$bfi[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
-  annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
-  annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
-  xlab(paste(x_data, "sen's slope"))+
-  ylab(paste(y_data, "sen's slope"))+
-  scale_color_continuous("BFI")
+# "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"
 
-ezgg = ggplot()+
-  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$Enzgsg_[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
-    annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
-   annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
-  xlab(paste(x_data, "sen's slope"))+
-  ylab(paste(y_data, "sen's slope"))+
-  scale_color_continuous("Einzugsgebiet [km²]")
-
-geo =  ggplot()+
-  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$hydrogeo_simple[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
-    annotate(geom="text", x=0.02, y=0.02, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
-  annotate(geom="text", x=0.02, y=0.015, label=paste("p = ", p_value))+
-  xlab(paste(x_data, "sen's slope"))+
-  ylab(paste(y_data, "sen's slope"))+
-  scale_color_discrete("Hydro Geo.")
-
-return(get(output))
-}
-
-which(is.na(mmkh_wi_q10$new_p))
-
-p=sig_plot(y_data = "mmky_jun_mn_q", x_data = "mmky_mar_mn_q", output = "sr", p_value = .1) 
+p=sig_plot(x_data = "mmky_ms7_date", y_data = "mmky_ms30_min", output = "sr_new", p_value = 1) 
 p
-mmky_ma
-p+geom_abline(slope=-1, intercept = 0)
-p+annotate(geom="text", x=)
 ggsave(plot = p, "./plots/further_investigate/final/mmky_1.png")
 
-dev.off()
-ggplot()+
-  geom_point(aes(y=mmkh_ms7_min$sen_slope, x=mmkh_su_sm_p$sen_slope, col=as.factor(gauges$sr)))+
-  scale_color_discrete("Einzugsgebiet [km²]")
-
-p_value=.1
-for (i in c(  "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10")){
-  data_plot= get(paste0("mmky_", i))
-  p = ggplot()+
-  geom_point(aes(y=data_plot$sen_slope[which(data_plot$new_p<p_value & data_plot$new_p < p_value)], x=gauges$saar[which(data_plot$new_p<p_value & data_plot$new_p < p_value)],col=as.factor(gauges$hydrogeo_simple[which(data_plot$new_p<p_value & data_plot$new_p < p_value)])))+
-    ylab(paste(i))+
-    xlab("SAAR [mm]")+
-    scale_color_discrete("seasonality")+
-    annotate(geom="text", -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(data_plot$new_p<p_value & data_plot$new_p < p_value))))+
-  annotate(geom="text", -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))
-  print(p)
-  #Sys.sleep(15)
-  
-  
-}
 
 
-ggsave("bbo.png")
-ggplot()+
-  geom_point(aes(y=mmkh_mar_mn_q$sen_slope[which(mmkh_mar_mn_q$new_p<.05)], x=gauges$bfi[which(mmkh_mar_mn_q$new_p<.05)], 
-                 col=as.factor(gauges$sr[which(mmkh_mar_mn_q$new_p<.05)])))+
-  scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))+
-  xlab("BFI")+
-  ylab("Sens's slope March mean at p =.05")
+#trend linear regression ####
+#----> see script drought_attribution
 
-ggplot()+
-  geom_point(aes(y=mmkh_mar_mn_q$sen_slope[which(mmkh_mar_mn_q$new_p<.05)], x=mmkh_wi_sm_p$sen_slope[which(mmkh_mar_mn_q$new_p<.05)], 
-                 col=gauges$bfi[which(mmkh_mar_mn_q$new_p<.05)]))+
-  scale_color_continuous("bfi")+
-  xlab("BFI")+
-  ylab("Sens's slope March mean at p =.05")
-hist(gauges$bfi)
-
-
-
-
-#trend moving window #### 
+#trend moving window  #### 
 
 ms7_sbst = mmky_sbst(raw_data = ms7_min, width=10)
 ms7_sbst30 = mmky_sbst(raw_data = ms7_min, width=30)
