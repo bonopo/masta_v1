@@ -205,26 +205,96 @@ ggsave("memoryeffect_24.png")
 
 #monthly correlation ####
 
-mar_sci = monthly_sci(month=3) 
-jun_sci = monthly_sci(month=6)
-mat = matrix(nrow=catch_n, ncol=12)
-for (n in 2:13){
-mat[,(n-1)]= sapply(1:catch_n, function(c) cor(x= mar_sci[,1,c],y= mar_sci[,n,c], use="na.or.complete"))
-}
-mar_sci_cor = mat %>% as.data.frame()
-colnames(mar_sci_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
-mar_sci_cor = cbind(mar_sci_cor,gauge= 1:catch_n,sr=  gauges$sr_new,saar= gauges$saar) %>% as.tbl()
-for (n in 2:13){
-mat[,(n-1)]= sapply(1:catch_n, function(c) cor(x= jun_sci[,1,c],y= jun_sci[,n,c], use="na.or.complete"))
-}
-jun_sci_cor = mat %>% as.data.frame()
-colnames(jun_sci_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
-jun_sci_cor = cbind(jun_sci_cor, gauge= 1:catch_n, sr= gauges$sr_new,saar=  gauges$saar)
+mar_sci_cor = monthly_sci(month=3, correlate = T) 
+apr_sci_cor = monthly_sci(month=4, correlate = T) 
+mai_sci_cor = monthly_sci(month=5, correlate = T)
+jun_sci_cor = monthly_sci(month=6, correlate = T) 
+aug_sci_cor = monthly_sci(month=8, correlate = T) 
+sep_sci_cor = monthly_sci(month=9, correlate = T) 
 
-data_plot = gather(jun_sci_cor, key=sci_type, value=cor, -gauge, -sr, -saar) %>% as.tbl()
 
 ggplot()+
-  geom_point(data=data_plot %>% filter(str_detect(sci_type, "spi"), sr==2) , aes(x=saar, y= cor, col=sci_type))
+  geom_point(data=data_plot_mar %>% filter(str_detect(sci_type, "spei"), sr==0) , aes(x=saar, y= cor, col=sci_type))
+
+monthly_cor_sci = function(sr_x=0, sci_typex="spi"){
+
+mar = ggplot()+
+  geom_boxplot(data=mar_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("March")+
+  ylab("spearman correlation ssi-1 ~ x")+
+  scale_x_discrete(labels=c(agg_month))
+jun = ggplot()+
+  geom_boxplot(data=jun_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("June")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))
+aug = ggplot()+
+  geom_boxplot(data=aug_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("August")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))
+sep = ggplot()+
+  geom_boxplot(data=sep_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("September")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))
+  
+
+return(grid.arrange(mar,jun,aug,sep, ncol=4))
+}
+
+monthly_cor_sci2 = function(sr_x=0, sci_typex="spi"){
+
+mar = ggplot()+
+  geom_boxplot(data=mar_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("March")+
+  ylab("spearman correlation ssi-1 ~ x")+
+  scale_x_discrete(labels=c(agg_month))
+apr = ggplot()+
+  geom_boxplot(data=apr_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("April")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))
+mai = ggplot()+
+  geom_boxplot(data=mai_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("Mai")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))
+jun = ggplot()+
+  geom_boxplot(data=jun_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("June")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))
+  
+
+return(grid.arrange(mar,apr,mai,jun, ncol=4))
+}
+
+ggplot()+
+  geom_boxplot(data=aug_sci_cor %>% filter(str_detect(sci_type, "spi_6"), sr==0), aes(x=hydro_geo, y = cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("March")+
+  ylab("spearman correlation ssi-1 ~ x")+
+  scale_x_discrete(labels=c(agg_month))
+
+pdf("./plots/3_choice/cor_ssi_spi_winter_spring.pdf")
+monthly_cor_sci2(sr_x=2,sci_typex="spi" )
+dev.off()
+
+fct_reorder()
+x= data_plot_jun %>% filter(str_detect(sci_type, "spi"))
+
+par(mfrow = c(1,2))
+boxplot(x$sci_type ~ x$cor)
+boxplot(jun_sci_cor[,c(1:6)])
 
 #one can see big gap between all winter catchments: further definition with catchments with higher precipitation than 1200mm (alpine vs Harz/Blackforest)
 int = which(gauges$sr_new == 2)
@@ -240,7 +310,7 @@ boxplot(jun_sci_cor[,7:12], ylab="pearson correlation with march ssi-1 (not wint
 boxplot(mar_sci_cor[,7:12], ylab="pearson correlation with march ssi-1", ylim=c(-.3,.9))
 dev.off()
 
-
+summary(fm3)
 
 
 #other analysis ####
