@@ -116,20 +116,33 @@ return(df)
 
 
 #monthly sci analysis ####
-monthly_sci = function(month=3){
+monthly_sci = function(month=3, correlate=TRUE){
 res.array = array(dim=c(40,13,catch_n))  
-for (c in 1:catch_n){
+for (c in 1:catch_n)
+  {
   
 int= which(month(date_seq)==month)
 res.array[,,c] = cbind(ssi_1[c(int),c], spi_v2_1[c(int),c], spi_v2_2[c(int),c], spi_v2_3[c(int),c], spi_v2_6[c(int),c], spi_v2_12[c(int),c], spi_v2_24[c(int),c], spei_v2_1[c(int),c], spei_v2_2[c(int),c], spei_v2_3[c(int),c], spei_v2_6[c(int),c], spei_v2_12[c(int),c], spei_v2_24[c(int),c]) %>% as.matrix()
 
-
-
-
+colnames(res.array) = c("ssi", "spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
 }
-cat("colnames: [,1] = ssi-1, [,2]= spi-1, [,3]= spi-2,... ,[,7] =spi-24 , [,8]=spei-1 ,..., [,13] = spei-24")
-return(res.array)
+if (correlate == TRUE)
+  {
+  mat = matrix(nrow=catch_n, ncol=12)
+for (n in 2:13)
+  {
+mat[,(n-1)]= sapply(1:catch_n, function(c) cor(x= res.array[,1,c],y= res.array[,n,c], use="na.or.complete", method = "spearman"))# spearman because we want rank correlation since ssi is nonparametric (limited to -1.97) and spi is parametric (not limited)
+}
+mat_cor = mat %>% as.data.frame()
+colnames(mat_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
+mat_cor = cbind(mat_cor,gauge= 1:catch_n,sr=  gauges$sr_new,saar= gauges$saar, hydro_geo = gauges$hydrogeo_simple) %>% as.tbl()
 
+mat_cor_long = gather(mat_cor, key=sci_type, value=cor, -gauge, -sr, -saar, -hydro_geo, factor_key = TRUE) %>% as.tbl()  
+return(mat_cor_long)}
+if(correlate==FALSE)
+  {
+return(res.array)
+}
 }
 
 
@@ -289,6 +302,60 @@ return(res_list)
 }
 
 #plot functions ####
+
+sig_plot = function(p_value = .1, x_data = "mmkh_mar_mn", y_data = "mmkh_yearly_q10", output = "sr"){
+
+sr = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
+    annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
+
+
+sr_new = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr_new[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
+    annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_discrete("Seasonality", label=c("summer", "winter"))
+
+saar= ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$saar[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("SAAR [mm]")
+
+bfi = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$bfi[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+    annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("BFI")
+
+ezgg = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$Enzgsg_[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("Einzugsgebiet [km²]")
+
+geo =  ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$hydrogeo_simple[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
+     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_discrete("Hydro Geo.")
+
+return(get(output))
+}
 
 #regression sci ~ ssi
 plot_reg <- function(spi_source = "spi_ssi_reg", spei_source="spei_ssi_reg", agg_n = 1){
