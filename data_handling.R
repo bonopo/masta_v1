@@ -14,9 +14,9 @@ sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie
 # Load data ---------------------------------------------------------------
 
 source("./R/masta_v1/functions.R")
-load("./data/catchments/eobs_pr_part.Rdata")
-load("./data/catchments/eobs_temp_part.Rdata")
-load("./data/catchments/streamflow.Rdata")
+load("./data/catchments/eobs_pr_part.Rdata") #precipiatation
+load("./data/catchments/eobs_temp_part.Rdata") # temperature
+load("./data/catchments/streamflow.Rdata")# streamflow
 #gauges  <- readOGR(dsn="./data/raster/gauges", layer= "gauges")
 gauges  <- shapefile("./data/raster/gauges")
 legende <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(1,5)]
