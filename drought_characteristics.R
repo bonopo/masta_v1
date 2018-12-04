@@ -151,7 +151,7 @@ save(output, file="./output/drought_q.Rdata")
 remove(lf_obj, res,  drought_t, new.drought.no, mov_mn_q, mov_mn_q_long)
 
 
-#for precipitation (not completed)####
+#for precipitation ####
 
   mov_sm_p = rollapply(precip, width=30, by.column=T, align= "center", FUN=sum, fill=NA) %>% as.data.frame() %>% as.tbl()
 mov_sm_p_long = mov_sm_p %>% 
@@ -159,6 +159,7 @@ mov_sm_p_long = mov_sm_p %>%
   gather(key=gauge, value=sum_mm, -date) %>% 
   mutate(gauge = as.numeric(gauge)) %>% 
   as.tbl()
+
 
 
 output = matrix(nrow=0, ncol=7) %>% as.data.frame()
@@ -223,10 +224,92 @@ drought_q= output
 load("./output/drought_p.Rdata", verbose = TRUE)
 drought_p = output
 
-head(drought_p)
+
+remove(output)
 
 sum_q = drought_q %>% 
   as.tbl %>% 
-  mutate(dr_start = ymd(dr_start), dr_end=ymd(dr_end), catchment= as.integer(catchment)) %>%   group_by(catchment, year(dr_start)) %>% 
-  summarise(n_events = n(), sm_length = sum(dr_end-dr_start), mn_defi = mean(def_vol))
+  mutate(dr_start = ymd(dr_start), dr_end=ymd(dr_end), catchment= as.integer(catchment)) %>%   group_by(catchment, year = as.integer(year(dr_start))) %>% 
+  summarise(n_events = n(), sm_length = as.numeric(sum(dr_end-dr_start)), tot_defi = as.numeric(round(sum(def_vol*(dr_end-dr_start)),0)),  mn_defi = as.numeric(round(tot_defi/n_events,0)),mn_length= round(sm_length/n_events,0)) %>% 
+  mutate(mn_length = as.integer(mn_length))
+#deficit vol in m³ increase per day of drought
+
+tot_defi_catch = sum_q %>% 
+  group_by(catchment) %>% 
+  summarise(sm_tot_defi = sum(tot_defi)) %>% 
+  mutate(hydrogeo = gauges$hydrogeo_simple)
+
+int = which.max(tot_defi_catch$mn_tot_defi) # remove to extreme
+
+pdf("./plots/4_choice/geo_tot_defi.pdf")
+boxplot((sm_tot_defi) ~ hydrogeo, data=tot_defi_catch)#[-int,])
+dev.off()
+tot_defi_q= sum_q %>% 
+  ungroup() %>% 
+  mutate(stan_defi = (tot_defi - mean(tot_defi))/sd(tot_defi)) %>% #has to be standadized see laaha et al 2015
+  dplyr::select(catchment, stan_defi, year) %>% 
+  spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
+  dplyr::select(-year)%>% 
+  as.data.frame()
+
+mn_defi_q= sum_q %>% 
+  ungroup() %>% 
+  mutate(stan_defi = (mn_defi - mean(mn_defi))/sd(mn_defi)) %>% #has to be standadized see laaha et al 2015
+  dplyr::select(catchment, stan_defi, year) %>% 
+  spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
+  dplyr::select(-year)%>% 
+  as.data.frame()
+
+mn_length_q= sum_q %>% 
+  ungroup() %>% 
+  dplyr::select(catchment, mn_length, year) %>% 
+  spread(., key=(catchment), value=(mn_length), fill = 0)%>% 
+  dplyr::select(-year)%>% 
+  as.data.frame()
+
+sm_length_q= sum_q %>% 
+  ungroup() %>% 
+  dplyr::select(catchment, sm_length, year) %>% 
+  spread(., key=(catchment), value=(sm_length), fill = 0)%>% 
+  dplyr::select(-year)%>% 
+  as.data.frame()
+
+
+sum_p= drought_p %>% 
+  as.tbl %>% 
+  mutate(dr_start = ymd(dr_start), dr_end=ymd(dr_end), catchment= as.integer(catchment)) %>%   group_by(catchment, year = as.integer(year(dr_start))) %>% 
+  summarise(n_events = n(), sm_length = as.numeric(sum(dr_end-dr_start)), tot_defi = as.numeric(round(sum(def_vol*(dr_end-dr_start)),0)),  mn_defi = as.numeric(round(tot_defi/n_events,0)),mn_length= round(sm_length/n_events,0)) %>% 
+  mutate(mn_length = as.integer(mn_length))
+
+
+
+tot_defi_p= sum_p %>% 
+  ungroup() %>% 
+  mutate(stan_defi = (tot_defi - mean(tot_defi))/sd(tot_defi)) %>% 
+  dplyr::select(catchment, stan_defi, year) %>% 
+  spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
+  dplyr::select(-year) %>% 
+  as.data.frame()
+
+mn_defi_p= sum_p %>% 
+  ungroup() %>% 
+  mutate(stan_defi = (mn_defi - mean(mn_defi))/sd(mn_defi)) %>% #has to be standadized see laaha et al 2015
+  dplyr::select(catchment, stan_defi, year) %>% 
+  spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
+  dplyr::select(-year)%>% 
+  as.data.frame()
+
+mn_length_p= sum_p %>% 
+  ungroup() %>% 
+  dplyr::select(catchment, mn_length, year) %>% 
+  spread(., key=(catchment), value=(mn_length), fill = 0)%>% 
+  dplyr::select(-year)%>% 
+  as.data.frame()
+
+sm_length_p= sum_p %>% 
+  ungroup() %>% 
+  dplyr::select(catchment, sm_length, year) %>% 
+  spread(., key=(catchment), value=(sm_length), fill = 0)%>% 
+  dplyr::select(-year)%>% 
+  as.data.frame()
 
