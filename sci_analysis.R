@@ -205,98 +205,21 @@ ggsave("memoryeffect_24.png")
 
 #monthly correlation ####
 
-mar_sci_cor = monthly_sci(month=3, correlate = T) 
-apr_sci_cor = monthly_sci(month=4, correlate = T) 
-mai_sci_cor = monthly_sci(month=5, correlate = T)
-jun_sci_cor = monthly_sci(month=6, correlate = T) 
-aug_sci_cor = monthly_sci(month=8, correlate = T) 
-sep_sci_cor = monthly_sci(month=9, correlate = T) 
+mar_sci_cor = monthly_sci(month=3, correlate = T, threshold = 0) 
+apr_sci_cor = monthly_sci(month=4, correlate = T, threshold = 0) 
+mai_sci_cor = monthly_sci(month=5, correlate = T, threshold = 0)
+jun_sci_cor = monthly_sci(month=6, correlate = T, threshold = 0) 
+aug_sci_cor = monthly_sci(month=8, correlate = T, threshold = 0) 
+sep_sci_cor = monthly_sci(month=9, correlate = T, threshold = 0) 
 
 
-ggplot()+
-  geom_point(data=data_plot_mar %>% filter(str_detect(sci_type, "spei"), sr==0) , aes(x=saar, y= cor, col=sci_type))
 
-monthly_cor_sci = function(sr_x=0, sci_typex="spi"){
-
-mar = ggplot()+
-  geom_boxplot(data=mar_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("March")+
-  ylab("spearman correlation ssi-1 ~ x")+
-  scale_x_discrete(labels=c(agg_month))
-jun = ggplot()+
-  geom_boxplot(data=jun_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("June")+
-  ylab("")+
-  scale_x_discrete(labels=c(agg_month))
-aug = ggplot()+
-  geom_boxplot(data=aug_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("August")+
-  ylab("")+
-  scale_x_discrete(labels=c(agg_month))
-sep = ggplot()+
-  geom_boxplot(data=sep_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("September")+
-  ylab("")+
-  scale_x_discrete(labels=c(agg_month))
-  
-
-return(grid.arrange(mar,jun,aug,sep, ncol=4))
-}
-
-monthly_cor_sci2 = function(sr_x=0, sci_typex="spi"){
-
-mar = ggplot()+
-  geom_boxplot(data=mar_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("March")+
-  ylab("spearman correlation ssi-1 ~ x")+
-  scale_x_discrete(labels=c(agg_month))
-apr = ggplot()+
-  geom_boxplot(data=apr_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("April")+
-  ylab("")+
-  scale_x_discrete(labels=c(agg_month))
-mai = ggplot()+
-  geom_boxplot(data=mai_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("Mai")+
-  ylab("")+
-  scale_x_discrete(labels=c(agg_month))
-jun = ggplot()+
-  geom_boxplot(data=jun_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("June")+
-  ylab("")+
-  scale_x_discrete(labels=c(agg_month))
-  
-
-return(grid.arrange(mar,apr,mai,jun, ncol=4))
-}
-
-ggplot()+
-  geom_boxplot(data=aug_sci_cor %>% filter(str_detect(sci_type, "spi_6"), sr==0), aes(x=hydro_geo, y = cor), na.rm = T)+
-  ylim(c(0,.9))+
-  xlab("March")+
-  ylab("spearman correlation ssi-1 ~ x")+
-  scale_x_discrete(labels=c(agg_month))
-
-pdf("./plots/3_choice/cor_ssi_spi_winter_spring.pdf")
-monthly_cor_sci2(sr_x=2,sci_typex="spi" )
+pdf("./plots/4_choice/cor_ssi_spei_winter_spring.pdf")
+monthly_cor_sci2(sr_x=2,sci_typex="spei" )
 dev.off()
 
-fct_reorder()
-x= data_plot_jun %>% filter(str_detect(sci_type, "spi"))
 
-par(mfrow = c(1,2))
-boxplot(x$sci_type ~ x$cor)
-boxplot(jun_sci_cor[,c(1:6)])
 
-#one can see big gap between all winter catchments: further definition with catchments with higher precipitation than 1200mm (alpine vs Harz/Blackforest)
 int = which(gauges$sr_new == 2)
 png("./plots/further_investigate/final/cor_mar_jun_ssi.png", width=1000, height=500)
 par(mfrow=c(1,2))
@@ -466,7 +389,7 @@ which(spi_v2_24[,c(1:338)]< -1) %>% length()/338
   ssi_1_long %>% 
     filter(month(yr_mt) ==1) %>% 
     group_by(gauge) %>% 
-    summarise(below = length(which(ssi < -1)))
+    summarise(below = length(which(ssi < 0)))
     6/40
     
     spi_v2_1[,1] %>% mean()
