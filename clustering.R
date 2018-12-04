@@ -173,6 +173,8 @@ which(gauges$sr_new==2)
 
 
 #alpine rivers####
+#one can see big gap between all winter catchments: further definition with catchments with higher precipitation than 1200mm (alpine vs Harz/Blackforest)
+
 gauges$alpine = 0
 gauges$alpine[which(gauges$sr_new==2)] = 1
 #after visual check removing following catchments: 221 238 42 305
