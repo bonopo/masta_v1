@@ -40,7 +40,7 @@ dev.off()
 
 mmkh_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"))
 
-mmky_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"))
+mmky_par(raw_data = c( "mn_defi_p", "mn_defi_q", "sm_length_p", "sm_length_q"))
 
 mmky_par("yearly_max_t")
 
