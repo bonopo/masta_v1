@@ -165,11 +165,15 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 
 # "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"
 
-p=sig_plot(x_data = "mmky_ms7_date", y_data = "mmky_ms30_min", output = "sr_new", p_value = 1) 
+p=sig_plot(y_data = "mmky_ms7_date", x_data = "mmky_su_sm_p", output = "sr", p_value = 5) 
 p
-ggsave(plot = p, "./plots/further_investigate/final/mmky_1.png")
+ggsave(plot = p, "./plots/3_choice/mmky_laaha_defi_defi_saar.pdf")
 
 
+
+ggplot()+
+  geom_point(aes(y= mmky_tot_defi_q$sen_slope[which(mmky_tot_defi_q$new_p < .05)], x=gauges$saar[which(mmky_tot_defi_q$new_p < .05)], col=as.factor(gauges$sr_new[which(mmky_tot_defi_q$new_p < .05)])))+
+  scale_color_discrete("hydrogeo")
 
 #trend linear regression ####
 #----> see script drought_attribution
