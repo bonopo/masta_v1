@@ -164,16 +164,16 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 
 
 # "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"
+#"mn_defi_p", "mn_defi_q", "sm_length_p", "sm_length_q", "mn_length_q", "mn_length_p", "tot_defi_p", "tot_defi_q"
 
-p=sig_plot(y_data = "mmky_ms7_date", x_data = "mmky_su_sm_p", output = "sr", p_value = 5) 
+p=sig_plot(y_data = "mmky_ms7_min", x_data = "mmky_sm_length_p", output = "sr_new", p_value = .1) 
 p
-ggsave(plot = p, "./plots/3_choice/mmky_laaha_defi_defi_saar.pdf")
+ggsave(plot = p, "./plots/4_choice/mmky_laaha_length_p_su_sm_p.pdf")
 
-
-
-ggplot()+
-  geom_point(aes(y= mmky_tot_defi_q$sen_slope[which(mmky_tot_defi_q$new_p < .05)], x=gauges$saar[which(mmky_tot_defi_q$new_p < .05)], col=as.factor(gauges$sr_new[which(mmky_tot_defi_q$new_p < .05)])))+
-  scale_color_discrete("hydrogeo")
+gauges$mnq30_month
+p = catch_plot(p_value=.05, color="sr_new", x_data="bfi", y_data= "mmky_tot_defi_q" , factor =T)
+p
+ggsave(plot = p, "./plots/4_choice/mmky_tot_defi_saar_hchwrt.pdf")
 
 #trend linear regression ####
 #----> see script drought_attribution
