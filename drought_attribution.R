@@ -117,22 +117,22 @@ cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
 
 
 
-png("./plots/3_choice/bxplt_dr_spi_1_spear.png", width=1000, height=500)
-par(mfrow=c(1,2))
-boxplot(cor_spi, names=agg_month, xlab="SPI-n", ylab="spearman correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
-boxplot(cor_spei, names=agg_month, xlab="SPEI-n", ylab="spearman correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
-dev.off()
+# png("./plots/3_choice/bxplt_dr_spi_1_spear.png", width=1000, height=500)
+# par(mfrow=c(1,2))
+# boxplot(cor_spi, names=agg_month, xlab="SPI-n", ylab="spearman correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
+# boxplot(cor_spei, names=agg_month, xlab="SPEI-n", ylab="spearman correlation with SSI-1 (<-1)", ylim=c(-.4,.8))
+# dev.off()
 
 colnames(cor_spi) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24")
 colnames(cor_spei) = c("spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
 
-boxplot(cor_spi)
+
 
 int= which(cor_spi[,4] > .5)
 gauges$bfi[int]
 gauges$Hochwrt[int]
 
-gauges$cor_spi_6 = cor_spi[,3]
+gauges$cor_spi_6 = cor_spi[,4]
 
 spplot(gauges, "cor_spi_6")
 
