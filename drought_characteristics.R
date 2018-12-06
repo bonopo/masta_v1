@@ -3,6 +3,7 @@
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 
 # source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
+#source("./R/masta_v1/functions.R")
 
 
 
@@ -41,6 +42,9 @@ dr_length_1_5 <- dr_n(severity = -1.5) #min value is -1.97
 dr_event_no_1<- dr_count(severity = -1) #returns every month affected by drought
 dsi_1.5<- dr_severity(severity = -1.5) #returns all drought events by counting consecutive month affected by drought
 dsi_1<- dr_severity(severity = -1)
+dsi_0<- dr_severity(severity = 0)
+
+
 
 dsi_1_yearly = list()
 for (i in 1:catch_n){
@@ -51,9 +55,19 @@ dsi_1_yearly[[i]] = dsi_1[[i]] %>%
 
 }
 
+dsi_0_yearly = list()
+for (i in 1:catch_n){
+dsi_0_yearly[[i]] = dsi_0[[i]] %>% 
+  mutate(year = year(dr_start)) %>% 
+  group_by(year) %>% 
+  summarise(sum_dsi = sum(dsi), sum_length = sum(dr_length), sum_inten = sum(dr_intens), n = n())
 
+}
 
-
+# sev <- lapply(dsi_0_yearly, function(x) x[2])
+# severity = do.call( "cbind",sev)
+# len <- lapply(dsi_0, function(x) x[1])
+# severity = do.call( "cbind",len)
 
 #drought frequency####
 
@@ -89,7 +103,7 @@ dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
 
 
 
-#80th percentile approach of van loon &laaha####
+#80th percentile approach of van loon &laaha (calculation) ####
 #for discharge discharge ####
 mov_mn_q = rollapply(q_wide, width=30, by.column=T, align= "center", FUN=mean, fill=NA) %>% as.data.frame %>% as.tbl()
 mov_mn_q_long = mov_mn_q %>% 
@@ -104,9 +118,9 @@ lf_obj <- mov_mn_q_long %>%
   filter(gauge == c) %>% 
   mutate( flow= mov_mn_q,day = day(date), month=month(date), year = year(date)) %>% 
   dplyr::select(-date, -gauge, -mov_mn_q) %>% 
-  createlfobj(., baseflow=F, hyearstart=1) %>% 
-  as.xts()
-#flowunit(lf_obj)<-'m³/s' default is m³/s so no new default definition is needed
+  createlfobj(., baseflow=F, hyearstart=1) 
+
+flowunit(lf_obj)<-'m³/s' 
 
 res= find_droughts(lf_obj, threshold = "Q80", varying="daily") #same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
 
@@ -168,9 +182,9 @@ lf_obj <- mov_sm_p_long %>%
   filter(gauge == c) %>% 
   mutate( flow= sum_mm,day = day(date), month=month(date), year = year(date)) %>% 
   dplyr::select(-date, -gauge, -sum_mm) %>% 
-  createlfobj(., baseflow=F, hyearstart=1) %>% 
-  as.xts()
-flowunit(lf_obj)<-"l/d" #default is m³/s so new default definition is needed
+  createlfobj(., baseflow=F, hyearstart=1) 
+  
+flowunit(lf_obj)<-"l/d" #default is m³/s so new default definition is needed. since unit is mm/day it can be set to l/d
 
 res= lfstat::find_droughts(lf_obj, threshold = "Q80", varying="daily") #same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
 
@@ -207,9 +221,10 @@ output = rbind(output, drought_t)
 cat(100*round(c/catch_n,3),"%", "\n")
 
 }
-#warings are due to assuming the default in the deficit unit (the default is correct!!) and because of Na values. NA values exist because the mean deficit is calculated from 30 day moving centered average (creating 14 NAs at the beginning at at the end of each time series)
+#warings are due to Na values. NA values exist because the mean deficit is calculated from 30 day moving centered average (creating 14 NAs at the beginning at at the end of each time series).
+
 colnames(output) = c("catchment", "dr_start", "dr_end", "def_vol", "threshhold", "mn_sm_p","event_no")
-head(output)
+
 save(output, file="./output/drought_p.Rdata")
 
 remove(lf_obj, res,  drought_t, new.drought.no)
@@ -218,15 +233,14 @@ remove(lf_obj, res,  drought_t, new.drought.no)
 
 
 
-#80th percentile approach analysis####
+#80th percentile approach (analysis)####
+
 load("./output/drought_q.Rdata", verbose = TRUE)
 drought_q= output
 load("./output/drought_p.Rdata", verbose = TRUE)
-drought_p = output
-
-
+  drought_p = output
 remove(output)
-
+  
 sum_q = drought_q %>% 
   as.tbl %>% 
   mutate(dr_start = ymd(dr_start), dr_end=ymd(dr_end), catchment= as.integer(catchment)) %>%   group_by(catchment, year = as.integer(year(dr_start))) %>% 
@@ -236,13 +250,13 @@ sum_q = drought_q %>%
 
 tot_defi_catch = sum_q %>% 
   group_by(catchment) %>% 
-  summarise(sm_tot_defi = sum(tot_defi)) %>% 
+  summarise(sd_tot_defi = sd(tot_defi)) %>% 
   mutate(hydrogeo = gauges$hydrogeo_simple)
 
-int = which.max(tot_defi_catch$mn_tot_defi) # remove to extreme
+int = which.max(tot_defi_catch$sd_tot_defi) # remove to extreme
 
-pdf("./plots/4_choice/geo_tot_defi.pdf")
-boxplot((sm_tot_defi) ~ hydrogeo, data=tot_defi_catch)#[-int,])
+pdf("./plots/4_choice/geo_sd_tot_defi.pdf")
+boxplot(log10(sd_tot_defi) ~ hydrogeo, data=tot_defi_catch[-int,], ylab="log10 sd total deficit")
 dev.off()
 tot_defi_q= sum_q %>% 
   ungroup() %>% 
@@ -251,6 +265,9 @@ tot_defi_q= sum_q %>%
   spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
   dplyr::select(-year)%>% 
   as.data.frame()
+
+
+
 
 mn_defi_q= sum_q %>% 
   ungroup() %>% 
@@ -313,3 +330,33 @@ sm_length_p= sum_p %>%
   dplyr::select(-year)%>% 
   as.data.frame()
 
+
+  
+save(list = c("mat_def", "mat_n"), file="./output/seasonal_80th_drought.Rdata")
+
+#seasonal 80th % (calculation) parallel (not complete, but working) ####
+  
+
+seasonal_80th_q = par_seas_80th(data = drought_q)
+seasonal_80th_q[[1]]
+save(seasonal_80th_q,file="./output/seasonal_q.Rdata")
+
+boxplot(data= seasonal_80th_q[[1]], )
+# seasonal 80th % method (analysis)####
+
+load("./output/seasonal_80th_drought.Rdata", verbose = T)
+
+mt_mn_def = mat_def %>%
+  as.data.frame() %>% 
+  set_colnames(1:catch_n) %>% 
+  mutate(month= as.integer(rownames(.))) %>% 
+  gather(key = gauge, value=mt_mn_def, -month) %>% 
+  mutate(stan_defi = (mt_mn_def - mean(mt_mn_def))/sd(mt_mn_def)) %>%   #has to be standadized see laaha et al 2015
+  mutate(gauge= as.integer(gauge)) %>% 
+  as.tbl()
+
+
+ggplot()+
+  geom_boxplot(data= mt_mn_def, aes(x=as.factor(month), y=mt_mn_def, group = month),stat="boxplot" )+
+  xlab("Month")+
+  ylab("standardized deficit vol. during droughts [all catchments]")
