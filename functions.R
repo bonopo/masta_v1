@@ -236,6 +236,76 @@ sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
 
 # drought characteristics -------------------------------------------------
 
+#parrallel computing of drought deficit and number of events
+par_seas_80th = function(data= drought_q ){
+no_cores=detectCores()
+cl<-makeCluster(no_cores-1) 
+registerDoSNOW(cl)
+res=list()
+def_catch = c()
+mean_def=c()
+mean_n = c()
+
+pb <- txtProgressBar(max = catch_n, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
+
+res <- foreach::foreach(c = 1:catch_n, .packages = c("tidyverse", "lubridate"), 
+                        .options.snow = opts)%dopar%{ ###cbind
+ #sub_80th =  function(c) 
+    temp1 = data %>%
+    filter(catchment == c)
+for (m in 1:12){
+  def_catch=NULL
+for (e in 1:max(temp1$event_no)){
+   if((year(temp1$dr_start[e])+1) == year(temp1$dr_end[e]) ){
+    months = c(seq(from=month(temp1$dr_start[e]), to=12, by=1), seq(from=1, to   =month(temp1$dr_end[e]), by=1))}
+   if(year(temp1$dr_start[e]) == year(temp1$dr_end[e])){
+      months = seq(from = month(temp1$dr_start[e]) , to= month(temp1$dr_end[e]), by=1)}
+   if((year(temp1$dr_end[e]) - year(temp1$dr_start[e])) > 1){
+     months = 1:12
+   }
+
+#retrieving length of drought. since def.vol is in m³/day it has to be multiplied by the length of the drought. if the drought is longer than one month the cumulative sum of the deficit volume gets devided by number of month (including partial months, meaning a drought going from mid dec. to end february: every month would get allocated a 1/3 of the total cumulative drought. 33% percent because it is three month: dec., jan. and feb.)
+   
+   
+   dr_len = as.numeric(ymd(temp1$dr_end[e])) - as.numeric(ymd(temp1$dr_start[e]))
+   
+ if(m %in% months){
+   def_catch = rbind(def_catch,temp1$def_vol[e]*(dr_len/length(months))) #calculating the deficit of all drought events of one catchment in one particular month (m) and rbinding them
+ 
+ }else{
+   next
+ }
+ }  
+
+mean_def[m] = round(sum(def_catch),0)
+mean_n[m] = length(def_catch)
+
+
+
+}
+
+    #return(mean_def) 
+cbind(mean_def, mean_n)
+# temp2
+  }
+close(pb)
+stopCluster(cl)
+
+mean_def_list <- lapply(res, function(x) x[,1])
+mean_def_df = do.call( "cbind",mean_def_list) %>% as.data.frame() %>% set_colnames(1:catch_n)
+
+mean_n_list <- lapply(res, function(x) x[,2])
+mean_n_df = do.call( "cbind",mean_n_list) %>% as.data.frame() %>% set_colnames(1:catch_n)
+
+return(list(mean_def_df,mean_n_df))
+# return(res)
+
+
+}
+
+
 
 #counting every month below threshhold
 dr_n <- function(severity = -1)  {
@@ -316,6 +386,14 @@ sr = ggplot()+
   scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
 
 
+hochwert = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$Hochwrt[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+    annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("Hochwert")
+
 sr_new = ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr_new[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
@@ -359,15 +437,29 @@ geo =  ggplot()+
 return(get(output))
 }
 
-catch_plot = function(p_value = .1, x_data = "saar", y_data = "mmkh_yearly_q10", factor = "sr_new"){
-  gauges_df = gauges %>% as.data.frame()
+
+catch_plot = function(p_value = .1, x_data = "saar", y_data = "mmkh_yearly_q10", color = "saar", factor= TRUE){
+gauges_df = gauges %>% as.data.frame()  
+  if (factor == TRUE)    {
+    z_value = as.factor(dplyr::select(gauges_df, color)[,1])
+  }else{
+    z_value = dplyr::select(gauges_df, color)[,1]
+  }
+  
 output= ggplot()+
-  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value)], x=dplyr::select(gauges_df, x_data)[which(get(y_data)$new_p<p_value),], col=as.factor(dplyr::select(gauges_df, factor)[which(get(y_data)$new_p<p_value),])))+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value)], x=dplyr::select(gauges_df, x_data)[which(get(y_data)$new_p<p_value),], col=z_value[which(get(y_data)$new_p<p_value)]))+
     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value ))))+
   annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
   xlab(x_data)+
-  ylab(paste(y_data, "sen's slope"))+
-  scale_color_discrete((factor))
+  ylab(paste(y_data, "sen's slope"))
+
+if(factor== TRUE){
+  output = output+
+    scale_color_discrete(color)
+}else {
+  output = output+
+    scale_color_continuous(color)
+}
 
 return(output)
 }
