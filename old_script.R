@@ -308,6 +308,53 @@ plot(x =spi_2[,1] , y=ssi_1[,1])
 #offensichtliche aussage: desto höher der spi, desto höher der spei 
 
 
+#seasonal 80th % calculation approach####
+#sequential (new: parralel see script:drought_attribution)
+
+#seasonal 80th % (calculation sequential USE PARALLEL)####
+#takes 10 min to calculate!!!!!
+mat_def = matrix(ncol=catch_n, nrow=12)
+mat_n = matrix(ncol=catch_n, nrow = 12)
+months = c()
+for( m in 1:12){
+
+
+for (c in 1:catch_n){
+  temp1 = drought_q %>% 
+    filter(catchment == c)
+def_mean = NULL
+n_mean= NULL
+ for (e in 1:max(temp1$event_no)){
+   #retrieving the month of the drought. drought that go over more than one month get allocated to each of the effected months
+   if((year(temp1$dr_start[e])+1) == year(temp1$dr_end[e]) ){
+    months = c(seq(from=month(temp1$dr_start[e]), to=12, by=1), seq(from=1, to   =month(temp1$dr_end[e]), by=1))}
+   if(year(temp1$dr_start[e]) == year(temp1$dr_end[e])){
+      months = seq(from = month(temp1$dr_start[e]) , to= month(temp1$dr_end[e]), by=1)} 
+   if((year(temp1$dr_end[e]) - year(temp1$dr_start[e])) > 1){
+     months = 1:12
+   }
+   
+   #retrieving length of drought. since def.vol is in m³/day it has to be multiplied by the length of the drought. if the drought is longer than one month the cumulative sum of the deficit volume gets devided by number of month (including partial months, meaning a drought going from mid dec. to end february: every month would get allocated a 1/3 of the total cumulative drought. 33% percent because it is three month: dec., jan. and feb.)
+   
+   dr_len = as.numeric(ymd(temp1$dr_end[e])) - as.numeric(ymd(temp1$dr_start[e]))
+   
+ if(m %in% months){
+   def_mean = rbind(def_mean,temp1$def_vol[e]*(dr_len/length(months))) #calculating the deficit of all drought events of one catchment in one particular month (m) and rbinding them
+ }else{
+   next
+ }
+ }  
+
+
+mat_def[m,c] = round(mean(def_mean),0)
+mat_n[m,c] = length(def_mean)
+if(c %% 20 == 0) cat(round((c+((m-1)*catch_n))/(catch_n*12),2) * 100, "%", "\n")
+  
+ 
+}
+cat(month.name[m], "just finished", "\n")
+}
+
 # functions ---------------------------------------------------------------
 
 dist_fitt <- function(distry, monthy){ #similar as above, old version, not used in script
