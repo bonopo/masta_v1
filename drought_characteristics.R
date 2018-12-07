@@ -337,26 +337,65 @@ save(list = c("mat_def", "mat_n"), file="./output/seasonal_80th_drought.Rdata")
 #seasonal 80th % (calculation) parallel (not complete, but working) ####
   
 
-seasonal_80th_q = par_seas_80th(data = drought_q)
-seasonal_80th_q[[1]]
+seasonal_80th_q = par_seas_80th(data = drought_q, catchment_max = catch_n) #list [[1]]=deficit vol sum (!) per catchment per month over all 40 years!! [[2]] sum of events (independent of length) in every month [[3]] sum of days per month that are effected by drought (needs to be converted to % later since now it is a sum over all 40 years)
+seasonal_80th_p = par_seas_80th(data = drought_p, catchment_max = catch_n)
 save(seasonal_80th_q,file="./output/seasonal_q.Rdata")
-
-boxplot(data= seasonal_80th_q[[1]], )
+save(seasonal_80th_p,file="./output/seasonal_p.Rdata")
 # seasonal 80th % method (analysis)####
 
-load("./output/seasonal_80th_drought.Rdata", verbose = T)
+load("./output/seasonal_q.Rdata", verbose = T)
+load("./output/seasonal_p.Rdata", verbose = T)
 
-mt_mn_def = mat_def %>%
+mt_mn_def = seasonal_80th_q[[1]] %>%
   as.data.frame() %>% 
   set_colnames(1:catch_n) %>% 
   mutate(month= as.integer(rownames(.))) %>% 
   gather(key = gauge, value=mt_mn_def, -month) %>% 
-  mutate(stan_defi = (mt_mn_def - mean(mt_mn_def))/sd(mt_mn_def)) %>%   #has to be standadized see laaha et al 2015
+  group_by(gauge) %>% # to standartize per catchment
+  mutate(stan_defi = (mt_mn_def - mean(mt_mn_def))/sd(mt_mn_def)) %>%   #has to be standartized see laaha et al 2015
+  ungroup() %>% 
   mutate(gauge= as.integer(gauge)) %>% 
   as.tbl()
 
+mt_sm_events = seasonal_80th_q[[2]]  %>%
+  as.data.frame() %>% 
+  set_colnames(1:catch_n) %>% 
+  mutate(month= as.integer(rownames(.))) %>% 
+  gather(key = gauge, value=mt_sm_events, -month) %>% 
+  group_by(gauge) %>% # to standartize per catchment
+  mutate(stan_events = (mt_sm_events - mean(mt_sm_events))/sd(mt_sm_events)) %>%   #has to be standartized see laaha et al 2015
+  ungroup() %>% 
+  mutate(gauge= as.integer(gauge) , mt_sm_events = as.integer(mt_sm_events)) %>% 
+  as.tbl()
 
+mt_perc_days = seasonal_80th_q[[3]]  %>%
+  as.data.frame() %>% 
+  set_colnames(1:catch_n) %>% 
+  mutate(month= as.integer(rownames(.))) %>% 
+  gather(key = gauge, value=tot_days, -month) %>% 
+  mutate(perc_days = round(tot_days /(40 *days_in_month(month)),3) *100) %>% 
+  group_by(gauge) %>% # to standartize per catchment
+  mutate(stan_perc = (perc_days - mean(perc_days))/sd(perc_days)) %>%   #has to be standartized see laaha et al 2015
+  ungroup() %>% 
+  as.tbl()
+
+
+
+#%>% filter(gauge == which(gauges$alpine == 0))
 ggplot()+
-  geom_boxplot(data= mt_mn_def, aes(x=as.factor(month), y=mt_mn_def, group = month),stat="boxplot" )+
+  geom_boxplot(data= mt_mn_def , aes(x=as.factor(month), y=stan_defi, group = month),stat="boxplot" )+
   xlab("Month")+
   ylab("standardized deficit vol. during droughts [all catchments]")
+#geprägt von fehlenden  schneeschmelze? alpine flüsse rausschmeißen? standardize differnetly to make up for discharge rich rivers. auf jedes catchment standardizieren!
+
+ggplot()+
+  geom_boxplot(data= mt_sm_events, aes(x=as.factor(month), y=stan_events, group = month),stat="boxplot" )+
+  xlab("Month")+
+  ylab("standardized deficit vol. during droughts [all catchments]")
+
+ggplot()+
+  geom_boxplot(data= mt_perc_days, aes(x=as.factor(month), y=stan_perc, group = month),stat="boxplot" )+
+  xlab("Month")+
+  ylab("standardized deficit vol. during droughts [all catchments]")
+
+
