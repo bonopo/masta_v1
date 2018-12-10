@@ -28,7 +28,7 @@ hydrogeo <- read.csv("./data/geo_landuse/hydrogeo.csv")
 date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
 date_seq_long =seq.Date(from= ymd("1970-01-01"), to = ymd("2009-12-31"), by= "day")
 catch_n <- 338 # number of catchments
-no_cores = detectCores()-1 #for parallel computing
+no_cores = detectCores() #for parallel computing
 my_catch = colnames(precip)
 agg_month =c(1, 2, 3, 6, 12, 24)
 # transforming data ----------------------------------------------------------------
