@@ -42,6 +42,15 @@ mmkh_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_m
 
 mmky_par(raw_data = c( "mn_defi_p", "mn_defi_q", "sm_length_p", "sm_length_q", "mn_length_q", "mn_length_p", "tot_defi_p", "tot_defi_q"))
 
+def_vol_q = q_yearly[[1]]
+days_dr_q  = q_yearly[[3]]
+def_vol_p = p_yearly[[1]]
+days_dr_p  = p_yearly[[3]]
+q_seas[[1]]
+
+mmky_par(raw_data = c( "def_vol_q","def_vol_p","days_dr_q","days_dr_p"))
+mmky_def_vol
+
 mmky_par("yearly_max_t")
 
 png("./plots/further_investigate/final/sen_vs_p_value.png", width=1000, height=500)
