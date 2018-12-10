@@ -244,7 +244,13 @@ remove(output)
 sum_q = drought_q %>% 
   as.tbl %>% 
   mutate(dr_start = ymd(dr_start), dr_end=ymd(dr_end), catchment= as.integer(catchment)) %>%   group_by(catchment, year = as.integer(year(dr_start))) %>% 
-  summarise(n_events = n(), sm_length = as.numeric(sum(dr_end-dr_start)), tot_defi = as.numeric(round(sum(def_vol*(dr_end-dr_start)),0)),  mn_defi = as.numeric(round(tot_defi/n_events,0)),mn_length= round(sm_length/n_events,0)) %>% 
+  summarise(
+    n_events = n(),
+    sm_length = as.numeric(sum(ymd(dr_end)-ymd(dr_start))),#not usable since there are droughts that go over several years
+    tot_defi = as.numeric(round(sum(def_vol*(dr_end-dr_start)),0)),#not usable because drought deficit gets allocated to one year even if it goes over several years
+    mn_defi = round(mean(def_vol)),
+    mn_length= round(sm_length/n_events,0)
+  ) %>% 
   mutate(mn_length = as.integer(mn_length))
 #deficit vol in m³ increase per day of drought
 
@@ -267,22 +273,25 @@ tot_defi_q= sum_q %>%
   as.data.frame()
 
 
+mmky_tot_defi_q$sen_slope[128] %>% which.max()
 
+ggplot()+
+  geom_line(data=sum_q %>% filter(catchment == 128), aes(x= year, y= tot_defi))
 
-mn_defi_q= sum_q %>% 
-  ungroup() %>% 
-  mutate(stan_defi = (mn_defi - mean(mn_defi))/sd(mn_defi)) %>% #has to be standadized see laaha et al 2015
-  dplyr::select(catchment, stan_defi, year) %>% 
-  spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
-  dplyr::select(-year)%>% 
-  as.data.frame()
+# mn_defi_q= sum_q %>% 
+#   ungroup() %>% 
+#   mutate(stan_defi = (mn_defi - mean(mn_defi))/sd(mn_defi)) %>% #has to be standadized see laaha et al 2015
+#   dplyr::select(catchment, stan_defi, year) %>% 
+#   spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
+#   dplyr::select(-year)%>% 
+#   as.data.frame()
 
-mn_length_q= sum_q %>% 
-  ungroup() %>% 
-  dplyr::select(catchment, mn_length, year) %>% 
-  spread(., key=(catchment), value=(mn_length), fill = 0)%>% 
-  dplyr::select(-year)%>% 
-  as.data.frame()
+# mn_length_q= sum_q %>% 
+#   ungroup() %>% 
+#   dplyr::select(catchment, mn_length, year) %>% 
+#   spread(., key=(catchment), value=(mn_length), fill = 0)%>% 
+#   dplyr::select(-year)%>% 
+#   as.data.frame()
 
 sm_length_q= sum_q %>% 
   ungroup() %>% 
@@ -308,20 +317,20 @@ tot_defi_p= sum_p %>%
   dplyr::select(-year) %>% 
   as.data.frame()
 
-mn_defi_p= sum_p %>% 
-  ungroup() %>% 
-  mutate(stan_defi = (mn_defi - mean(mn_defi))/sd(mn_defi)) %>% #has to be standadized see laaha et al 2015
-  dplyr::select(catchment, stan_defi, year) %>% 
-  spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
-  dplyr::select(-year)%>% 
-  as.data.frame()
+# mn_defi_p= sum_p %>% 
+#   ungroup() %>% 
+#   mutate(stan_defi = (mn_defi - mean(mn_defi))/sd(mn_defi)) %>% #has to be standadized see laaha et al 2015
+#   dplyr::select(catchment, stan_defi, year) %>% 
+#   spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
+#   dplyr::select(-year)%>% 
+#   as.data.frame()
 
-mn_length_p= sum_p %>% 
-  ungroup() %>% 
-  dplyr::select(catchment, mn_length, year) %>% 
-  spread(., key=(catchment), value=(mn_length), fill = 0)%>% 
-  dplyr::select(-year)%>% 
-  as.data.frame()
+# mn_length_p= sum_p %>% 
+#   ungroup() %>% 
+#   dplyr::select(catchment, mn_length, year) %>% 
+#   spread(., key=(catchment), value=(mn_length), fill = 0)%>% 
+#   dplyr::select(-year)%>% 
+#   as.data.frame()
 
 sm_length_p= sum_p %>% 
   ungroup() %>% 
@@ -334,19 +343,27 @@ sm_length_p= sum_p %>%
   
 save(list = c("mat_def", "mat_n"), file="./output/seasonal_80th_drought.Rdata")
 
-#seasonal 80th % (calculation) parallel (not complete, but working) ####
+#seasonal 80th % (calculation) parallel####
   
+#list [[1]]=deficit vol sum (!) per catchment per month over all 40 years!! [[2]] sum of events (independent of length) in every month [[3]] sum of days per month that are effected by drought (needs to be converted to % later since now it is a sum over all 40 years)
 
-seasonal_80th_q = par_seas_80th(data = drought_q, catchment_max = catch_n) #list [[1]]=deficit vol sum (!) per catchment per month over all 40 years!! [[2]] sum of events (independent of length) in every month [[3]] sum of days per month that are effected by drought (needs to be converted to % later since now it is a sum over all 40 years)
-seasonal_80th_p = par_seas_80th(data = drought_p, catchment_max = catch_n)
-save(seasonal_80th_q,file="./output/seasonal_q.Rdata")
-save(seasonal_80th_p,file="./output/seasonal_p.Rdata")
+
+  q_seas= seasonal_80th(data = drought_q)
+  p_seas= seasonal_80th(data = drought_p)
+  
+  q_yearly = yearly_80th(data = drought_q)
+  p_yearly = yearly_80th(data =drought_p)
+  
+save(q_seas,file="./output/seasonal_q.Rdata")
+save(p_seas,file="./output/seasonal_p.Rdata")
+save(q_yearly,file="./output/q_yearly.Rdata")
+save(p_yearly,file="./output/p_yearly.Rdata")
 # seasonal 80th % method (analysis)####
 
 load("./output/seasonal_q.Rdata", verbose = T)
 load("./output/seasonal_p.Rdata", verbose = T)
 
-mt_mn_def = seasonal_80th_q[[1]] %>%
+mt_mn_def = q_seas[[1]] %>%
   as.data.frame() %>% 
   set_colnames(1:catch_n) %>% 
   mutate(month= as.integer(rownames(.))) %>% 
@@ -357,7 +374,7 @@ mt_mn_def = seasonal_80th_q[[1]] %>%
   mutate(gauge= as.integer(gauge)) %>% 
   as.tbl()
 
-mt_sm_events = seasonal_80th_q[[2]]  %>%
+mt_sm_events = q_seas[[2]]  %>%
   as.data.frame() %>% 
   set_colnames(1:catch_n) %>% 
   mutate(month= as.integer(rownames(.))) %>% 
@@ -368,15 +385,12 @@ mt_sm_events = seasonal_80th_q[[2]]  %>%
   mutate(gauge= as.integer(gauge) , mt_sm_events = as.integer(mt_sm_events)) %>% 
   as.tbl()
 
-mt_perc_days = seasonal_80th_q[[3]]  %>%
+mt_perc_days = q_seas[[3]]  %>%
   as.data.frame() %>% 
   set_colnames(1:catch_n) %>% 
   mutate(month= as.integer(rownames(.))) %>% 
   gather(key = gauge, value=tot_days, -month) %>% 
-  mutate(perc_days = round(tot_days /(40 *days_in_month(month)),3) *100) %>% 
-  group_by(gauge) %>% # to standartize per catchment
-  mutate(stan_perc = (perc_days - mean(perc_days))/sd(perc_days)) %>%   #has to be standartized see laaha et al 2015
-  ungroup() %>% 
+  mutate(perc_days = round(tot_days /(40 *days_in_month(month)),3) *100) %>%  # 40 because 40 years
   as.tbl()
 
 
@@ -386,16 +400,28 @@ ggplot()+
   geom_boxplot(data= mt_mn_def , aes(x=as.factor(month), y=stan_defi, group = month),stat="boxplot" )+
   xlab("Month")+
   ylab("standardized deficit vol. during droughts [all catchments]")
-#geprägt von fehlenden  schneeschmelze? alpine flüsse rausschmeißen? standardize differnetly to make up for discharge rich rivers. auf jedes catchment standardizieren!
+
+
+ggplot()+
+  geom_boxplot(data= mt_mn_def , aes(x=as.factor(month), y=mt_mn_def, group = month),stat="boxplot" )+
+  xlab("Month")+
+  ylab("standardized deficit vol. during droughts [all catchments]")
+
 
 ggplot()+
   geom_boxplot(data= mt_sm_events, aes(x=as.factor(month), y=stan_events, group = month),stat="boxplot" )+
   xlab("Month")+
   ylab("standardized deficit vol. during droughts [all catchments]")
 
-ggplot()+
-  geom_boxplot(data= mt_perc_days, aes(x=as.factor(month), y=stan_perc, group = month),stat="boxplot" )+
-  xlab("Month")+
-  ylab("standardized deficit vol. during droughts [all catchments]")
+# ggplot()+
+#   geom_boxplot(data= mt_perc_days, aes(x=as.factor(month), y=perc_days, group = month),stat="boxplot" )+
+#   ylim(c(0,25))+
+#   xlab("Month")+
+#   ylab("standardized deficit vol. during droughts [all catchments]")
 
+
+q_yearly[[1]] %>% 
+  mutate(year = c(1970:2009)) %>% 
+  gather(key= gauge, value=def_vol, -year) %>% 
+  group_by()
 
