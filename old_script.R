@@ -313,13 +313,14 @@ plot(x =spi_2[,1] , y=ssi_1[,1])
 
 #seasonal 80th % (calculation sequential USE PARALLEL)####
 #takes 10 min to calculate!!!!!
+stime = Sys.time()
 mat_def = matrix(ncol=catch_n, nrow=12)
 mat_n = matrix(ncol=catch_n, nrow = 12)
 months = c()
 for( m in 1:12){
 
 
-for (c in 1:catch_n){
+for (c in 1:10){  #change to catch_n
   temp1 = drought_q %>% 
     filter(catchment == c)
 def_mean = NULL
@@ -354,6 +355,312 @@ if(c %% 20 == 0) cat(round((c+((m-1)*catch_n))/(catch_n*12),2) * 100, "%", "\n")
 }
 cat(month.name[m], "just finished", "\n")
 }
+Sys.time()-stime
+
+#seasonal 80th (parallel version1)####
+
+par_seas_80th = function(data= drought_q , catchment_max=catch_n){
+no_cores=detectCores()
+cl<-makeCluster(no_cores-1) 
+registerDoSNOW(cl)
+res=list()
+def_catch = c()
+mean_def=c()
+mean_n = c()
+sm_length=c()
+
+pb <- txtProgressBar(max = catchment_max, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
+
+res <- foreach::foreach(c = 1:catchment_max, .packages = c("tidyverse", "lubridate"), 
+                        .options.snow = opts)%dopar%{ ###cbind
+ #sub_80th =  function(c) 
+    temp1 = data %>%
+    filter(catchment == c)
+for (m in 1:12){
+  def_catch=NULL
+  days_catch=NULL
+for (e in 1:max(temp1$event_no)){
+  days_dr = NULL
+  dr_len = NULL
+   if((year(temp1$dr_start[e])+1) == year(temp1$dr_end[e]) ){
+    months = c(seq(from=month(temp1$dr_start[e]), to=12, by=1), seq(from=1, to   =month(temp1$dr_end[e]), by=1))}
+   if(year(temp1$dr_start[e]) == year(temp1$dr_end[e])){
+      months = seq(from = month(temp1$dr_start[e]) , to= month(temp1$dr_end[e]), by=1)}
+   if((year(temp1$dr_end[e]) - year(temp1$dr_start[e])) > 1){
+     months = 1:12
+   }
+
+#retrieving length of drought. since def.vol is in m³/day it has to be multiplied by the length of the drought. if the drought is longer than one month the cumulative sum of the deficit volume gets devided by number of month (including partial months, meaning a drought going from mid dec. to end february: every month would get allocated a 1/3 of the total cumulative drought. 33% percent because it is three month: dec., jan. and feb.)
+   
+  
+ if(m %in% months){
+   dr_len = as.numeric(ymd(temp1$dr_end[e])) - as.numeric(ymd(temp1$dr_start[e]))
+   def_catch = rbind(def_catch,temp1$def_vol[e]*(dr_len/length(months))) #calculating the deficit of all drought events of one catchment in one particular month (m) and rbinding them
+   if(length(months) == (12)){
+     days_dr = as.numeric((year(temp1$dr_end[e]) - year(temp1$dr_start[e]))*days_in_month(m))
+   }
+      if(m > month(temp1$dr_start[e]) & m < month(temp1$dr_end[e])){
+     days_dr = days_in_month(m)}
+   if(m == month(temp1$dr_start[e]) & m == month(temp1$dr_end[e]) ){
+     days_dr = as.numeric(ymd(temp1$dr_end[e])) - as.numeric(ymd(temp1$dr_start[e]))}
+   if(m == month(temp1$dr_start[e]) & is.null(days_dr)){
+     days_dr = as.numeric(days_in_month(m) - day(ymd(temp1$dr_start[e])))}
+   if(m == month(temp1$dr_end[e]) & is.null(days_dr)){
+     days_dr = as.numeric(day(ymd(temp1$dr_end[e])))
+   }
+   
+   days_catch = rbind(days_catch, days_dr)
+   
+ }else{
+   next
+ }
+ }  
+
+mean_def[m] = round(sum(def_catch),0)
+mean_n[m] = length(def_catch)
+sm_length[m] = sum(days_catch) #total sum of days
+
+
+}
+
+    #return(mean_def) 
+cbind(mean_def, mean_n, sm_length)
+# temp2
+  }
+close(pb)
+stopCluster(cl)
+
+mean_def_list <- lapply(res, function(x) x[,1])
+mean_def_df = do.call( "cbind",mean_def_list) %>% as.data.frame() %>% set_colnames(1:catchment_max)
+
+mean_n_list <- lapply(res, function(x) x[,2])
+mean_n_df = do.call( "cbind",mean_n_list) %>% as.data.frame() %>% set_colnames(1:catchment_max)
+
+sm_days_list <- lapply(res, function(x) x[,3])
+sm_days_df = do.call( "cbind",sm_days_list) %>% as.data.frame() %>% set_colnames(1:catchment_max)
+
+return(list(mean_def_df,mean_n_df, sm_days_df))
+# return(res)
+
+
+}
+
+#seasonal 80th with monthly sm days calculation####
+seasonal_80th = function(data= drought_q, year_ta= 1970:2009){
+sub_80th =  function(i) {
+  
+  sum_def=c()
+  mean_n = c()
+  sm_length = c()
+  
+    temp1 = data %>%
+    filter(catchment == i)
+    mat = matrix(nrow=length(year_ta), ncol=12)
+for (m in 1:12){
+  def_catch=NULL
+  days_catch=NULL
+for (e in 1:max(temp1$event_no)){
+  days_dr = NULL
+   months= NULL
+   
+   if((year(temp1$dr_start[e])+1) == year(temp1$dr_end[e]) ){
+    months = c(seq(from=month(temp1$dr_start[e]), to=12, by=1), seq(from=1, to   =month(temp1$dr_end[e]), by=1))}
+   if(year(temp1$dr_start[e]) == year(temp1$dr_end[e])){
+      months = seq(from = month(temp1$dr_start[e]) , to= month(temp1$dr_end[e]), by=1)}
+   if((year(temp1$dr_end[e]) - year(temp1$dr_start[e])) > 1){
+     months = 1:12
+   }
+ 
+#retrieving length of drought. since def.vol is in m³/day it has to be multiplied by the length of the drought. if the drought is longer than one month the cumulative sum of the deficit volume gets devided by number of month (including partial months, meaning a drought going from mid dec. to end february: every month would get allocated a 1/3 of the total cumulative drought. 33% percent because it is three month: dec., jan. and feb.)
+   
+  
+ if(m %in% months){
+
+   #calculating number of days that are affected by drought
+  if(length(months) == (12)){
+     days_dr = as.numeric((year(temp1$dr_end[e]) - year(temp1$dr_start[e]))*days_in_month(m))}
+  if(length(months) > 2 & is.null(days_dr) & m %in% months[c(-1,-length(months))]){
+     days_dr = days_in_month(m)}
+  if(m == month(temp1$dr_start[e]) & m == month(temp1$dr_end[e])& is.null(days_dr) ){
+     days_dr = as.numeric(ymd(temp1$dr_end[e])) - as.numeric(ymd(temp1$dr_start[e]))}
+  if(m == month(temp1$dr_start[e]) & is.null(days_dr)){
+     days_dr = as.numeric(days_in_month(m) - day(ymd(temp1$dr_start[e])))}
+  if(m == month(temp1$dr_end[e]) & is.null(days_dr)){
+     days_dr = as.numeric(day(ymd(temp1$dr_end[e])))}
+  if(year(ymd(temp1$dr_start[e])) < year(ymd(temp1$dr_end[e])) & m < tail(months,1) & is.null(days_dr)){
+     days_dr = days_in_month(m) %>% as.numeric()
+        }
+   # if(m == 1)  cat(days_dr,e, "\n")
+  
+  
+     
+   days_catch = rbind(days_catch, days_dr) #days per catchment effected by drought #
+   def_catch = rbind(def_catch,temp1$def_vol[e]*days_dr) #calculating the deficit of all drought events of one catchment in one particular month (m) and rbinding them proportional to the amount of days effected
+  
+ 
+   # if(is.null(days_dr)) {
+   #  # stop(e, "row", i, "catchment")
+   #   cat(e, "row", i, "catchment", m, "\n")}
+ }else{
+   next
+ }
+}
+  
+
+
+sum_def[m] = round(sum(def_catch),0) #sum deficit per catchment per month
+mean_n[m] = length(def_catch) # mean number of events per month per catchment
+sm_length[m] = sum(days_catch) #total sum of days effected in every month per catchment #
+
+
+}
+   return(cbind(sum_def, mean_n,sm_length)) 
+
+}
+
+
+cl<-makeCluster(no_cores-1) 
+registerDoSNOW(cl)
+res=list()
+pb <- txtProgressBar(max = catch_n, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
+res <- foreach::foreach(c = 1:catch_n, .packages = c("tidyverse", "lubridate"), 
+                        .options.snow = opts)%dopar%{ 
+   sub_80th(i=c)
+                        }
+close(pb)
+stopCluster(cl)
+#save(res,file="./output/seasonal_q.Rdata")
+
+sum_def_list <- lapply(res, function(x) x[,1])
+sum_def_df = do.call( "cbind",sum_def_list) %>% as.data.frame() %>% set_colnames(1:catch_n)
+mean_n_list <- lapply(res, function(x) x[,2])
+mean_n_df = do.call( "cbind",mean_n_list) %>% as.data.frame() %>% set_colnames(1:catch_n)
+sm_days_list <- lapply(res, function(x) x[,3])
+sm_days_df = do.call( "cbind",sm_days_list) %>% as.data.frame() %>% set_colnames(1:catch_n)
+
+return(list(sum_def_df,mean_n_df,sm_days_df))
+}
+
+#seasonal with monthly and yearly calculation ####
+seasonal_80th = function(data= drought_q, year_ta= 1970:2009){
+sub_80th =  function(i) {
+  
+  sum_def=c()
+  mean_n = c()
+  sm_length = c()
+  
+    temp1 = data %>%
+    filter(catchment == i)
+    mat = matrix(nrow=length(year_ta), ncol=12)
+for (m in 1:12){
+  def_catch=NULL
+  days_catch=NULL
+for (e in 1:max(temp1$event_no)){
+  days_dr = NULL
+   months= NULL
+   
+   if((year(temp1$dr_start[e])+1) == year(temp1$dr_end[e]) ){
+    months = c(seq(from=month(temp1$dr_start[e]), to=12, by=1), seq(from=1, to   =month(temp1$dr_end[e]), by=1))}
+   if(year(temp1$dr_start[e]) == year(temp1$dr_end[e])){
+      months = seq(from = month(temp1$dr_start[e]) , to= month(temp1$dr_end[e]), by=1)}
+   if((year(temp1$dr_end[e]) - year(temp1$dr_start[e])) > 1){
+     months = 1:12
+   }
+  mt_yr = seq.Date(from=ymd(temp1$dr_start[e]), to= ymd(temp1$dr_end[e]), by="month")
+   if(month(ymd(temp1$dr_start[e])) !=  month(ymd(temp1$dr_end[e])) | length(months) > 1){
+     mt_yr = c(mt_yr, ymd(temp1$dr_end[e]))
+   }
+  year_y = year(mt_yr)
+  month_x = month(mt_yr)
+
+#retrieving length of drought. since def.vol is in m³/day it has to be multiplied by the length of the drought. if the drought is longer than one month the cumulative sum of the deficit volume gets devided by number of month (including partial months, meaning a drought going from mid dec. to end february: every month would get allocated a 1/3 of the total cumulative drought. 33% percent because it is three month: dec., jan. and feb.)
+   
+  
+ if(m %in% months){
+   years_of_drought =  pmatch(year_y,year_ta,duplicates.ok = F)
+   #calculating number of days that are affected by drought
+     if(length(months) == (12)){
+     #days_dr = as.numeric((year(temp1$dr_end[e]) - year(temp1$dr_start[e]))*days_in_month(m))
+     mat[years_of_drought[which(!is.na(years_of_drought))], m] = days_in_month(m) #
+   }
+      if(length(months) > 2 & is.null(days_dr) & m %in% months[c(-1,-length(months))]){
+     #days_dr = days_in_month(m)
+     mat[years_of_drought[which(!is.na(years_of_drought))], m] = days_in_month(m)}#
+   if(m == month(temp1$dr_start[e]) & m == month(temp1$dr_end[e])& is.null(days_dr) ){
+    # days_dr = as.numeric(ymd(temp1$dr_end[e])) - as.numeric(ymd(temp1$dr_start[e]))}
+      mat[years_of_drought[which(!is.na(years_of_drought))], m] =  as.numeric(ymd(temp1$dr_end[e])) - as.numeric(ymd(temp1$dr_start[e]))}
+   if(m == month(temp1$dr_start[e]) & is.null(days_dr)){
+     #days_dr = as.numeric(days_in_month(m) - day(ymd(temp1$dr_start[e])))}
+     mat[years_of_drought[which(!is.na(years_of_drought))], m] = as.numeric(days_in_month(m) - day(ymd(temp1$dr_start[e])))}
+   if(m == month(temp1$dr_end[e]) & is.null(days_dr)){
+     #days_dr = as.numeric(day(ymd(temp1$dr_end[e])))}
+     mat[years_of_drought[which(!is.na(years_of_drought))], m] = as.numeric(day(ymd(temp1$dr_end[e])))}
+     
+   if(year(ymd(temp1$dr_start[e])) < year(ymd(temp1$dr_end[e])) & m < tail(months,1) & is.null(days_dr)){
+     #days_dr = days_in_month(m) %>% as.numeric()
+      cat(e, "row", i, "catchment", m, "\n")
+      mat[years_of_drought[which(!is.na(years_of_drought))], m] = days_in_month(m)
+   }
+   # if(m == 1)  cat(days_dr,e, "\n")
+  
+  
+     
+   #days_catch = rbind(days_catch, days_dr) #days per catchment effected by drought #
+   def_catch = rbind(def_catch,temp1$def_vol[e]*days_dr) #calculating the deficit of all drought events of one catchment in one particular month (m) and rbinding them proportional to the amount of days effected
+   print(mat,"\n")#
+   #print(temp1[e,], "\n") #
+   Sys.sleep(10)#
+ 
+   # if(is.null(days_dr)) {
+   #  # stop(e, "row", i, "catchment")
+   #   cat(e, "row", i, "catchment", m, "\n")}
+ }else{
+   next
+ }
+}
+  
+
+
+sum_def[m] = round(sum(def_catch),0) #sum deficit per catchment per month
+mean_n[m] = length(def_catch) # mean number of events per month per catchment
+#sm_length[m] = sum(days_catch) #total sum of days effected in every month per catchment #
+
+
+}
+return(list(sum_def, mean_n,mat))
+#    return(cbind(sum_def, mean_n,sm_length)) #
+
+}
+
+
+cl<-makeCluster(no_cores-1) 
+registerDoSNOW(cl)
+res=list()
+pb <- txtProgressBar(max = catch_n, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
+res <- foreach::foreach(c = 1:catch_n, .packages = c("tidyverse", "lubridate"), 
+                        .options.snow = opts)%dopar%{ 
+   sub_80th(i=c)
+                        }
+close(pb)
+stopCluster(cl)
+#save(res,file="./output/seasonal_q.Rdata")
+
+sum_def_list <- lapply(res, function(x) x[,1])
+sum_def_df = do.call( "cbind",sum_def_list) %>% as.data.frame() %>% set_colnames(1:catch_n)
+mean_n_list <- lapply(res, function(x) x[,2])
+mean_n_df = do.call( "cbind",mean_n_list) %>% as.data.frame() %>% set_colnames(1:catch_n)
+sm_days_list <- lapply(res, function(x) x[,3])
+sm_days_df = do.call( "cbind",sm_days_list) %>% as.data.frame() %>% set_colnames(1:catch_n)
+
+return(list(sum_def_df,mean_n_df,sm_days_df))
+}
+
 
 # functions ---------------------------------------------------------------
 
