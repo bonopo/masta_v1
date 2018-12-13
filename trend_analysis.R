@@ -120,16 +120,6 @@ spplot(gauges, c("mmkh_q10"), col.regions = rainbow(100, start = 4/6, end = 1),
     )
 )
 
-# negative trend detail examination ####
-
-mmkh_ms7_min
-mmkh_ms7_min
-  neg_ms7 =   which(mmkh_ms7_min$sen_slope <0 & mmkh_ms7_min$new_p < .05) 
-  
-
-neg_q10 = which(mmkh_yearly_q10$Tau < 0)
-
-
 
 #monthly trend analysis ####
 res=c()
@@ -166,10 +156,12 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 # "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"
 #"mn_defi_p", "mn_defi_q", "sm_length_p", "sm_length_q", "mn_length_q", "mn_length_p", "tot_defi_p", "tot_defi_q"
 #"def_vol_q","def_vol_p","days_dr_q","days_dr_p"
+#"p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"
 
-p=sig_plot(x_data = "mmky_def_vol_p", y_data = "mmky_def_vol_q", output = "sr_new", p_value = .1) 
+p=sig_plot(x_data = "mmky_p_days_of_drought_yr", y_data = "mmky_q_days_of_drought_yr", output = "bfi", p_value = .1) 
 p
-ggsave(plot = p, "./plots/4_choice/mmky_laaha_def_vol_p.png")
+
+ggsave(plot = p, "./plots/4_choice/mmky_laaha_yr_day_days.png")
 
 gauges$mnq30_month
 p = catch_plot(p_value=.05, color="sr_new", x_data="bfi", y_data= "mmky_tot_defi_q" , factor =T)
