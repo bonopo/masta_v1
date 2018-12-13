@@ -230,9 +230,6 @@ save(output, file="./output/drought_p.Rdata")
 remove(lf_obj, res,  drought_t, new.drought.no)
 
 
-
-
-
 #80th percentile approach (analysis)####
 
 load("./output/drought_q.Rdata", verbose = TRUE)
@@ -240,128 +237,29 @@ drought_q= output
 load("./output/drought_p.Rdata", verbose = TRUE)
   drought_p = output
 remove(output)
-  
-sum_q = drought_q %>% 
-  as.tbl %>% 
-  mutate(dr_start = ymd(dr_start), dr_end=ymd(dr_end), catchment= as.integer(catchment)) %>%   group_by(catchment, year = as.integer(year(dr_start))) %>% 
-  summarise(
-    n_events = n(),
-    sm_length = as.numeric(sum(ymd(dr_end)-ymd(dr_start))),#not usable since there are droughts that go over several years
-    tot_defi = as.numeric(round(sum(def_vol*(dr_end-dr_start)),0)),#not usable because drought deficit gets allocated to one year even if it goes over several years
-    mn_defi = round(mean(def_vol)),
-    mn_length= round(sm_length/n_events,0)
-  ) %>% 
-  mutate(mn_length = as.integer(mn_length))
-#deficit vol in m³ increase per day of drought
-
-tot_defi_catch = sum_q %>% 
-  group_by(catchment) %>% 
-  summarise(sd_tot_defi = sd(tot_defi)) %>% 
-  mutate(hydrogeo = gauges$hydrogeo_simple)
-
-int = which.max(tot_defi_catch$sd_tot_defi) # remove to extreme
-
-pdf("./plots/4_choice/geo_sd_tot_defi.pdf")
-boxplot(log10(sd_tot_defi) ~ hydrogeo, data=tot_defi_catch[-int,], ylab="log10 sd total deficit")
-dev.off()
-tot_defi_q= sum_q %>% 
-  ungroup() %>% 
-  mutate(stan_defi = (tot_defi - mean(tot_defi))/sd(tot_defi)) %>% #has to be standadized see laaha et al 2015
-  dplyr::select(catchment, stan_defi, year) %>% 
-  spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
-  dplyr::select(-year)%>% 
-  as.data.frame()
-
-
-mmky_tot_defi_q$sen_slope[128] %>% which.max()
-
-ggplot()+
-  geom_line(data=sum_q %>% filter(catchment == 128), aes(x= year, y= tot_defi))
-
-# mn_defi_q= sum_q %>% 
-#   ungroup() %>% 
-#   mutate(stan_defi = (mn_defi - mean(mn_defi))/sd(mn_defi)) %>% #has to be standadized see laaha et al 2015
-#   dplyr::select(catchment, stan_defi, year) %>% 
-#   spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
-#   dplyr::select(-year)%>% 
-#   as.data.frame()
-
-# mn_length_q= sum_q %>% 
-#   ungroup() %>% 
-#   dplyr::select(catchment, mn_length, year) %>% 
-#   spread(., key=(catchment), value=(mn_length), fill = 0)%>% 
-#   dplyr::select(-year)%>% 
-#   as.data.frame()
-
-sm_length_q= sum_q %>% 
-  ungroup() %>% 
-  dplyr::select(catchment, sm_length, year) %>% 
-  spread(., key=(catchment), value=(sm_length), fill = 0)%>% 
-  dplyr::select(-year)%>% 
-  as.data.frame()
-
-
-sum_p= drought_p %>% 
-  as.tbl %>% 
-  mutate(dr_start = ymd(dr_start), dr_end=ymd(dr_end), catchment= as.integer(catchment)) %>%   group_by(catchment, year = as.integer(year(dr_start))) %>% 
-  summarise(n_events = n(), sm_length = as.numeric(sum(dr_end-dr_start)), tot_defi = as.numeric(round(sum(def_vol*(dr_end-dr_start)),0)),  mn_defi = as.numeric(round(tot_defi/n_events,0)),mn_length= round(sm_length/n_events,0)) %>% 
-  mutate(mn_length = as.integer(mn_length))
-
-
-
-tot_defi_p= sum_p %>% 
-  ungroup() %>% 
-  mutate(stan_defi = (tot_defi - mean(tot_defi))/sd(tot_defi)) %>% 
-  dplyr::select(catchment, stan_defi, year) %>% 
-  spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
-  dplyr::select(-year) %>% 
-  as.data.frame()
-
-# mn_defi_p= sum_p %>% 
-#   ungroup() %>% 
-#   mutate(stan_defi = (mn_defi - mean(mn_defi))/sd(mn_defi)) %>% #has to be standadized see laaha et al 2015
-#   dplyr::select(catchment, stan_defi, year) %>% 
-#   spread(., key=(catchment), value=(stan_defi), fill = 0) %>% 
-#   dplyr::select(-year)%>% 
-#   as.data.frame()
-
-# mn_length_p= sum_p %>% 
-#   ungroup() %>% 
-#   dplyr::select(catchment, mn_length, year) %>% 
-#   spread(., key=(catchment), value=(mn_length), fill = 0)%>% 
-#   dplyr::select(-year)%>% 
-#   as.data.frame()
-
-sm_length_p= sum_p %>% 
-  ungroup() %>% 
-  dplyr::select(catchment, sm_length, year) %>% 
-  spread(., key=(catchment), value=(sm_length), fill = 0)%>% 
-  dplyr::select(-year)%>% 
-  as.data.frame()
-
 
   
-save(list = c("mat_def", "mat_n"), file="./output/seasonal_80th_drought.Rdata")
-
-#seasonal 80th % (calculation) parallel####
-  
-#list [[1]]=deficit vol sum (!) per catchment per month over all 40 years!! [[2]] sum of events (independent of length) in every month [[3]] sum of days per month that are effected by drought (needs to be converted to % later since now it is a sum over all 40 years)
-
 
   q_seas= seasonal_80th(data = drought_q)
   p_seas= seasonal_80th(data = drought_p)
   
-  q_yearly = yearly_80th(data = drought_q)
-  p_yearly = yearly_80th(data =drought_p)
-  
+
+ #result of funtion is a list: 338 list elements with two matrix per catchment [[1]]=deficit vol sum (!) per catchment per month over all 40 years!!  [[2]] sum of days per month that are effected by drought
+ 
 save(q_seas,file="./output/seasonal_q.Rdata")
 save(p_seas,file="./output/seasonal_p.Rdata")
-save(q_yearly,file="./output/q_yearly.Rdata")
-save(p_yearly,file="./output/p_yearly.Rdata")
 # seasonal 80th % method (analysis)####
 
 load("./output/seasonal_q.Rdata", verbose = T)
 load("./output/seasonal_p.Rdata", verbose = T)
+
+p_days_of_drought_df <- lapply(p_seas, function(x) x[[1]]) %>% do.call("rbind", .)
+q_days_of_drought_df <- lapply(q_seas, function(x) x[[1]]) %>% do.call("rbind", .)
+
+p_sum_def_df = lapply(p_seas, function(x) x[[2]]) %>% do.call("rbind", .)
+q_sum_def_df<- lapply(q_seas, function(x) x[[2]]) %>% do.call("rbind", .)
+
+boxplot(q_days_of_drought_df)
 
 mt_mn_def = q_seas[[1]] %>%
   as.data.frame() %>% 
@@ -420,8 +318,26 @@ ggplot()+
 #   ylab("standardized deficit vol. during droughts [all catchments]")
 
 
+#yearly q80 calculation (for yearly trend analysis)####
+
+
+p_days_of_drought_df <- lapply(p_seas, function(x) x[[1]]) %>% do.call("rbind", .)
+q_days_of_drought_df <- lapply(q_seas, function(x) x[[1]]) %>% do.call("rbind", .)
+
+p_sum_def_df = lapply(p_seas, function(x) x[[2]]) %>% do.call("rbind", .)
+q_sum_def_df<- lapply(q_seas, function(x) x[[2]]) %>% do.call("rbind", .)
+
+p_days_of_drought_yr = apply(p_days_of_drought_df,1, sum )%>% cbind(days_dr=.,year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40))%>%as.data.frame() %>%  spread(key=gauge, value = days_dr)%>% dplyr::select(-year)
+
+q_days_of_drought_yr = apply(q_days_of_drought_df,1, sum )%>% cbind(days_dr=., year = rep(1970:2009,catch_n),gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = days_dr) %>% dplyr::select(-year)
+
+p_sum_def_yr = apply(p_sum_def_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
+
+q_sum_def_yr = apply(q_sum_def_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
+
 q_yearly[[1]] %>% 
   mutate(year = c(1970:2009)) %>% 
   gather(key= gauge, value=def_vol, -year) %>% 
   group_by()
 
+plot(q_sum_def_yr[,152], type="l")
