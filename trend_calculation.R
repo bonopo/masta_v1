@@ -40,7 +40,7 @@ dev.off()
 
 mmkh_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"))
 
-mmky_par(raw_data = c( "mn_defi_p", "mn_defi_q", "sm_length_p", "sm_length_q", "mn_length_q", "mn_length_p", "tot_defi_p", "tot_defi_q"))
+mmky_par(raw_data = c( "p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"))
 
 def_vol_q = q_yearly[[1]]
 days_dr_q  = q_yearly[[3]]
