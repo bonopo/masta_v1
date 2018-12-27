@@ -157,16 +157,21 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 #"mn_defi_p", "mn_defi_q", "sm_length_p", "sm_length_q", "mn_length_q", "mn_length_p", "tot_defi_p", "tot_defi_q"
 #"def_vol_q","def_vol_p","days_dr_q","days_dr_p"
 #"p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"
-
-p=sig_plot(x_data = "mmky_p_days_of_drought_yr", y_data = "mmky_q_days_of_drought_yr", output = "bfi", p_value = .1) 
+mmky_mar_mn_q %>% head()
+p=sig_plot(x_data = "mmky_jun_mn_q", y_data = "mmky_ms7_date", output = "sr_new", p_value = .1) 
 p
+
+mmky_ms7_date$sen_slope
+mmky_mar_mn_q$sen_slope
 
 ggsave(plot = p, "./plots/4_choice/mmky_laaha_yr_day_days.png")
-
-gauges$mnq30_month
-p = catch_plot(p_value=.05, color="sr_new", x_data="bfi", y_data= "mmky_tot_defi_q" , factor =T)
+  gauges$Enzgsg_
+gauges$cor_s
+p = catch_plot(p_value=.05, color="sr_new", x_data="mar_best_spei", y_data= "mmky_mar_mn_q" , factor =T)
 p
-ggsave(plot = p, "./plots/4_choice/mmky_tot_defi_saar_hchwrt.png")
+ggsave(plot = p, "./plots/4_choice/mmky_mar_best_spei_sr.png")
+
+
 
 #trend linear regression ####
 #----> see script drought_attribution
