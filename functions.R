@@ -124,7 +124,7 @@ for (c in 1:catch_n)
 int= which(month(date_seq)==month)
 df= cbind.data.frame(ssi = ssi_1[c(int),c], spi_v2_1[c(int),c], spi_v2_2[c(int),c], spi_v2_3[c(int),c], spi_v2_6[c(int),c], spi_v2_12[c(int),c], spi_v2_24[c(int),c], spei_v2_1[c(int),c], spei_v2_2[c(int),c], spei_v2_3[c(int),c], spei_v2_6[c(int),c], spei_v2_12[c(int),c], spei_v2_24[c(int),c]) 
 df_drought = df %>% filter(ssi < threshold)
-colnames(df_drought) = c("ssi", "spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
+colnames(df_drought) = c("ssi", "spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1","spei_2","spei_3", "spei_6", "spei_12","spei_24")
 res.list[[c]] =df_drought
 
 }
@@ -136,7 +136,7 @@ for (n in 2:13)
 mat[,(n-1)]= sapply(1:catch_n, function(c) cor(x= res.list[[c]]$ssi,y= res.list[[c]][,n], use="na.or.complete", method = "spearman"))# spearman because we want rank correlation since ssi is nonparametric (limited to -1.97) and spi is parametric (not limited)
 }
 mat_cor = mat %>% as.data.frame()
-colnames(mat_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1"," spei_2"," spei_3", "spei_6", "spei_12"," spei_24")
+colnames(mat_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1","spei_2","spei_3", "spei_6", "spei_12","spei_24")
 mat_cor = cbind(mat_cor,gauge= 1:catch_n,sr=  gauges$sr_new,saar= gauges$saar, hydro_geo = gauges$hydrogeo_simple, landuse= gauges$landuse) %>% as.tbl()
 
 mat_cor_long = gather(mat_cor, key=sci_type, value=cor, -gauge,-landuse, -sr, -saar, -hydro_geo, factor_key = TRUE) %>% as.tbl()  
