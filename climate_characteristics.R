@@ -1,5 +1,3 @@
-
-
 # climate characteristics -------------------------------------------------
 
 # source("./R/masta_v1/functions.R")# has to run before if not objects will be missing!
@@ -60,7 +58,7 @@ ms7_min_temp = q_long %>%
 ms7_min = cbind(ms7_min_temp, ms7) %>% 
   gather(key=gauge, value=ms7, -`date`, -`year(date)`) %>% 
   group_by( as.integer(gauge),year(date)) %>% 
-  summarise(ms7_min = min(ms7, na.rm=T), ms7_date = yday(date[which.min(ms7)] )) %>% 
+  summarise(ms7_min = min(ms7, na.rm=T), ms7_date = yday(date[which.min(ms7)] )) %>% #resulting in a table with the minimum value and the day of the year when the minimum value accured (looking at summer only)
   ungroup() %>% 
   as.data.frame()
 
@@ -75,6 +73,8 @@ ms7_date = ms7_min %>%
 ms7_min %<>%  dplyr::select(gauge, ms7_min, year) %>% 
   spread(key=gauge, value=ms7_min) %>% 
   dplyr::select(-year) 
+
+#since there are catchments that have their lowflow in winter the ms7 and ms7 date will relate to their non-snowfall caused drought. 
 
 remove(ms7_df, ms7, q_wide_summer, ms7_min_temp, int)
 
@@ -126,6 +126,16 @@ remove(ms30, ms30_df, ms30_summer)
 #comparing ms7 with ms30
 
 plot(ms30_min[,11] ~ ms7_min[,11])
+
+#high flow ####
+#since the data shows that the discharge in march tend to increase do the also tend to be earlier and/or more severe 
+
+q_long
+
+
+#only looking at floods from march to mai
+
+
 
 #summer mean q
 
