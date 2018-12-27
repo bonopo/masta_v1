@@ -6,9 +6,6 @@ setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 #source("./R/masta_v1/functions.R")
 
 
-
-
-
 #month with max drought overall####
 
 
