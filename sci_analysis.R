@@ -4,8 +4,6 @@
 source("./R/masta_v1/functions.R")# has to run before if not objects will be missin!
 source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
 source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
-# autocorrelation ---------------------------------------------------------
-acf(spei_1)
 
 # cross correlation -------------------------------------------------------
 
@@ -77,83 +75,8 @@ plot(y=ken[[1]][1,],x=1:agg_month, type="l", ylim=c(-.5, .5))
 for (i in 2:50) lines(y=ken[[1]][i,],x=1:agg_month, type="l")
 
 
+# seasonal correlation values for SPI/SPEI####
 
-
-# drought attribution: SPI or SPEI? with linear regression ####
-
-
-spi_ssi = spi_spei_reg(sci = "spi_") #1 =intercept 2= slope 3 = rsq
-spei_ssi = spi_spei_reg(sci = "spei_") 
-best_spi = c()
-value_spi = c()
-best_spei = c()
-value_spei = c()
-
-plot(spi_ssi[[3]][,3])
-points(spi_ssi_v2[[3]][,3], col=2)
-
-for(r in 1:catch_n){
- best_spi[r] = spi_ssi[[3]][r,] %>% which.max()
- value_spi[r] = spi_ssi[[3]][r,] %>% max()}
-gauges$reg_spi_n = best_spi
-gauges$reg_spi_n = value_spi
-for(r in 1:catch_n){
- best_spei[r] = spei_ssi[[3]][r,] %>% which.max()
- value_spei[r] = spei_ssi[[3]][r,] %>% max()}
-
-gauges$reg_spei_n = best_spei
-gauges$reg_spei_n =value_spei
-
-# pdf("./plots/spi_spei_reg.pdf")
-# plot(best_spi - best_spei)
-# dev.off()
-# 
-# pdf("./plots/spi_spei_reg_rsq.pdf")
-# plot(value_spi, ylab="best r²")
-# points(value_spei, col=2)
-# legend("bottomleft", col=c(1,2), pch=c(1,1), c("spi", "spei"), bty="n")
-# dev.off()
-# 
-# pdf("./plots/spi_spei_opt_agg_n.pdf")
-# plot(best_spi, ylab="SPI-/SPEI-n with lowest r²")
-# points(x=which(best_spei != best_spi), y=best_spei[best_spei != best_spi], col=2)
-# legend("topleft", c("spi", "spei(only if diff. to spi)"), col=c(1,2), pch=c(1,1), bty="n")
-# dev.off()
-
-
-
-# drought attribution: SPI or SPEI? with correlation ####
-
-cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_v2_", ssi="ssi_1")
-cor_spei_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_v2_", ssi="ssi_1")
-
-# plot(cor_spi_ssi[,3] ~ spi_ssi[[2]][,3])
-
-# png("cor_spi_v2_spi_np.png")
-# plot(cor_spi_ssi[,3],ylab="correlation of SPI-3" )
-# points(cor_spi_ssi_v2[,3], col=2)
-# legend("bottomleft", col=c(1,2), pch=c(1,1), c("non-paramatric", "parametric"), bty="n")
-# dev.off()
-
-best_spi = c()
-  value_spi = c()
-best_spei = c()
-  value_spei = c()
-for(r in 1:catch_n){
- best_spi[r] = cor_spi_ssi_v2[r,] %>% which.max()
- value_spi[r] = cor_spi_ssi_v2[r,] %>% max()}
-
-for(r in 1:catch_n){
- best_spei[r] = cor_spei_ssi[r,] %>% which.max()
- value_spei[r] = cor_spei_ssi[r,] %>% max()}
-
-gauges$cor_spei_n = best_spei
-gauges$cor_spi_n = best_spi
-gauges$cor_spi = value_spi
-gauges$cor_spei = value_spei
-
-# monthly correlation values for SPI/SPEI####
-  
 
 summer_cor_spi = cor_sci_ssi_sea(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_", ssi="ssi_1", begin=5, end=11) 
   
@@ -235,7 +158,22 @@ dev.off()
 
 summary(fm3)
 
+mar_best_spi_cor = mar_sci_cor %>% 
+  filter(str_detect(sci_type, "spi"))%>% 
+  group_by(gauge) %>% 
+  summarise(max_cor = max(cor) , spi_n = as.factor(sci_type[which.max(cor)]))%>% 
+  mutate(spi_n = as.integer(str_remove(spi_n,"spi_")))
 
+mar_best_spei_cor = mar_sci_cor %>% 
+  filter(str_detect(sci_type, "spei"))%>% 
+  group_by(gauge) %>% 
+  summarise(max_cor = max(cor) , spei_n = as.factor(sci_type[which.max(cor)])) %>% 
+  mutate(spei_n = as.integer(str_remove(spei_n,"spei_")))
+
+gauges$mar_best_spei = mar_best_spei_cor$max_cor
+gauges$mar_best_spei_n = mar_best_spei_cor$spei_n
+gauges$mar_best_spi = mar_best_spi_cor$max_cor
+gauges$mar_best_spi_n = mar_best_spi_cor$spi_n
 #other analysis ####
 ggplot()+
   geom_point(aes(y= mmkh_ms7_min$Tau, x=value_spi, col= gauges_df$bfi))+
