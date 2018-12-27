@@ -41,13 +41,7 @@ gauges$sr_new <- as.numeric(q_sr$sr_value_new) # 2= winter 12- 0= summer low flo
 remove(q_sr, q_sr_s, q_sr_w)
 #spplot(gauges, "sr")
 
-# ind <- which(is.na(q_sr$sr_value))
-# q_long %>%
-#   filter(gauge %in% ind) %>%
-#   filter(year(date) < 1975) %>%
-#   ggplot() +
-#   geom_smooth(aes(x=date, y=q, group= as.factor(gauge), color= as.factor(gauge)))+
-#   scale_y_log10()
+
 
 gauges$ezggr_class <- cut(gauges$Enzgsg_, breaks=c(0,50,100,150,Inf), labels=c("<50", "50-100", "100-150", "150-200"))
 
@@ -180,3 +174,28 @@ gauges$alpine[which(gauges$sr_new==2)] = 1
 #after visual check removing following catchments: 221 238 42 305
 gauges$alpine[c(42,221,238,305)] = 0
 #spplot(gauges, "alpine", identify=T)
+
+#which best spi-n aggregation month and correlation value ####
+  #this calculates the best spi-n aggregation month for every catchment individually and the cor value itself too. The correlation is calculated between all ssi values (not only drought) and the spi-n value. In the next step the best one is selected and stored in the gauges attribution as a characteristic describing the catchment. All ssi (and not only the ssi values that are negative; indicating drought) are considered in this step because it is an attribute describing the catchment. 
+cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_v2_", ssi="ssi_1")
+cor_spei_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_v2_", ssi="ssi_1")
+
+
+best_spi = c()
+  value_spi = c()
+best_spei = c()
+  value_spei = c()
+for(r in 1:catch_n){
+ best_spi[r] = cor_spi_ssi_v2[r,] %>% which.max()
+ value_spi[r] = cor_spi_ssi_v2[r,] %>% max()}
+
+for(r in 1:catch_n){
+ best_spei[r] = cor_spei_ssi_v2[r,] %>% which.max()
+ value_spei[r] = cor_spei_ssi_v2[r,] %>% max()}
+
+gauges$cor_spei_n = best_spei
+gauges$cor_spi_n = best_spi
+gauges$cor_spi = value_spi
+gauges$cor_spei = value_spei
+
+remove(value_spei, value_spi, best_spei, best_spi, cor_spei_ssi_v2,cor_spi_ssi_v2)
