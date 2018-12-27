@@ -287,6 +287,49 @@ gauges$summer_q_q10 = ken_trend(data_source = "summer_q_q10", sci=FALSE)[,1]
 
 
 
+# drought attribution: SPI or SPEI? with linear regression ####
+
+
+spi_ssi = spi_spei_reg(sci = "spi_") #1 =intercept 2= slope 3 = rsq
+spei_ssi = spi_spei_reg(sci = "spei_") 
+best_spi = c()
+value_spi = c()
+best_spei = c()
+value_spei = c()
+
+plot(spi_ssi[[3]][,3])
+points(spi_ssi_v2[[3]][,3], col=2)
+
+for(r in 1:catch_n){
+ best_spi[r] = spi_ssi[[3]][r,] %>% which.max()
+ value_spi[r] = spi_ssi[[3]][r,] %>% max()}
+gauges$reg_spi_n = best_spi
+gauges$reg_spi_n = value_spi
+for(r in 1:catch_n){
+ best_spei[r] = spei_ssi[[3]][r,] %>% which.max()
+ value_spei[r] = spei_ssi[[3]][r,] %>% max()}
+
+gauges$reg_spei_n = best_spei
+gauges$reg_spei_n =value_spei
+
+# pdf("./plots/spi_spei_reg.pdf")
+# plot(best_spi - best_spei)
+# dev.off()
+# 
+# pdf("./plots/spi_spei_reg_rsq.pdf")
+# plot(value_spi, ylab="best r²")
+# points(value_spei, col=2)
+# legend("bottomleft", col=c(1,2), pch=c(1,1), c("spi", "spei"), bty="n")
+# dev.off()
+# 
+# pdf("./plots/spi_spei_opt_agg_n.pdf")
+# plot(best_spi, ylab="SPI-/SPEI-n with lowest r²")
+# points(x=which(best_spei != best_spi), y=best_spei[best_spei != best_spi], col=2)
+# legend("topleft", c("spi", "spei(only if diff. to spi)"), col=c(1,2), pch=c(1,1), bty="n")
+# dev.off()
+
+
+
 # kendall rank correlation -----------------------------------------------------
 
 mk_spi_tau <- list()
