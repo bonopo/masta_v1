@@ -250,47 +250,48 @@ save(p_seas,file="./output/seasonal_p.Rdata")
 load("./output/seasonal_q.Rdata", verbose = T)
 load("./output/seasonal_p.Rdata", verbose = T)
 
-p_days_of_drought_df <- lapply(p_seas, function(x) x[[1]]) %>% do.call("rbind", .)
+p_days_of_drought_df <- lapply(p_seas, function(x) x[[1]]) %>% do.call("rbind", .) 
 q_days_of_drought_df <- lapply(q_seas, function(x) x[[1]]) %>% do.call("rbind", .)
+
+
 
 p_sum_def_df = lapply(p_seas, function(x) x[[2]]) %>% do.call("rbind", .)
 q_sum_def_df<- lapply(q_seas, function(x) x[[2]]) %>% do.call("rbind", .)
 
-boxplot(q_days_of_drought_df)
 
-mt_mn_def = q_seas[[1]] %>%
-  as.data.frame() %>% 
-  set_colnames(1:catch_n) %>% 
-  mutate(month= as.integer(rownames(.))) %>% 
-  gather(key = gauge, value=mt_mn_def, -month) %>% 
-  group_by(gauge) %>% # to standartize per catchment
-  mutate(stan_defi = (mt_mn_def - mean(mt_mn_def))/sd(mt_mn_def)) %>%   #has to be standartized see laaha et al 2015
-  ungroup() %>% 
-  mutate(gauge= as.integer(gauge)) %>% 
-  as.tbl()
-
-mt_sm_events = q_seas[[2]]  %>%
-  as.data.frame() %>% 
-  set_colnames(1:catch_n) %>% 
-  mutate(month= as.integer(rownames(.))) %>% 
-  gather(key = gauge, value=mt_sm_events, -month) %>% 
-  group_by(gauge) %>% # to standartize per catchment
-  mutate(stan_events = (mt_sm_events - mean(mt_sm_events))/sd(mt_sm_events)) %>%   #has to be standartized see laaha et al 2015
-  ungroup() %>% 
-  mutate(gauge= as.integer(gauge) , mt_sm_events = as.integer(mt_sm_events)) %>% 
-  as.tbl()
-
-mt_perc_days = q_seas[[3]]  %>%
-  as.data.frame() %>% 
-  set_colnames(1:catch_n) %>% 
-  mutate(month= as.integer(rownames(.))) %>% 
-  gather(key = gauge, value=tot_days, -month) %>% 
-  mutate(perc_days = round(tot_days /(40 *days_in_month(month)),3) *100) %>%  # 40 because 40 years
-  as.tbl()
-
+# mt_mn_def = q_seas[[1]] %>%
+#   as.data.frame() %>% 
+#   set_colnames(1:catch_n) %>% 
+#   mutate(month= as.integer(rownames(.))) %>% 
+#   gather(key = gauge, value=mt_mn_def, -month) %>% 
+#   group_by(gauge) %>% # to standartize per catchment
+#   mutate(stan_defi = (mt_mn_def - mean(mt_mn_def))/sd(mt_mn_def)) %>%   #has to be standartized see laaha et al 2015
+#   ungroup() %>% 
+#   mutate(gauge= as.integer(gauge)) %>% 
+#   as.tbl()
+# 
+# mt_sm_events = q_seas[[2]]  %>%
+#   as.data.frame() %>% 
+#   set_colnames(1:catch_n) %>% 
+#   mutate(month= as.integer(rownames(.))) %>% 
+#   gather(key = gauge, value=mt_sm_events, -month) %>% 
+#   group_by(gauge) %>% # to standartize per catchment
+#   mutate(stan_events = (mt_sm_events - mean(mt_sm_events))/sd(mt_sm_events)) %>%   #has to be standartized see laaha et al 2015
+#   ungroup() %>% 
+#   mutate(gauge= as.integer(gauge) , mt_sm_events = as.integer(mt_sm_events)) %>% 
+#   as.tbl()
+# 
+# mt_perc_days = q_seas[[3]]  %>%
+#   as.data.frame() %>% 
+#   set_colnames(1:catch_n) %>% 
+#   mutate(month= as.integer(rownames(.))) %>% 
+#   gather(key = gauge, value=tot_days, -month) %>% 
+#   mutate(perc_days = round(tot_days /(40 *days_in_month(month)),3) *100) %>%  # 40 because 40 years
+#   as.tbl()
 
 
-#%>% filter(gauge == which(gauges$alpine == 0))
+
+
 ggplot()+
   geom_boxplot(data= mt_mn_def , aes(x=as.factor(month), y=stan_defi, group = month),stat="boxplot" )+
   xlab("Month")+
@@ -308,21 +309,17 @@ ggplot()+
   xlab("Month")+
   ylab("standardized deficit vol. during droughts [all catchments]")
 
-# ggplot()+
-#   geom_boxplot(data= mt_perc_days, aes(x=as.factor(month), y=perc_days, group = month),stat="boxplot" )+
-#   ylim(c(0,25))+
-#   xlab("Month")+
-#   ylab("standardized deficit vol. during droughts [all catchments]")
 
 
-#yearly q80 calculation (for yearly trend analysis)####
+p_days_of_drought_list <- lapply(p_seas, function(x) x[[1]]) 
+q_days_of_drought_list <- lapply(q_seas, function(x) x[[1]]) 
+
+p_sum_def_list = lapply(p_seas, function(x) x[[2]]) 
+q_sum_def_list <- lapply(q_seas, function(x) x[[2]]) 
 
 
-p_days_of_drought_df <- lapply(p_seas, function(x) x[[1]]) %>% do.call("rbind", .)
-q_days_of_drought_df <- lapply(q_seas, function(x) x[[1]]) %>% do.call("rbind", .)
+seasonal_dec_80_ana(data= q_days_of_drought_list)
 
-p_sum_def_df = lapply(p_seas, function(x) x[[2]]) %>% do.call("rbind", .)
-q_sum_def_df<- lapply(q_seas, function(x) x[[2]]) %>% do.call("rbind", .)
 
 p_days_of_drought_yr = apply(p_days_of_drought_df,1, sum )%>% cbind(days_dr=.,year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40))%>%as.data.frame() %>%  spread(key=gauge, value = days_dr)%>% dplyr::select(-year)
 
@@ -332,9 +329,8 @@ p_sum_def_yr = apply(p_sum_def_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:
 
 q_sum_def_yr = apply(q_sum_def_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 
-q_yearly[[1]] %>% 
-  mutate(year = c(1970:2009)) %>% 
-  gather(key= gauge, value=def_vol, -year) %>% 
-  group_by()
+
+
+
 
 plot(q_sum_def_yr[,152], type="l")
