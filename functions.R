@@ -300,6 +300,28 @@ stopCluster(cl)
 return(res)
 }
 
+#making decadal sums of drought characteristics
+seasonal_dec_80_ana = function(data= p_days_of_drought_list){
+res= list()
+n=1
+mat = matrix(nrow=catch_n, ncol=12)
+for (r in c(1,11,21,31)){
+  for (i in 1:catch_n) { 
+  mat[i,] = apply(data[[i]][r:(r+9),],2,sum)
+  }
+  res[[n]] = mat
+  n=n+1
+}
+print({
+  par(mfrow=c(2,2))
+for (p in 1:4){  
+ 
+  boxplot(as.data.frame(res[[p]]), names=c(1:12), ylim=c(0,max(res[[1]])), main=p) # max = res[[1]] because in the 70th there was a major drought
+}
+  
+  })
+
+}
 
 #counting every month below threshhold
 dr_n <- function(severity = -1)  {
