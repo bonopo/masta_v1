@@ -104,11 +104,11 @@ gauges$cor_spi_summer = value_spi_summer
 
 
 #longterm (lt) memory effect of catchments####
-lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_")
-lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_")
-
+lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_v2_")
+lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_v2_")
+gauges_df = as.data.frame(gauges)
 ggplot()+
-  geom_point(aes(y=lt_cor_spi$`24`, x=gauges_df$bfi, col=as.factor(gauges_df$spi_n )))+
+  geom_point(aes(y=lt_cor_spi$`24`, x=gauges_df$bfi, col=as.factor(gauges_df$cor_spi_n )))+
   ylab("cor. SPI-24 ~ SSI-1")+
   xlab("BFI")+
   scale_color_discrete("optim. \n SPI-n")
@@ -118,7 +118,7 @@ ggplot()+
   ylab("cor. SPI-12 ~ SSI-1")+
   xlab("BFI")+
   scale_color_continuous("Catchment \n Size [km²?]")
-ggsave("memoryeffect_24.png")
+ggsave("./plots/5_choice/memoryeffect_24.png")
 
     
 # SCI indice when there is drought ####
@@ -128,35 +128,18 @@ ggsave("memoryeffect_24.png")
 
 #monthly correlation ####
 
-mar_sci_cor = monthly_sci(month=3, correlate = T, threshold = 0) 
-apr_sci_cor = monthly_sci(month=4, correlate = T, threshold = 0) 
-mai_sci_cor = monthly_sci(month=5, correlate = T, threshold = 0)
-jun_sci_cor = monthly_sci(month=6, correlate = T, threshold = 0) 
-aug_sci_cor = monthly_sci(month=8, correlate = T, threshold = 0) 
-sep_sci_cor = monthly_sci(month=9, correlate = T, threshold = 0) 
+mar_sci_cor = monthly_sci(month=3, threshold = 0) 
+apr_sci_cor = monthly_sci(month=4, threshold = 0) 
+mai_sci_cor = monthly_sci(month=5, threshold = 0)
+jun_sci_cor = monthly_sci(month=6, threshold = 0) 
+aug_sci_cor = monthly_sci(month=8,threshold = 0) 
+sep_sci_cor = monthly_sci(month=9, threshold = 0) 
 
-
-
-pdf("./plots/4_choice/cor_ssi_spei_winter_spring.pdf")
-monthly_cor_sci2(sr_x=2,sci_typex="spei" )
+png("./plots/5_choice/cor_ssi_spi_winter_spring.png", width=800, height=500)
+monthly_cor_sci_spring(sr_x=2,sci_typex="spi")
 dev.off()
 
 
-
-int = which(gauges$sr_new == 2)
-png("./plots/further_investigate/final/cor_mar_jun_ssi.png", width=1000, height=500)
-par(mfrow=c(1,2))
-boxplot(jun_sci_cor[int,7:12], ylab="pearson correlation with june ssi-1 (only winter lf)", ylim=c(-.2,.9))
-boxplot(mar_sci_cor[int,7:12], ylab="pearson correlation with march ssi-1 (only winter lf)", ylim=c(-.2,.9))
-dev.off()
-
-png("./plots/further_investigate/final/cor_mar_jun_ssi_all.png", width=1000, height=500)
-par(mfrow=c(1,2))
-boxplot(jun_sci_cor[,7:12], ylab="pearson correlation with march ssi-1 (not winter lf)", ylim=c(-.3,.9))
-boxplot(mar_sci_cor[,7:12], ylab="pearson correlation with march ssi-1", ylim=c(-.3,.9))
-dev.off()
-
-summary(fm3)
 
 mar_best_spi_cor = mar_sci_cor %>% 
   filter(str_detect(sci_type, "spi"))%>% 
@@ -174,43 +157,7 @@ gauges$mar_best_spei = mar_best_spei_cor$max_cor
 gauges$mar_best_spei_n = mar_best_spei_cor$spei_n
 gauges$mar_best_spi = mar_best_spi_cor$max_cor
 gauges$mar_best_spi_n = mar_best_spi_cor$spi_n
-#other analysis ####
-ggplot()+
-  geom_point(aes(y= mmkh_ms7_min$Tau, x=value_spi, col= gauges_df$bfi))+
-  ylab("mmkh tau of mnq7 summer")+
-  xlab("correlation spi-n")+
-  scale_color_continuous("BFI")
 
-ggsave("mnq7_summer_date_min.png")
-
-ggplot()+
-  geom_point(aes(x= mmkh_ms7_min$Tau , mmkh_ms7_date$Tau, col=gauges_df$bfi))+
-  geom_abline(slope=1, intercept = 0)+
-  ylab("mmkh mnq7 summer date")+
-  xlab("mmkh mnq7 summer")+
-  scale_color_continuous("BFI")
-
-ggplot()+
-  geom_point(aes(y= mmkh_ms7_min$Tau , x= cor_spei_ssi$`2`, col=gauges_df$bfi))+
-  ylab("mmkh mnq7 summer tau")+
-  xlab("corr. SPEI-2 ~ SSI-1")+
-  scale_color_continuous("BFI")
-
-# pdf("./plots/spi_spei_cor.pdf")
-# plot(value_spi, ylab="pearson correlation")
-# points(value_spei, col=2)
-# legend("bottomleft", col=c(1,2), pch=c(1,1), c("spi", "spei"), bty="n")
-# dev.off()
-# 
-# pdf("./plots/spi_spei_cor_optim_n.pdf")
-# plot(best_spi, ylab="Otim. SPI-/SPEI-n")
-# points(x=which(best_spei != best_spi), y=best_spei[best_spei != best_spi] , col=2)
-# legend("topleft", col=c(1,2), pch=c(1,1), c("spi", "spei (only if diff. to spi)"), bty="n")
-# dev.off()
-
-# pdf("./plots/spi-ssi_regression.pdf")
-# boxplot(cor_spi_ssi)
-# dev.off()
 
 
 #why some values are really low?
