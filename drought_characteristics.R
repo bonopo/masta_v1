@@ -227,99 +227,41 @@ save(output, file="./output/drought_p.Rdata")
 remove(lf_obj, res,  drought_t, new.drought.no)
 
 
-#80th percentile approach (analysis)####
+#80th percentile approach summary calculation####
 
+#loading data from previous step
 load("./output/drought_q.Rdata", verbose = TRUE)
 drought_q= output
 load("./output/drought_p.Rdata", verbose = TRUE)
   drought_p = output
 remove(output)
 
-  
+# calculating result through summary (per year and month) 
+# function takes a while and runs on all cores -1 (so please go get a coffee)
+q_seas= seasonal_80th(data = drought_q)
+p_seas= seasonal_80th(data = drought_p)
 
-  q_seas= seasonal_80th(data = drought_q)
-  p_seas= seasonal_80th(data = drought_p)
+# returns list with two df for each catchment [[1]] = mat_days (= days of drought per year per month) [[2]] = mat_def (=deficit volume per month (of drought) per year)
   
-
- #result of funtion is a list: 338 list elements with two matrix per catchment [[1]]=deficit vol sum (!) per catchment per month over all 40 years!!  [[2]] sum of days per month that are effected by drought
- 
+#saving result for next step
 save(q_seas,file="./output/seasonal_q.Rdata")
 save(p_seas,file="./output/seasonal_p.Rdata")
-# seasonal 80th % method (analysis)####
+
+
+# seasonal 80th % method analysis####
 
 load("./output/seasonal_q.Rdata", verbose = T)
 load("./output/seasonal_p.Rdata", verbose = T)
 
+#yearly analysis 
+#(summing all rows to make sums for every year to see changes over the year rather than changes over the seasons) 
+#the result (df with catchments as columns and rows as years) for trend analysis
+
 p_days_of_drought_df <- lapply(p_seas, function(x) x[[1]]) %>% do.call("rbind", .) 
 q_days_of_drought_df <- lapply(q_seas, function(x) x[[1]]) %>% do.call("rbind", .)
 
-
-
 p_sum_def_df = lapply(p_seas, function(x) x[[2]]) %>% do.call("rbind", .)
 q_sum_def_df<- lapply(q_seas, function(x) x[[2]]) %>% do.call("rbind", .)
-
-
-# mt_mn_def = q_seas[[1]] %>%
-#   as.data.frame() %>% 
-#   set_colnames(1:catch_n) %>% 
-#   mutate(month= as.integer(rownames(.))) %>% 
-#   gather(key = gauge, value=mt_mn_def, -month) %>% 
-#   group_by(gauge) %>% # to standartize per catchment
-#   mutate(stan_defi = (mt_mn_def - mean(mt_mn_def))/sd(mt_mn_def)) %>%   #has to be standartized see laaha et al 2015
-#   ungroup() %>% 
-#   mutate(gauge= as.integer(gauge)) %>% 
-#   as.tbl()
-# 
-# mt_sm_events = q_seas[[2]]  %>%
-#   as.data.frame() %>% 
-#   set_colnames(1:catch_n) %>% 
-#   mutate(month= as.integer(rownames(.))) %>% 
-#   gather(key = gauge, value=mt_sm_events, -month) %>% 
-#   group_by(gauge) %>% # to standartize per catchment
-#   mutate(stan_events = (mt_sm_events - mean(mt_sm_events))/sd(mt_sm_events)) %>%   #has to be standartized see laaha et al 2015
-#   ungroup() %>% 
-#   mutate(gauge= as.integer(gauge) , mt_sm_events = as.integer(mt_sm_events)) %>% 
-#   as.tbl()
-# 
-# mt_perc_days = q_seas[[3]]  %>%
-#   as.data.frame() %>% 
-#   set_colnames(1:catch_n) %>% 
-#   mutate(month= as.integer(rownames(.))) %>% 
-#   gather(key = gauge, value=tot_days, -month) %>% 
-#   mutate(perc_days = round(tot_days /(40 *days_in_month(month)),3) *100) %>%  # 40 because 40 years
-#   as.tbl()
-
-
-
-
-ggplot()+
-  geom_boxplot(data= mt_mn_def , aes(x=as.factor(month), y=stan_defi, group = month),stat="boxplot" )+
-  xlab("Month")+
-  ylab("standardized deficit vol. during droughts [all catchments]")
-
-
-ggplot()+
-  geom_boxplot(data= mt_mn_def , aes(x=as.factor(month), y=mt_mn_def, group = month),stat="boxplot" )+
-  xlab("Month")+
-  ylab("standardized deficit vol. during droughts [all catchments]")
-
-
-ggplot()+
-  geom_boxplot(data= mt_sm_events, aes(x=as.factor(month), y=stan_events, group = month),stat="boxplot" )+
-  xlab("Month")+
-  ylab("standardized deficit vol. during droughts [all catchments]")
-
-
-
-p_days_of_drought_list <- lapply(p_seas, function(x) x[[1]]) 
-q_days_of_drought_list <- lapply(q_seas, function(x) x[[1]]) 
-
-p_sum_def_list = lapply(p_seas, function(x) x[[2]]) 
-q_sum_def_list <- lapply(q_seas, function(x) x[[2]]) 
-
-
-seasonal_dec_80_ana(data= q_days_of_drought_list)
-
 
 p_days_of_drought_yr = apply(p_days_of_drought_df,1, sum )%>% cbind(days_dr=.,year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40))%>%as.data.frame() %>%  spread(key=gauge, value = days_dr)%>% dplyr::select(-year)
 
@@ -329,8 +271,35 @@ p_sum_def_yr = apply(p_sum_def_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:
 
 q_sum_def_yr = apply(q_sum_def_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 
+#decadal analysis
+#in the 70s there was a major drought dominating the trends (leading to mainly neg. trends since all droughts after the 70s were less severe).
+p_days_of_drought_list <- lapply(p_seas, function(x) x[[1]]) 
+q_days_of_drought_list <- lapply(q_seas, function(x) x[[1]]) 
+
+p_sum_def_list = lapply(p_seas, function(x) x[[2]]) 
+q_sum_def_list <- lapply(q_seas, function(x) x[[2]]) 
 
 
+seasonal_dec_80_ana(data= q_days_of_drought_list) 
+seasonal_dec_80_ana(data= p_days_of_drought_list)
+seasonal_dec_80_ana(data= p_sum_def_list)
+seasonal_dec_80_ana(data= q_sum_def_list)
 
 
-plot(q_sum_def_yr[,152], type="l")
+#preperation of seasonal data for trend analysis
+
+march_dy_drought_p = seasonal_80th_trend(month = 3, datax= p_days_of_drought_list)
+march_dy_drought_q = seasonal_80th_trend(month = 3, datax= q_days_of_drought_list)
+march_sm_def_p = seasonal_80th_trend(month = 3, datax= p_sum_def_list) 
+march_sm_def_q = seasonal_80th_trend(month = 3, datax= q_sum_def_list) 
+
+
+june_dy_drought_p = seasonal_80th_trend(month = 6, datax= p_days_of_drought_list)
+june_dy_drought_q = seasonal_80th_trend(month = 6, datax= q_days_of_drought_list)
+june_sm_def_p = seasonal_80th_trend(month = 6, datax= p_sum_def_list) 
+june_sm_def_q = seasonal_80th_trend(month = 6, datax= q_sum_def_list) 
+
+#tot deficit
+png("./plots/5_choice/boxplot_geo.png")
+boxplot(log10(apply(q_sum_def_yr, 2, sum)) ~ gauges$hydrogeo_simple)
+dev.off()
