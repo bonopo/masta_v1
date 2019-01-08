@@ -116,7 +116,7 @@ return(df)
 
 
 #monthly sci analysis ####
-monthly_sci = function(month=3, correlate=TRUE, threshold = 0){
+monthly_sci = function(month=3, threshold = 0){
 res.list = list()  
 for (c in 1:catch_n)
   {
@@ -128,9 +128,8 @@ colnames(df_drought) = c("ssi", "spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "s
 res.list[[c]] =df_drought
 
 }
-if (correlate == TRUE)
-  {
-  mat = matrix(nrow=catch_n, ncol=12)
+mat = matrix(nrow=catch_n, ncol=12)
+
 for (n in 2:13)
   {
 mat[,(n-1)]= sapply(1:catch_n, function(c) cor(x= res.list[[c]]$ssi,y= res.list[[c]][,n], use="na.or.complete", method = "spearman"))# spearman because we want rank correlation since ssi is nonparametric (limited to -1.97) and spi is parametric (not limited)
@@ -139,12 +138,8 @@ mat_cor = mat %>% as.data.frame()
 colnames(mat_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1","spei_2","spei_3", "spei_6", "spei_12","spei_24")
 mat_cor = cbind(mat_cor,gauge= 1:catch_n,sr=  gauges$sr_new,saar= gauges$saar, hydro_geo = gauges$hydrogeo_simple, landuse= gauges$landuse) %>% as.tbl()
 
-mat_cor_long = gather(mat_cor, key=sci_type, value=cor, -gauge,-landuse, -sr, -saar, -hydro_geo, factor_key = TRUE) %>% as.tbl()  
-return(mat_cor_long)}
-if(correlate==FALSE)
-  {
-return(res.array)
-}
+mat_cor_long = gather(mat_cor, key=sci_type, value=cor, -gauge,-landuse, -sr, -saar, -hydro_geo, factor_key = TRUE) %>% as.data.frame()  
+return(mat_cor_long)
 }
 
 
@@ -305,6 +300,7 @@ seasonal_dec_80_ana = function(data= p_days_of_drought_list){
 res= list()
 n=1
 mat = matrix(nrow=catch_n, ncol=12)
+dec_years=c("1970-1980","1980-1990","1990-2000","2000-2010")
 for (r in c(1,11,21,31)){
   for (i in 1:catch_n) { 
   mat[i,] = apply(data[[i]][r:(r+9),],2,sum)
@@ -316,11 +312,17 @@ print({
   par(mfrow=c(2,2))
 for (p in 1:4){  
  
-  boxplot(as.data.frame(res[[p]]), names=c(1:12), ylim=c(0,max(res[[1]])), main=p) # max = res[[1]] because in the 70th there was a major drought
+  boxplot(as.data.frame(res[[p]]), names=c(1:12), ylim=c(0,max(res[[1]])), main= dec_years[p]) # max = res[[1]] because in the 70th there was a major drought
 }
   
   })
 
+}
+
+#seasonal 80th data preperation for every month for trend analysis
+seasonal_80th_trend = function(month = 3, datax= p_days_of_drought_list){
+  res= lapply(datax, function(x) x[,month]) %>% do.call("cbind", .) %>% as.data.frame() %>% set_colnames(1:catch_n)
+  return(res)
 }
 
 #counting every month below threshhold
@@ -480,7 +482,7 @@ if(factor== TRUE){
 return(output)
 }
 
-monthly_cor_sci = function(sr_x=0, sci_typex="spi"){
+monthly_cor_sci_yr = function(sr_x=0, sci_typex="spi"){ #calculates it for spring+summer month
 
 mar = ggplot()+
   geom_boxplot(data=mar_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
@@ -511,7 +513,7 @@ sep = ggplot()+
 return(grid.arrange(mar,jun,aug,sep, ncol=4))
 }
 
-monthly_cor_sci2 = function(sr_x=0, sci_typex="spi"){
+monthly_cor_sci_spring = function(sr_x=0, sci_typex="spi"){ #callculates it for spring
 
 mar = ggplot()+
   geom_boxplot(data=mar_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
