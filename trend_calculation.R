@@ -42,16 +42,12 @@ mmkh_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_m
 
 mmky_par(raw_data = c( "p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"))
 
-def_vol_q = q_yearly[[1]]
-days_dr_q  = q_yearly[[3]]
-def_vol_p = p_yearly[[1]]
-days_dr_p  = p_yearly[[3]]
-q_seas[[1]]
+mmky_par(raw_data = c("march_dy_drought_q", "march_dy_drought_p","march_sm_def_p","march_sm_def_q","june_dy_drought_q", "june_dy_drought_p","june_sm_def_p","june_sm_def_q")) # no trends can be seen!
+
+
 
 mmky_par(raw_data = c( "def_vol_q","def_vol_p","days_dr_q","days_dr_p"))
-mmky_def_vol
 
-mmky_par("yearly_max_t")
 
 png("./plots/further_investigate/final/sen_vs_p_value.png", width=1000, height=500)
 par(mfrow=c(2,1))
