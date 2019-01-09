@@ -185,12 +185,13 @@ best_spi = c()
   value_spi = c()
 best_spei = c()
   value_spei = c()
+
 for(r in 1:catch_n){
- best_spi[r] = cor_spi_ssi_v2[r,] %>% which.max()
+ best_spi[r] = cor_spi_ssi_v2[r,] %>% which.max() #%>% agg_month[.]
  value_spi[r] = cor_spi_ssi_v2[r,] %>% max()}
 
 for(r in 1:catch_n){
- best_spei[r] = cor_spei_ssi_v2[r,] %>% which.max()
+ best_spei[r] = cor_spei_ssi_v2[r,] %>% which.max()#%>% agg_month[.]
  value_spei[r] = cor_spei_ssi_v2[r,] %>% max()}
 
 gauges$cor_spei_n = best_spei
