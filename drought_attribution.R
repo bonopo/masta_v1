@@ -113,7 +113,29 @@ cor_spi[g, a] = cor(y= temp$ssi , x= temp$spi, use="c", method = "spearman")
 cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
 }
 }
-#plot(y= drought_sci[[3]]$ssi , x= drought_sci[[3]]$spi_3)
+
+#which aggregation month describes the catchment the best and what is its correlation (pearson)
+best_spi = c()
+  value_spi = c()
+best_spei = c()
+  value_spei = c()
+
+for(r in 1:catch_n){
+ best_spi[r] = cor_spi[r,] %>% which.max() 
+ value_spi[r] = cor_spi[r,] %>% max()}
+
+for(r in 1:catch_n){
+ best_spei[r] = cor_spei[r,] %>% which.max() 
+ value_spei[r] = cor_spei[r,] %>% max()}
+
+gauges$cor_spei_n_dr = best_spei
+gauges$cor_spi_n_dr  = best_spi
+gauges$cor_spi_dr    = value_spi
+gauges$cor_spei_dr   = value_spei
+
+which(gauges$cor_spi_dr > .5) 
+
+
 
 
 
@@ -455,5 +477,9 @@ ggplot()+
   scale_color_discrete("Seasonality", label=c("summer", "unclear", "winter"))
 
 
+  
+  
+# correlation of ms7 with spi_n of that equivalant month####
+  ### to still be done (or not)
   
   
