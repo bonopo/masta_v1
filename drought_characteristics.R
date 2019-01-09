@@ -4,6 +4,7 @@ setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 
 # source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
 #source("./R/masta_v1/functions.R")
+#source("./R/masta_v1/clustering.R")
 
 
 #month with max drought overall####
@@ -101,6 +102,7 @@ dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
 
 
 #80th percentile approach of van loon &laaha (calculation) ####
+#through this method more droughts are found in precipitation than in streamflow
 #for discharge discharge ####
 mov_mn_q = rollapply(q_wide, width=30, by.column=T, align= "center", FUN=mean, fill=NA) %>% as.data.frame %>% as.tbl()
 mov_mn_q_long = mov_mn_q %>% 
@@ -183,7 +185,10 @@ lf_obj <- mov_sm_p_long %>%
   
 flowunit(lf_obj)<-"l/d" #default is m³/s so new default definition is needed. since unit is mm/day it can be set to l/d
 
-res= lfstat::find_droughts(lf_obj, threshold = "Q80", varying="daily") #same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
+res= lfstat::find_droughts(lf_obj, threshold = "Q80", varying="daily") 
+#daily is not really daily. It is actually the 30day moving sum
+
+#same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
 
 #problem: droughts of less than 4 days are still defined as drought: But I am intested in droughts that have a long lasting effect with it's deficit in water
 
@@ -303,3 +308,247 @@ june_sm_def_q = seasonal_80th_trend(month = 6, datax= q_sum_def_list)
 png("./plots/5_choice/boxplot_geo.png")
 boxplot(log10(apply(q_sum_def_yr, 2, sum)) ~ gauges$hydrogeo_simple)
 dev.off()
+
+
+#drought event realtionship:streamflow vs precipitation####
+#If severe drought than maybe there has been a major rainfall defcitit in the past (spi-6/-12?)
+#with spi as indicator for precipitastion and ssi as indicator of drought 
+
+spi_12_long = spi_v2_12 %>% 
+  mutate(yr_mt = date_seq) %>% 
+  gather(key=gauge, value=spi_12, -yr_mt) 
+
+spi_06_long = spi_v2_6 %>%
+  mutate(yr_mt= date_seq) %>% 
+  gather(key=gauge, value=spi_06, -yr_mt) 
+  
+spi_24_long = spi_v2_24 %>% 
+  gather(key=gauge, value=spi_24) 
+
+spi_lt_long = spi_v2_3 %>% 
+  mutate(yr_mt = date_seq) %>% 
+  gather(key=gauge, value=spi_03, -yr_mt) %>% 
+  mutate(spi_06 = spi_06_long$spi_06) %>% 
+  mutate(spi_12 = spi_12_long$spi_12) %>% 
+  mutate(spi_24 = spi_24_long$spi_24) %>% 
+  as.tbl()
+
+#getting the mid date of every drought event (80th method) to retrieve the equivelent spi_n value of that date. this is a crude method, alternative could be to average all spi_n values during the drought if the drought lasts longer than one month
+drought_q_80 = drought_q %>% 
+  mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
+  mutate(intensity = mn_q/threshhold) %>% 
+  mutate(mid_date = dr_start+floor((dr_end-dr_start)/2)) %>% 
+  mutate(mid_mt_yr = ymd(paste0(year(mid_date),"-", month(mid_date),"-15"))) %>% 
+  as.tbl() 
+
+#severity is the sum of the ssi deviation of the threshhold (0) during the drought event
+#getting the mid date of every drought event (ssi threshhold method, threshhold beeing ssi <0 = drought) to retrieve the equivelent spi_n value of that date 
+drought_q_ssi= list() 
+ for( i in 1:catch_n) {
+    temp= dsi_1[[i]] %>% 
+  mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
+  mutate(mid_date = dr_start+floor((dr_end-dr_start)/2)) %>% 
+  mutate(mid_mt_yr = ymd(paste0(year(mid_date),"-", month(mid_date),"-15"))) %>% 
+  as.tbl()
+    drought_q_ssi[[i]] = temp
+    }
+
+mat= matrix(nrow=catch_n, ncol=4)
+
+#corelating spi with severity. Hypothesis: the higher the severity the higher the correlation with higher spi_n (ie spi_24). result is a matrix of the pearson correlation of the selected spi_n aggregation months with the severity of the drought.
+for( i in 1:catch_n){
+  spi_temp = filter(spi_lt_long, gauge == i)
+  drought_q_t = drought_q_ssi[[i]]
+  int = pmatch(drought_q_t$mid_mt_yr, spi_temp$yr_mt)
+  spi_catch= spi_temp[int, 3:6]
+  spi_catch_long = spi_catch %>%
+        mutate(event_n = 1:nrow(spi_catch), date= drought_q_t$mid_mt_yr)  %>% 
+        gather(key= spi_n, value=spi, -event_n, -date)
+  
+  mat[i,] = cor(method = "p", use="na.or.complete", y=drought_q_t$dsi, x=spi_catch)
+#   print(
+#     ggplot()+
+#     geom_point(aes(x= drought_q_t$mid_mt_yr, y=drought_q_t$dsi))+
+#     geom_point(data = spi_catch_long, aes(x=date, y=spi, col=spi_n))+
+#       ylab("spi_n value & DSI")
+# ggsave("./plots/5_choice/explanation_neg_cor.png")
+#     )
+  
+    }
+
+#converting the correlation matrix into a df so it can be used to plot with ggplot
+drought_severity_spi_cor= mat %>% 
+  as.data.frame() %>% 
+  mutate(gauge = 1:catch_n) %>% 
+  set_colnames(., c("spi_03", "spi_06", "spi_12", "spi_24", "gauge")) %>% 
+  gather(key=spi_n, value=spi, -gauge) %>% 
+  as.tbl() %>% 
+  mutate(bfi = rep(gauges$bfi, 4), saar= rep(gauges$saar, 4), spi_cor = rep(gauges$cor_spi_n,4), lt= rep(gauges$lt_memoryeffect, 4), cor_spi_drought = rep(gauges$cor_spi_dr,4),cor_spi_drought_n = rep(gauges$cor_spi_n_dr,4))
+  
+#first graphic analysis
+
+ggplot(data = drought_severity_spi_cor)+
+  geom_point(aes(x=cor_spi_drought, y=spi, col=spi_n),na.rm=T)+#, position = position_dodge(width=.3))+
+  ylab("spi pearson cor spi_n ~ dsi")+
+  xlab("best spi_n month considering only drought month (according to ssi<=-1) [aggregation month]")
+
+ggsave("./plots/5_choice/spi_drought_cor_ssi.png")
+
+#one really negative catchment:
+ drought_severity_spi_cor[which.min(drought_severity_spi_cor$spi),]
+ #catchment 338
+ #caused by the method of selecting the mid-month to retrieve the spi. In this catchment there was one very long drought (1339 days) with average month:
+ 
+ spi_v2_6$`338`[c(which(date_seq == "2000-04-15"):which(date_seq == "2003-12-15"))] %>% mean()
+ 
+ #mean leads no better result. min?
+ 
+  spi_v2_6$`338`[c(which(date_seq == "2000-04-15"):which(date_seq == "2003-12-15"))] %>% min()
+  
+  #not really better
+  #this catchment is probably altered or its water was used for something else
+ 
+ 
+ ggplot()+
+    geom_point(aes(x= drought_q_t$mid_mt_yr, y=drought_q_t$dsi))+
+    geom_point(data = spi_catch_long, aes(x=date, y=spi, col=spi_n))
+
+#with SPEI as climate indicator
+spei_12_long = spei_v2_12 %>% 
+  mutate(yr_mt = date_seq) %>% 
+  gather(key=gauge, value=spei_12, -yr_mt) 
+
+spei_06_long = spei_v2_6 %>% 
+  gather(key=gauge, value=spei_06) 
+  
+spei_24_long = spei_v2_24 %>% 
+  gather(key=gauge, value=spei_24) 
+
+spei_lt_long = spei_v2_3 %>% 
+  mutate(yr_mt = date_seq) %>% 
+  gather(key=gauge, value=spei_03, -yr_mt) %>% 
+  mutate(spei_06 = spei_06_long$spei_06) %>% 
+  mutate(spei_12 = spei_12_long$spei_12) %>% 
+  mutate(spei_24 = spei_24_long$spei_24) %>% 
+  as.tbl()
+
+
+
+mat= matrix(nrow=catch_n, ncol=4)
+
+for( i in 1:catch_n){
+  spei_temp = filter(spei_lt_long, gauge == i)
+  drought_q_t = drought_q_ssi[[i]]
+  int = pmatch(drought_q_t$mid_mt_yr, spei_temp$yr_mt)
+  spei_catch= spei_temp[int, 3:6]
+  spei_catch_long = spei_catch %>%
+        mutate(event_n = 1:nrow(spei_catch), date= drought_q_t$mid_mt_yr)  %>% 
+        gather(key= spei_n, value=spi, -event_n, -date)
+  
+  mat[i,] = cor(method = "p", use="na.or.complete", y=drought_q_t$dsi, x=spei_catch)
+  # print(
+  #   ggplot()+
+  #   geom_point(aes(x= drought_q_t$mid_mt_yr, y=drought_q_t$dsi))+
+  #   geom_point(data = spi_catch_long, aes(x=date, y=spi, col=spi_n))
+  #   
+  #   )
+  # 
+    }
+
+drought_severity_spei_cor= mat %>% 
+  as.data.frame() %>% 
+  mutate(gauge = 1:catch_n) %>% 
+  set_colnames(., c("spei_03", "spei_06", "spei_12", "spei_24", "gauge")) %>% 
+  gather(key=spei_n, value=spei, -gauge) %>% 
+  as.tbl() %>% 
+  mutate(bfi = rep(gauges$bfi, 4), saar= rep(gauges$saar, 4), spei_cor = rep(gauges$cor_spei_n,4), lt= rep(gauges$lt_memoryeffect, 4), cor_spei_drought = rep(gauges$cor_spei_dr,4),cor_spei_drought_n = rep(gauges$cor_spei_n_dr,4))
+  
+  
+
+ggplot(data = drought_severity_spei_cor)+
+  geom_point(aes(x=cor_spei_drought, y=spei, col=spei_n),na.rm=T)+#, position = position_dodge(width=.2))+
+  ylab("spei pearson cor spei_n ~ dsi")+
+xlab("best spei_n cor considering only drought month (according to ssi<=-1)")
+
+ggsave("./plots/5_choice/spei_drought_cor_ssi.png")
+
+
+#comparing both the deficit/ days of drought / severity of every event in streamflow and precipitation. Is there a linear relationship? ####
+
+##getting the mid date of every drought event (80th method) to retrieve the equivelent spi_n value of that date and calculating the intensity (as alternative to severity)
+drought_q_80 = drought_q %>% 
+  mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
+  mutate(intensity = mn_q/threshhold) %>% 
+  mutate(mid_date = dr_start+floor((dr_end-dr_start)/2)) %>% 
+  mutate(mid_mt_yr = ymd(paste0(year(mid_date),"-", month(mid_date),"-15"))) %>% 
+  as.tbl() 
+
+drought_p_80 = drought_p %>% 
+  mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
+  mutate(intensity = mn_sm_p/threshhold) %>% 
+  mutate(mid_date = dr_start+floor((dr_end-dr_start)/2)) %>% 
+  mutate(mid_mt_yr = ymd(paste0(year(mid_date),"-", month(mid_date),"-15"))) %>% 
+  as.tbl() 
+
+#which catchments have a high correlation between spi and ssi during drought, meaning that the droughts are more precipitation (if SPI) or precipitation-evaporation controlled (if SPEI)
+
+ catchment_drought_relation = which(gauges$cor_spi_dr>.5) 
+
+#drawing an example plot to see if there is any realtionship (before calculating correlation)
+ 
+ for (i in catchment_drought_relation){
+   print(
+     ggplot()+
+     geom_line(data= drought_p_80 %>% filter(.,catchment==i),
+               aes(x=mid_date, y=intensity), col=1)+
+     geom_point(data= drought_q_80 %>% filter(.,catchment==i), 
+               aes(x=mid_date, y=intensity), col=2)+
+     xlab(i)
+   )
+ }
+ # not really no relationship. too many precipitation events
+ 
+ #using severity method: looking at the severity of precipitation drought events (SPI_6 as the best compromise) and and the severity of streamflow droughts
+ #using the same severity threshold for both (-1)
+ dsi_spi_6 =  dr_severity(datax = spi_06_long, severity = -1)
+ dsi_ssi   =  dr_severity(datax = ssi_1_long, severity = -1)
+ 
+ #calculating mit date to plot in the next step
+ 
+ drought_p_spi_6= list() 
+ for( i in 1:catch_n) {
+    temp= dsi_spi_6[[i]] %>% 
+    mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
+    mutate(mid_date = dr_start+floor((dr_end-dr_start)/2)) %>% 
+    mutate(mid_mt_yr = ymd(paste0(year(mid_date),"-", month(mid_date),"-15"))) %>% 
+    as.tbl()
+    drought_p_spi_6[[i]] = temp
+ }
+ 
+ drought_q_ssi= list() 
+ for( i in 1:catch_n) {
+    temp= dsi_ssi[[i]] %>% 
+    mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
+    mutate(mid_date = dr_start+floor((dr_end-dr_start)/2)) %>% 
+    mutate(mid_mt_yr = ymd(paste0(year(mid_date),"-", month(mid_date),"-15"))) %>% 
+    as.tbl()
+    drought_q_ssi[[i]] = temp
+ }
+ 
+ #plotting the catchments with highest correlation
+ 
+ for (i in catchment_drought_relation){
+  spi_dr = drought_p_spi_6[[i]]
+     ssi_dr = drought_q_ssi[[i]]
+    print(
+        ggplot()+
+     geom_line(data= spi_dr,
+               aes(x=dr_start, y=dsi), col=1)+
+     geom_point(data= ssi_dr, 
+               aes(x=dr_end, y=dsi), col=2)+
+     xlab(i)
+   )
+ }
+ 
+ #problem: calculating correlation. Since the 80th method and the dsi method lead to different amount of droughts (according to their definition). This causing f.e. more doughts in precipitation in one catchment than measured in streamflow. 
+ 
