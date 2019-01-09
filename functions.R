@@ -276,7 +276,7 @@ for (e in 1:max(temp1$event_no)){
  }
     }
    
-  Sys.time() -  ptime
+  
 return(list(mat_days, mat_def))
 }
 
@@ -344,13 +344,14 @@ for (i in 1:catch_n){
 }
 
 #counting number of events depending on severity threshhold
+spi_06_long
 
-dr_count <- function(severity = -1){
-  try(if(severity < min(ssi_1_long$ssi)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
+dr_count <- function(severity = -1, datax=ssi_1_long){
+  try(if(severity < min(datax[,3], na.rm = T)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
  res<- list()
  for (g in 1:catch_n){
-s1 <- ssi_1_long %>% 
-  filter(gauge == g , ssi < severity) %>% 
+s1 <- datax %>% 
+  filter(gauge == g , .[,3] < severity) %>% 
    mutate(date_diff = c(diff.Date(yr_mt),0)) 
 n <- 1
 for (i in 1: length(s1$yr_mt)){
@@ -364,15 +365,15 @@ res[[g]] <- s1}
 
 #sum of severity per event
 
-dr_severity <- function(severity = -1){
-try(if(severity < min(ssi_1_long$ssi)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
+dr_severity <- function(severity = -1, datax=ssi_1_long){
+try(if(severity < min(datax[,3], na.rm=T)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
 res_list <- list()
-raw_data = dr_count(severity = severity)
+raw_data = dr_count(severity = severity, datax = datax)
 for (g in 1:catch_n){
     data  <- raw_data[[g]]
     res   <- matrix(nrow = max(data$event_n), ncol=6) 
 for (d in 1:max(data$event_n)){
-  res[d,1]        <- sum(data$ssi[data$event_n == d]-severity)
+  res[d,1]        <- sum(filter(data, event_n == d) %>%  dplyr::select(3)-severity)
   res[d,2]        <- d
   res[d,3]        <- data$yr_mt[data$event_n == d][1] 
   res[d,4]        <- tail(data$yr_mt[data$event_n == d],1)
@@ -390,7 +391,7 @@ for (d in 1:max(data$event_n)){
     }
 return(res_list)
 }
-
+dr_severity(datax = spi_06_long)
 #plot functions ####
 
 sig_plot = function(p_value = .1, x_data = "mmkh_mar_mn", y_data = "mmkh_yearly_q10", output = "sr"){
@@ -603,6 +604,7 @@ for(d in raw_data){
   assign(paste0("mmkh_", d), as.data.frame(res_mmkh), envir = .GlobalEnv )
 }}
 
+#calculating man kandell trend with correction for serial correlated data using Yue and Wang's (2004) approach
 mmky_par = function(raw_data =c("ms7_min", "ms30_min")){
 
 for(d in raw_data){
