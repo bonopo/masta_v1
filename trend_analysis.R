@@ -149,17 +149,16 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 #trend analysis with sen's slope####
 
 # "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"
-#"mn_defi_p", "mn_defi_q", "sm_length_p", "sm_length_q", "mn_length_q", "mn_length_p", "tot_defi_p", "tot_defi_q"
 #"p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"
 #"march_dy_drought_q", "march_dy_drought_p","march_sm_def_p","march_sm_def_q","june_dy_drought_q", "june_dy_drought_p","june_sm_def_p","june_sm_def_q"
 
-p=sig_plot(x_data = "mmky_sm_length_q", y_data = "mmky_ms7_min", output = "sr_new", p_value = .1) 
+p=sig_plot(x_data = "mmky_q_sum_def_yr", y_data = "mmky_yearly_mn_q", output = "sr_new", p_value = .1) 
 p
 
 ggsave(plot = p, "./plots/5_choice/mmky_length_ms7_q.png")
 p = catch_plot(p_value=.05, color="hydrogeo_simple", x_data="bfi", y_data= "mmky_q_sum_def_yr" , factor =T)
 p
-ggsave(plot = p, "./plots/5_choice/mmky_ms7_enzg.png")
+ggsave(plot = p, "./plots/5_choice/mmky_q_sum_def_yearly_mn.png")
 
 
 
