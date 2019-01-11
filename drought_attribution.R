@@ -304,42 +304,41 @@ lm_x1_w = lm_x1[which(lm_x2 == 2)] #winter lf
 lm_x1_s = lm_x1[which(lm_x2 != 2)] #not winter low flows
 hist(lm_x1_w)
 hist(lm_x1_s)
+lm_y_norm = abs(min(lm_y))+lm_y 
 lm_x1_w_norm= (lm_x1_w+abs(min(lm_x1_w))) 
 lm_x1_s_norm= (lm_x1_s+abs(min(lm_x1_w))) #adding the minima of winter (!) to both summer and winter
-nnn = (lm_x1 - mean(lm_x1))/sd(lm_x1)
-hist(log(exp(lm_x1)))
-range(nnn)
-exp(nnn)
+
 
 #lm_x1_w_norm[which(lm_x1_w_norm == 0)] = 0.01
 hist(exp(lm_x1_s_norm)) #normal
 hist(exp(lm_x1_w_norm))#normal
+hist(sqrt(lm_y_norm)) #normal
 
 lm_x1_norm= lm_x1+abs(min(lm_x1))
-data_lm = cbind.data.frame(lm_y,lm_x1_norm, lm_x2, alp)
+data_lm = cbind.data.frame(lm_y_norm,lm_x1_norm, lm_x2, alp)
 #head(data_df)
 #problem one variable is normal the other is positivly skewed
-fm = lm(lm_y ~ exp(lm_x1_norm)*lm_x2, data=data_lm)
-fm2 = lm(y ~ x*x2_s)
+fm = lm(sqrt(lm_y_norm) ~ exp(lm_x1_norm)*lm_x2, data=data_lm[-c(42,50,52,143,172,181),])
+
 summary(fm)
-summary(fm3)
+
 plot(fm)
 hist(residuals(fm))
-#still bad residuals
+
+
 #problem residuals are not normal distributed, low variance for high fitted values and vice versa 
+#now throught normalisation ok
 # and high leverage through few points
-influence.measures(fm) #with threshhold =1
- range(cooks.distance(fm)); range(cooks.distance(fm3))
+cook_d = influence.measures(fm) %>% as.data.frame()#with threshhold =1
+ range(cooks.distance(fm))
+ 
+ table= cooks.distance(fm)
+ which.max(table)
+lm_x2[ which(table > .04)]
+ table[c(41,42,52,192, 172)]
 
-
-logLik(fm)
-str(fm)
-summary(fm)$adj.r.squared
-#with negative skewnesss package sn
-fm_sn = selm(y~x*x2, family= "SN", data=data_plot)
-summary(fm_sn) #higher log likelihood therefore better
-# new_data = predict.selm(fm_sn, newdata = data_plot$x, param.type = "cp", interval = "prediction" ) # With the "CP" option (that is, the 'centred
-#parametrization'), the residuals are centred around 0, at least approximately; 
+#without the following data points re run a linear modell 41,42,52,192
+ #or without 42 50 52 143 172 181
 
 ggplot(data= data_plot, aes(y=lm_x1, x=lm_y, col=as.factor(lm_x2)))+
   geom_point()+
@@ -480,6 +479,50 @@ ggplot()+
   
   
 # correlation of ms7 with spi_n of that equivalant month####
-  ### to still be done (or not)
+ms7_spi_t =   ms7_min %>% 
+    mutate(yr_mt = ymd(paste0(year(ms7_date_long), "-",month(ms7_date_long), "-15")))
   
+  mat=matrix(nrow=catch_n, ncol=4)
+  for (i in 1:catch_n){
+  
+spi_temp = filter(spi_lt_long, gauge==i)
+ms7_temp = filter(ms7_spi_t, gauge==i)
+ms7_spi=  spi_temp[pmatch(ms7_temp$yr_mt, spi_temp$yr_mt),3:6]
+mat[i,] = cor(x=ms7_temp$ms7_min, y=ms7_spi, use="na.or.complete" , method = "s")
+
+# ggplot()+
+#   geom_point(aes(x= ms7_temp$yr_mt, y=ms7_temp$ms7_min ))+
+#   geom_point(aes(y= ms7_spi$spi_06,
+#                  x= ms7_temp$yr_mt), col=2)+
+#   geom_hline(yintercept = mean(ms7_temp$ms7_min))+
+#   xlab("catchment: 122")+
+#   ylab("ms7_min [m³/s] & SPI-6 of the month of ms7_date")
+# ggsave("./plots/5_choice/ms7_spi12_example.png")
+  } 
+  
+  remove(ms7_spi_t,spi_temp ,ms7_temp, ms7_spi)
+  
+ms7_spi_cor = mat %>% 
+  as.data.frame() %>% 
+   set_colnames(c("spi_03", "spi_06", "spi_12", "spi_24") )%>% 
+  mutate(gauge=1:catch_n) %>% 
+  mutate(bfi = gauges$bfi,saar= gauges$saar, cor_drought_spi = gauges$cor_spi_dr, cor_drought_spi_n  = gauges$cor_spi_n_dr) %>% 
+  as.tbl() %>% 
+  gather(key=spi_n, value=spi, -bfi, -saar, -cor_drought_spi, -cor_drought_spi_n, -gauge)
+
+
+ms7_best_spi_cor = ms7_spi_cor %>% 
+  group_by(gauge) %>% 
+  summarise(cor= max(spi), best_spi= spi_n[which.max(spi)]) %>% 
+  mutate(bfi = gauges$bfi,saar= gauges$saar, cor_drought_spi = gauges$cor_spi_dr, cor_drought_spi_n  = gauges$cor_spi_n_dr) 
+ 
+  
+ggplot(data=ms7_spi_cor)+
+  geom_point(aes(x=cor_drought_spi_n, y=spi, col=spi_n), position = position_dodge(width = .3))
+
+ggplot(data= ms7_best_spi_cor)+
+  geom_point(aes(x=saar, y=cor,  col=best_spi))+
+  ylab("best spearman cor. ms7 ~ spi-n")
+
+ggsave("./plots/5_choice/ms7_spi_n_cor.png")
   
