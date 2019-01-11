@@ -13,13 +13,7 @@ saar <- precip_long %>%
 gauges$saar <- saar$sum_mm_yr
 remove(saar)
 
-#summer and winter climate data ####
 
-
-
-
-
-remove(summer_temp,summer_precip)
 #median drought duration ####
   median_drought_duration = c()
   for (g in 1:catch_n){
@@ -57,12 +51,11 @@ ms7_min_temp = q_long %>%
 
 ms7_min = cbind(ms7_min_temp, ms7) %>% 
   gather(key=gauge, value=ms7, -`date`, -`year(date)`) %>% 
-  group_by( as.integer(gauge),year(date)) %>% 
-  summarise(ms7_min = min(ms7, na.rm=T), ms7_date = yday(date[which.min(ms7)] )) %>% #resulting in a table with the minimum value and the day of the year when the minimum value accured (looking at summer only)
+  group_by( gauge= as.integer(gauge),year = year(date)) %>% 
+  summarise(ms7_min = min(ms7, na.rm=T), ms7_date = yday(date[which.min(ms7)]) , ms7_date_long =date[which.min(ms7)]) %>% #resulting in a table with the minimum value and the day of the year when the minimum value accured (looking at summer only)
   ungroup() %>% 
   as.data.frame()
 
-colnames(ms7_min) = c("gauge", "year", "ms7_min", "ms7_date")
 remove(ms7_min_temp)
 
 ms7_date = ms7_min %>% 
@@ -312,7 +305,7 @@ remove(d30_mn_t)
 
 # precipitation seasonal ####
 
-
+sp_sm_p = summer_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin =5, end=6)
 su_sm_p = summer_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin =5, end=11)
 
 gauges$su_sm_p = colMeans(su_sm_p)
@@ -336,3 +329,5 @@ yearly_sm_p = mt_sm_p %>%
   dplyr::select(-`year(yr_mt)`) %>% 
   as.data.frame()
 
+
+#precipitation monthly ####
