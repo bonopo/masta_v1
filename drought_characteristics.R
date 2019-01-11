@@ -91,7 +91,6 @@ dr_dsi_5yr = rollapply(mat_dsi, width=5, by= 5, FUN=sum, by.column=TRUE)
 #per decade
 dr_freq_10yr = rollapply(mat_n, width=10, by= 10, FUN=sum, by.column=TRUE)
 dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
-#drought free time####
 #visual plot checking ####
 # for (i in sample(338, size=10)){
 # plot(yearly_q10[,i]~summer_q10[,i], main=i)
@@ -388,11 +387,11 @@ drought_severity_spi_cor= mat %>%
 #first graphic analysis
 
 ggplot(data = drought_severity_spi_cor)+
-  geom_point(aes(x=cor_spi_drought, y=spi, col=spi_n),na.rm=T)+#, position = position_dodge(width=.3))+
+  geom_point(aes(x=saar, y=spi, col=spi_n),na.rm=T)+#, position = position_dodge(width=.3))+
   ylab("spi pearson cor spi_n ~ dsi")+
-  xlab("best spi_n month considering only drought month (according to ssi<=-1) [aggregation month]")
+  xlab("saar")
 
-ggsave("./plots/5_choice/spi_drought_cor_ssi.png")
+ggsave("./plots/5_choice/spi_drought_saar.png")
 
 #one really negative catchment:
  drought_severity_spi_cor[which.min(drought_severity_spi_cor$spi),]
@@ -466,11 +465,11 @@ drought_severity_spei_cor= mat %>%
   
 
 ggplot(data = drought_severity_spei_cor)+
-  geom_point(aes(x=cor_spei_drought, y=spei, col=spei_n),na.rm=T)+#, position = position_dodge(width=.2))+
+  geom_point(aes(x=cor_spei_drought, y=spei, col=spei_n),na.rm=T)+#, position = position_dodge(width=.3))+
   ylab("spei pearson cor spei_n ~ dsi")+
-xlab("best spei_n cor considering only drought month (according to ssi<=-1)")
+xlab("best spei_n aggregation month considering only drought month (according to ssi<=-1)")
 
-ggsave("./plots/5_choice/spei_drought_cor_ssi.png")
+ggsave("./plots/5_choice/spei_drought_cor_ssi_best_month.png")
 
 
 #comparing both the deficit/ days of drought / severity of every event in streamflow and precipitation. Is there a linear relationship? ####
