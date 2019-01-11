@@ -103,12 +103,7 @@ gauges$best_spi_summer = best_spi_summer
 gauges$cor_spi_summer = value_spi_summer
 
 
-#longterm (lt) memory effect of catchments####
-lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_v2_")
-lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_v2_")
 
-gauges$lt_memoryeffect = 0
-gauges$lt_memoryeffect[which(lt_cor_spi$`24`>=.5)] =1 #defining all catchments with a correlation 0.5 or higher with the spi_24 as a longterm memory catchment (very crude definition but sufficient since it will not be used in the final analysis)
 
 gauges_df = as.data.frame(gauges)
 ggplot()+
