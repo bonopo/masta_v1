@@ -41,7 +41,7 @@ gauges$sr_new <- as.numeric(q_sr$sr_value_new) # 2= winter 12- 0= summer low flo
 remove(q_sr, q_sr_s, q_sr_w)
 #spplot(gauges, "sr")
 
-
+mmky
 
 gauges$ezggr_class <- cut(gauges$Enzgsg_, breaks=c(0,50,100,150,Inf), labels=c("<50", "50-100", "100-150", "150-200"))
 
@@ -174,6 +174,16 @@ gauges$alpine[which(gauges$sr_new==2)] = 1
 #after visual check removing following catchments: 221 238 42 305
 gauges$alpine[c(42,221,238,305)] = 0
 #spplot(gauges, "alpine", identify=T)
+
+#longterm (lt) memory effect of catchments####
+lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_v2_")
+lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_v2_")
+
+gauges$lt_memoryeffect = 0
+gauges$lt_memoryeffect[which(lt_cor_spi$`24`>=.5)] =1 #defining all catchments with a correlation 0.5 or higher with the spi_24 as a longterm memory catchment (very crude definition but sufficient since it will not be used in the final analysis)
+
+#corellation SSI (during drought) with SPI/SPEI-n ####
+ #-----> see drought attribution script
 
 #which best spi-n aggregation month and correlation value ####
   #this calculates the best spi-n aggregation month for every catchment individually and the cor value itself too. The correlation is calculated between all ssi values (not only drought) and the spi-n value. In the next step the best one is selected and stored in the gauges attribution as a characteristic describing the catchment. All ssi (and not only the ssi values that are negative; indicating drought) are considered in this step because it is an attribute describing the catchment. 
