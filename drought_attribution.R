@@ -299,6 +299,7 @@ lm_x1 = x1$sen_slope[which(x1$new_p<.05 & y$new_p<.05)]
 lm_x2 = x2[which(x1$new_p<.05 & y$new_p<.05)]
 alp = alpine[which(x1$new_p<.05 & y$new_p<.05)]
 data_plot = cbind.data.frame(lm_y,lm_x1, lm_x2, alp)
+
 #transformation to normal
 lm_x1_w = lm_x1[which(lm_x2 == 2)] #winter lf
 lm_x1_s = lm_x1[which(lm_x2 != 2)] #not winter low flows
@@ -437,19 +438,6 @@ head(iris)
 
 stepAIC(fm, direction = "backward", k=log(catch_n))
 
-#predictor analysis with randomForest####
-install.packages("randomForest")
-library(randomForest)
-hist(dat)
-head(dat)
-cart = randomForest::randomForest(data= dat, y~.)
-summary(cart)
-varImpPlot(cart)
-round(importance(cart),2)
-plot(mmky_ms7_min$sen_slope ~ mmky_su_mn_t$sen_slope)
-getTree(cart, k=500, labelVar = T)
-plot.randomForest(cart)
-
 # regression with best_spi_n ####
 
 fm=lm(gauges$best_spi_n ~ gauges$hydrogeo_simple + gauges$bfi)
@@ -526,3 +514,21 @@ ggplot(data= ms7_best_spi_cor)+
 
 ggsave("./plots/5_choice/ms7_spi_n_cor.png")
   
+# jun negative trend ####
+
+y= mmky_jun_mn_q
+x1= mmky_sp_sm_p
+x2=gauges$sr_new
+lm_y = y$sen_slope[which(x1$new_p<.05 & y$new_p<.05)]
+lm_x1 = x1$sen_slope[which(x1$new_p<.05 & y$new_p<.05)]
+lm_x2 = x2[which(x1$new_p<.05 & y$new_p<.05)]
+lm_y_norm = abs(min(lm_y))+lm_y+0.0001
+hist(sqrt(lm_y_norm))
+
+fm = lm(lm_y~lm_x1*lm_x2)
+summary(fm)
+
+#winter sommer precipitation ####
+
+lm(mmky_wi_p_pet$sen_slope ~ mmky_wi_mn_q$sen_slope) %>% summary()
+lm(mmky_su_p_pet$sen_slope ~ mmky_su_sm_p$sen_slope) %>% summary()
