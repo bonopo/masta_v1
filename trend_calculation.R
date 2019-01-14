@@ -36,9 +36,9 @@ dev.off()
 # mk_tests_par(raw_data = "jun_mean_df")
 # mk_tests_par(raw_data = c("mar_mean_df","jul_mean_df"))
 
-mmky_par("sp_sm_p" )
+mmky_par("su_p_pet")
 
-mmky_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p", "sp_sm_p"))
+mmky_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p", "sp_sm_p", "year_p_pet", "su_p_pet", "wi_p_pet"))
 
 mmky_par(raw_data = c( "p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"))
 
