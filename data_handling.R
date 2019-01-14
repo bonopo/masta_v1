@@ -7,7 +7,7 @@ load(file="./data/r_temp_image/basic.Rdata")
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest", "gridExtra", "foreach",  "doSNOW", "snow", "itertools"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 #install.packages("itertools")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn","randomForest", "gridExtra",  "foreach", "doSNOW", "snow"), require, character.only = T)
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI",  "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn", "gridExtra",  "foreach", "doSNOW", "snow"), require, character.only = T)
 #install.packages("climtrends", repos="http://R-Forge.R-project.org")
 
 
@@ -162,9 +162,20 @@ spei_data <- mt_sm_p %>%
     mutate(pet_th = pet_th_vec) %>%
     mutate(p_pet = month_sum - pet_th) 
 
-spei_data_mat <- spei_data %>% dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame()
-colnames(spei_data_mat) <- 1:catch_n
+wi_p_pet = spei_data %>% 
+  filter(month(yr_mt) < 5 | month(yr_mt) > 11) %>% 
+  dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame() %>% 
+set_colnames(1:catch_n)
 
+su_p_pet = spei_data %>% 
+  filter(month(yr_mt) > 4 & month(yr_mt) < 12) %>% 
+  dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame() %>% 
+set_colnames(1:catch_n)
+
+spei_data_mat <- spei_data %>% dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame() %>% 
+set_colnames(1:catch_n)
+
+year_p_pet = spei_data_mat
 
 remove(spei_data,pet_th, latitude,pet_th_vec)
 remove(data, i, res_ts, xy_gk, xy_wgs84)
