@@ -152,17 +152,22 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 #"p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"
 #"march_dy_drought_q", "march_dy_drought_p","march_sm_def_p","march_sm_def_q","june_dy_drought_q", "june_dy_drought_p","june_sm_def_p","june_sm_def_q"
 
-p=sig_plot(y_data = "mmky_jun_mn_q", x_data = "mmky_sp_sm_p", output = "sr_new", p_value = .05) 
+p=sig_plot(x_data = "mmky_su_p_pet", y_data = "mmky_jun_mn_q", output = "sr_new", p_value = 1) 
 p
-ggsave(plot = p, "./plots/5_choice/mmky_jun_sp_sm_p.png")
+  ggsave(plot = p, "./plots/5_choice/mmky_jun_sp_sm_p.png")
 
-p = catch_plot(p_value=.05, color="hydrogeo_simple", x_data="bfi", y_data= "mmky_q_sum_def_yr" , factor =T)
+  plot(su_sm_p$`100`)
+  abline(a= median(su_sm_p$`100`), b = mmky_su_sm_p$sen_slope[100])
+which.min(mmky_su_sm_p$sen_slope)
+40*mmky_su_sm_p$sen_slope[100]
+
+p = catch_plot(p_value=1, color="hydrogeo_simple", x_data="bfi", y_data= "mmky_su_sm_p" , factor =T)
 p
-ggsave(plot = p, "./plots/5_choice/mmky_q_sum_def_yearly_mn.png")
+  ggsave(plot = p, "./plots/5_choice/mmky_q_sum_def_yearly_mn.png")
 
 x_data = "mmky_mar_mn_q";y_data = "mmky_jun_mn_q"
 ggplot()+
-  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=mmky_sp_sm_p$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=mmky_wi_p_pet$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
      annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
   annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
   xlab(paste(x_data, "sen's slope"))+
