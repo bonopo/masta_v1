@@ -152,18 +152,34 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 #"p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"
 #"march_dy_drought_q", "march_dy_drought_p","march_sm_def_p","march_sm_def_q","june_dy_drought_q", "june_dy_drought_p","june_sm_def_p","june_sm_def_q"
 
-p=sig_plot(x_data = "mmky_su_p_pet", y_data = "mmky_jun_mn_q", output = "sr_new", p_value = 1) 
-p
-  ggsave(plot = p, "./plots/5_choice/mmky_jun_sp_sm_p.png")
+p=sig_plot(x_data = "mmky_wi_q10", y_data = "mmky_su_q10", output = "sr_new", p_value = 1) 
+p + geom_abline(slope=1, intercept=0)
+ggsave(plot = p, "./plots/5_choice/mmky_speichertransfer.png")
 
-  plot(su_sm_p$`100`)
-  abline(a= median(su_sm_p$`100`), b = mmky_su_sm_p$sen_slope[100])
+plot(su_sm_p$`100`)
+abline(a= median(su_sm_p$`100`), b = mmky_su_sm_p$sen_slope[100])
 which.min(mmky_su_sm_p$sen_slope)
 40*mmky_su_sm_p$sen_slope[100]
 
-p = catch_plot(p_value=1, color="hydrogeo_simple", x_data="bfi", y_data= "mmky_su_sm_p" , factor =T)
+gauges$cor_spi_n
+
+p = catch_plot(p_value=.05, color="sr_new", x_data="bfi", y_data= "mmky_yearly_mn_q" , factor =T)
 p
-  ggsave(plot = p, "./plots/5_choice/mmky_q_sum_def_yearly_mn.png")
+
+ggsave(plot = p, "./plots/5_choice/mmky_q_sum_def_yearly_mn.png")
+
+
+p_value=.05; color="saar"; x_data="cor_spi_n"; y_data= "mmky_q10" 
+z_value = dplyr::select(gauges_df, color)[,1]
+ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value)], x=dplyr::select(gauges_df, x_data)[which(get(y_data)$new_p<p_value),], col=z_value[which(get(y_data)$new_p<p_value)]), position = position_dodge(width = .5))+
+    annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value ))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(x_data)+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("saar")
+
+
 
 x_data = "mmky_mar_mn_q";y_data = "mmky_jun_mn_q"
 ggplot()+
