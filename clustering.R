@@ -63,6 +63,9 @@ plot(bfi)
 gauges$bfi <- bfi
 remove(bfi, lf_obj, basefl)
 
+#mean q####
+mean_q = apply(q_wide, 2, mean)
+gauges$mn_q = mean_q
 #maximum duration ####
 max_drought_duration = c()
   for (g in 1:catch_n){
@@ -106,15 +109,6 @@ n_events = c()
 
 gauges$n_events = n_events
 remove(n_events)
-#average q ####
-
-q_mean = q_long %>% 
-  filter(year(date) >1970 & year(date) < 2001) %>% 
-  group_by(gauge) %>% 
-  summarise(mean = mean(q))
-
-gauges$q_mean = c(q_mean$mean)
-remove(q_mean)
 #clustered plots #### 
 #see barker et al
 
