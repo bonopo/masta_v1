@@ -1095,6 +1095,19 @@ return(list(sum_def_df,mean_n_df,sm_days_df))
 }
 
 
+#predictor analysis with randomForest####
+install.packages("randomForest")
+library(randomForest)
+hist(dat)
+head(dat)
+cart = randomForest::randomForest(data= dat, y~.)
+summary(cart)
+varImpPlot(cart)
+round(importance(cart),2)
+plot(mmky_ms7_min$sen_slope ~ mmky_su_mn_t$sen_slope)
+getTree(cart, k=500, labelVar = T)
+plot.randomForest(cart)
+
 # functions ---------------------------------------------------------------
 
 dist_fitt <- function(distry, monthy){ #similar as above, old version, not used in script
