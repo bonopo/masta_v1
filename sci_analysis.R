@@ -6,8 +6,9 @@ source("./R/masta_v1/data_handling.R")# has to run before if not objects will be
 source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
 
 # cross correlation -------------------------------------------------------
+sapply(1:catch_n, function(x) ccf(x= spi_v2_1[,x], y=ssi_1[,x], na.action=na.pass, plot=F)$acf)
 
-ccf(x= spi_12[,1], y=ssi_1[,1], na.action=na.pass)
+ccf(x= spi_v2_1, y=ssi_1, na.action=na.pass, plot=F)[1]
 
 ccf_spi <- sci_ccf(sci= c(1,2,3,6,12,24),sci_namex = "spi_", sci_namey="ssi_1")
 ccf_spei <- sci_ccf(sci= c(1,2,3,6,12,24), sci_namex="spei_", sci_namey="ssi_1")
