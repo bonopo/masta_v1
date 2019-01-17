@@ -163,10 +163,12 @@ which.min(mmky_su_sm_p$sen_slope)
 
 gauges$cor_spi_n
 
-p = catch_plot(p_value=.05, color="sr_new", x_data="bfi", y_data= "mmky_yearly_mn_q" , factor =T)
+yearly_sm_p$`21` %>% plot(type="l")
+
+p = catch_plot(p_value=.05, color="sr_new", x_data="saar", y_data= "mmky_yearly_sm_p" , factor =T)
 p
 
-ggsave(plot = p, "./plots/5_choice/mmky_q_sum_def_yearly_mn.png")
+ggsave(plot = p, "./plots/5_choice/mmky_wi_p_pet.png")
 
 
 p_value=.05; color="saar"; x_data="cor_spi_n"; y_data= "mmky_q10" 
