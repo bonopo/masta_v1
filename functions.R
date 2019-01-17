@@ -610,12 +610,90 @@ mmky_par = function(raw_data =c("ms7_min", "ms30_min")){
 for(d in raw_data){
   ts_data = get(d)
   #modified mk test
-  res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky))
-  colnames(res_mmky) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
+  res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky_edit))
+  colnames(res_mmky) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var","S")
   assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
 }
 }
 
+mmky_edit = function(x)
+{
+    x = x
+    z = NULL
+    z0 = NULL
+    pval = NULL
+    pval0 = NULL
+    S = 0
+    Tau = NULL
+    essf = NULL
+    if (is.vector(x) == FALSE) {
+        stop("Input data must be a vector")
+    }
+    if (any(is.finite(x) == FALSE)) {
+        x <- x[-c(which(is.finite(x) == FALSE))]
+        warning("The input vector contains non-finite numbers. An attempt was made to remove them")
+    }
+    n <- length(x)
+    V <- rep(NA, n * (n - 1)/2)
+    k = 0
+    for (i in 1:(n - 1)) {
+        for (j in (i + 1):n) {
+            k = k + 1
+            V[k] = (x[j] - x[i])/(j - i)
+        }
+    }
+    slp <- median(V, na.rm = TRUE)
+    t = 1:length(x)
+    xn = (x[1:n]) - ((slp) * (t))
+    for (i in 1:(n - 1)) {
+        for (j in (i + 1):n) {
+            S = S + sign(x[j] - x[i])
+        }
+    }
+    ro <- acf(xn, lag.max = (n - 1), plot = FALSE)$acf[-1]
+    rof <- rep(NA, length(ro))
+    for (i in 1:(length(ro))) {
+        rof[i] <- ro[i]
+    }
+    ess = 0
+    for (k in 1:(n - 1)) {
+        ess = ess + (1 - (k/n)) * rof[k]
+    }
+    essf = 1 + 2 * (ess)
+    var.S = n * (n - 1) * (2 * n + 5) * (1/18)
+    if (length(unique(x)) < n) {
+        aux <- unique(x)
+        for (i in 1:length(aux)) {
+            tie <- length(which(x == aux[i]))
+            if (tie > 1) {
+                var.S = var.S - tie * (tie - 1) * (2 * tie + 
+                  5) * (1/18)
+            }
+        }
+    }
+    VS = var.S * essf
+    if (S == 0) {
+        z = 0
+        z0 = 0
+    }
+    if (S > 0) {
+        z = (S - 1)/sqrt(VS)
+        z0 = (S - 1)/sqrt(var.S)
+    }
+    else {
+        z = (S + 1)/sqrt(VS)
+        z0 = (S + 1)/sqrt(var.S)
+    }
+    pval = 2 * pnorm(-abs(z))
+    pval0 = 2 * pnorm(-abs(z0))
+    Tau = S/(0.5 * n * (n - 1))
+    return(c(`Corrected Zc` = z, `new P-value` = pval, `N/N*` = essf, 
+        `Original Z` = z0, `old P.value` = pval0, Tau = Tau, 
+        `Sen's slope` = slp, old.variance = var.S, new.variance = VS,s_stat = S))
+}
+
+
+mmky
 #mmky subset
 
 mmky_sbst = function(raw_data =ms7_min, width = 10, start_y=1970){
