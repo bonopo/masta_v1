@@ -7,6 +7,8 @@ t = cor*sqrt((n-2)/(1-(cor^2)))
 df=n-2
 qt(0.05/2, df=df, lower.tail = T)
 
+
+z_score= 
 #if t statistic is above or below the critical t vlaues than the correlation is significant
 
 
@@ -18,11 +20,15 @@ fm = lm(y~c(1:40))
 n = length(y)
 trend =  mmky_mar_mn_q$tau[203]
 
+z = trend - mean(mmky_mar_mn_q$corrected_z)/sqrt(mmky_mar_mn_q$new_var[203])
+
+mmky_mar_mn_q$new_p[203]
+2*pnorm(-abs(z))
+mmky
 t = trend*sqrt((n-2)/(1-(trend^2))) # t-test for significance
 df=n-2
 qt(0.05/2, df=df, lower.tail = F)
 t
-
 
 N_eff = n* ((1-acf(y, plot=F)$acf[2,1,1])/(1+acf(y, plot=F)$acf[2,1,1]))
 variance = (1/(N_eff - 2)) * sum(residuals(fm)^2)
@@ -34,6 +40,13 @@ plot(mmky_mar_mn_q$corrected_z/sqrt(mmky_mar_mn_q$new_var), type="l")
 lines(mmky_mar_mn_q$new_p, type="l", col=3)
 legend("topright", c("corrected_z", "orig_z"), lty=c(1,1), col=c(1,3))
 
+plot(yearly_sm_p$`47`, type="l")
+abline(a= median(yearly_sm_p$`47`), b = mmky_yearly_sm_p$sen_slope[47])
+which.min(mmky_su_sm_p$sen_slope)
+40*mmky_su_sm_p$sen_slope[100]
 
-bbsmK(x=y)
-bbsmK_mod(x=y)
+#field significance ####
+
+s= mmky_su_p_pet$S
+s_r = mean(s)
+var(s_r)
