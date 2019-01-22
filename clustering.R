@@ -4,6 +4,7 @@
 # source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
 # source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
 # source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missing!
+#source("./R/masta_v1/climate_characteristics.R") # has to run before if not objects will be missing!
 
 #seasonality ratio (SR)####
 
@@ -41,7 +42,7 @@ gauges$sr_new <- as.numeric(q_sr$sr_value_new) # 2= winter 12- 0= summer low flo
 remove(q_sr, q_sr_s, q_sr_w)
 #spplot(gauges, "sr")
 
-mmky
+
 
 gauges$ezggr_class <- cut(gauges$Enzgsg_, breaks=c(0,50,100,150,Inf), labels=c("<50", "50-100", "100-150", "150-200"))
 
@@ -62,6 +63,10 @@ bfi[i] <- BFI(basefl)
 plot(bfi)
 gauges$bfi <- bfi
 remove(bfi, lf_obj, basefl)
+gauges$bfi_class = cut(gauges$bfi, breaks=c(0,.4,.6,.8,1), labels=c("<.4", ".4-.6", ".6-.8", ".8-1"))
+
+which(gauges$bfi_class == ".8-1") %>% length()
+
 
 #mean q####
 mean_q = apply(q_wide, 2, mean)
@@ -122,7 +127,7 @@ remove(n_events)
 # ggplot(data=gauges_df)+
 #   geom_point(aes(x=saar, y= best_spi, alpha= bfi))
 # 
-# 
+ 
 # ggplot(data=gauges_df)+
 #   geom_point(aes(x=saar, y= best_spei, col= bfi))
 # 
@@ -143,21 +148,39 @@ remove(n_events)
 #   geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
 # ggsave("max_dr_dur_med_dr_int_bfi.png")
 # 
-# png("gauges_sr.png")
-# spplot(gauges, "sr")
-# dev.off()
-# 
+gauges$ms30 = mmky_ms30_min$sen_slope
+gauges$ms7_date = mmky_ms7_date$sen_slope
+min(mmky_ms7_date$sen_slope)
+rtb = c('#ca0020','#f4a582','#bababa','#92c5de','#0571b0')
+germany = raster::getData("GADM",country="Germany",level=0)
+
+png("./plots/5_choice/gauges_msdate.png", width=800, height=1000)
+#pdf("./plots/5_choice/gauges_msdate.pdf")
+spplot(gauges, "ms7_date", 
+       col.regions = rtb,
+       cuts = c(-2.5,-1.5,-.5,.5,1.5,2.5),
+       legendEntries = c("<-1.5", "<-0.5", "near no trend", ">0.5",">1.5"),
+       sp.layout = germany,
+       colorkey=T,
+       scales = list(draw = TRUE))
+dev.off()
+
+tofy = c("#9ecae1","#fdae61","#d7191c","#9ecae1")
+pdf("./plots/5_choice/gauges_mnq30.pdf")
+spplot(gauges, "mnq30_month", 
+      col.regions = tofy,
+       cuts = c(1,5,8,11,12),
+       #legendEntries = c("<-1.5", "<-0.5", "near no trend", ">0.5",">1.5"),
+       sp.layout = germany,
+       colorkey=T,
+       scales = list(draw = TRUE))
+dev.off()
+
 # gauges$cor_spi_n
 # 
 # gauges$sr
 
-#regionalisation####
-# int = which(gauges$Hochwrt > 5900000)
-# gauges$saar[int] %>% mean()
-# gauges$saar %>%  which.max()
-# 
-spplot(gauges, "sr_new", identify=T)
-which(gauges$sr_new==2)
+
 
 
 #alpine rivers####
@@ -171,7 +194,7 @@ gauges$alpine[c(42,221,238,305)] = 0
 
 #longterm (lt) memory effect of catchments####
 lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_v2_")
-lt_cor_spei = cor_sci_ssi(sci_n = c(12,24), sci="spei_v2_")
+
 
 gauges$lt_memoryeffect = 0
 gauges$lt_memoryeffect[which(lt_cor_spi$`24`>=.5)] =1 #defining all catchments with a correlation 0.5 or higher with the spi_24 as a longterm memory catchment (very crude definition but sufficient since it will not be used in the final analysis)
@@ -204,3 +227,21 @@ gauges$cor_spi = value_spi
 gauges$cor_spei = value_spei
 
 remove(value_spei, value_spi, best_spei, best_spi, cor_spei_ssi_v2,cor_spi_ssi_v2)
+
+#do the catchments with high bfi have longer droughts? and higher deficits? definig bfi > 0.75  (see: hist(gauges$bfi))####
+# length of droughts is the same for every catchment per definition since, per definition everything below the 20th quantile counts as drought
+
+high_bfi = which(gauges$bfi > .75)
+tot_deficit = q_sum_def_yr %>% apply(., 2, sum) 
+mean_deficit = q_sum_def_yr %>% apply(., 2, mean) 
+
+boxplot( tot_deficit ~gauges$hydrogeo_simple)
+
+ggplot()+
+  geom_boxplot( aes(y=tot_deficit, x=gauges$hydrogeo_simple, col=gauges$bfi_class), position = "dodge")+
+  xlab("Hydrogeology")+
+  ylab("cumulative discharge deficit during drought [m³]")+
+  scale_color_discrete("BFI",labels = c("<0.4", "0.4-0.6", "0.6-0.8", ">0.8"))
+
+ggsave("./plots/clustering/hydrogeo_deficit.pdf")
+#similar hypothesis for chasm aquifer (hydrogeo_simple == K)
