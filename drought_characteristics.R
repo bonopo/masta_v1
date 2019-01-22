@@ -12,7 +12,7 @@ setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 
 
 mnq30_month <- c()
-for ( i in 1:338){
+for ( i in 1:catch_n){
 data <- mt_mn_q %>% 
   filter(gauge == i)
 data_by <- data %>% group_by(year(yr_mt)) %>% 
@@ -47,7 +47,7 @@ dsi_0<- dr_severity(severity = 0)
 dsi_1_yearly = list()
 for (i in 1:catch_n){
 dsi_1_yearly[[i]] = dsi_1[[i]] %>% 
-  mutate(year = year(dr_start)) %>% 
+  mutate(year = year(dr_start)) %>% # defining the year of the drought beginning to the year in which the drought happened
   group_by(year) %>% 
   summarise(sum_dsi = sum(dsi), sum_length = sum(dr_length), sum_inten = sum(dr_intens), n = n())
 
@@ -56,7 +56,7 @@ dsi_1_yearly[[i]] = dsi_1[[i]] %>%
 dsi_0_yearly = list()
 for (i in 1:catch_n){
 dsi_0_yearly[[i]] = dsi_0[[i]] %>% 
-  mutate(year = year(dr_start)) %>% 
+  mutate(year = year(dr_start)) %>% # defining the year of the drought beginning to the year in which the drought happened
   group_by(year) %>% 
   summarise(sum_dsi = sum(dsi), sum_length = sum(dr_length), sum_inten = sum(dr_intens), n = n())
 
@@ -68,13 +68,13 @@ dsi_0_yearly[[i]] = dsi_0[[i]] %>%
 # severity = do.call( "cbind",len)
 
 #drought frequency####
-
+#severity per year
 mat_dsi= matrix(0, nrow=40, ncol=catch_n)
 for (i in 1:catch_n){
 int = pmatch(c(dsi_1_yearly[[i]][,1])$year,c(1970:2009 ) )
   mat_dsi[int,i] = c(dsi_1_yearly[[i]][,2])$sum_dsi
 }
-
+#number of events per year
 mat_n= matrix(0, nrow=40, ncol=catch_n)
 for (i in 1:catch_n){
 int = pmatch(c(dsi_1_yearly[[i]][,1])$year,c(1970:2009 ) )
@@ -185,7 +185,7 @@ lf_obj <- mov_sm_p_long %>%
 flowunit(lf_obj)<-"l/d" #default is m³/s so new default definition is needed. since unit is mm/day it can be set to l/d
 
 res= lfstat::find_droughts(lf_obj, threshold = "Q80", varying="daily") 
-#daily is not really daily. It is actually the 30day moving sum
+#daily is not really daily. It is actually the 30day moving sum calculated two steps before
 
 #same as laaha approach saying the 80th percentile of the flow duration curve, with daily varying threshold. Comparison to own threshold calculation gives the same result see commented out part above
 
@@ -260,9 +260,12 @@ load("./output/seasonal_p.Rdata", verbose = T)
 #yearly analysis 
 #(summing all rows to make sums for every year to see changes over the year rather than changes over the seasons) 
 #the result (df with catchments as columns and rows as years) for trend analysis
-
+p_days_of_drought_list = lapply(p_seas, function(x) x[[1]])
+q_days_of_drought_list = lapply(q_seas, function(x) x[[1]])
 p_days_of_drought_df <- lapply(p_seas, function(x) x[[1]]) %>% do.call("rbind", .) 
 q_days_of_drought_df <- lapply(q_seas, function(x) x[[1]]) %>% do.call("rbind", .)
+p_sum_def_list = lapply(p_seas, function(x) x[[2]])
+q_sum_def_list = lapply(q_seas, function(x) x[[2]])
 
 p_sum_def_df = lapply(p_seas, function(x) x[[2]]) %>% do.call("rbind", .)
 q_sum_def_df<- lapply(q_seas, function(x) x[[2]]) %>% do.call("rbind", .)
@@ -274,6 +277,7 @@ q_days_of_drought_yr = apply(q_days_of_drought_df,1, sum )%>% cbind(days_dr=., y
 p_sum_def_yr = apply(p_sum_def_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 
 q_sum_def_yr = apply(q_sum_def_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
+
 
 #decadal analysis
 #in the 70s there was a major drought dominating the trends (leading to mainly neg. trends since all droughts after the 70s were less severe).
