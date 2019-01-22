@@ -14,9 +14,9 @@ sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI",  "lubrid
 # Load data ---------------------------------------------------------------
 
 source("./R/masta_v1/functions.R")
-load("./data/catchments/eobs_pr_part.Rdata") #precipiatation
-load("./data/catchments/eobs_temp_part.Rdata") # temperature
-load("./data/catchments/streamflow.Rdata")# streamflow
+load("./data/catchments/eobs_pr_part.Rdata", verbose = T) #precipiatation
+load("./data/catchments/eobs_temp_part.Rdata", verbose = T) # temperature
+load("./data/catchments/streamflow.Rdata", verbose = T)# streamflow
 #gauges  <- readOGR(dsn="./data/raster/gauges", layer= "gauges")
 gauges  <- shapefile("./data/raster/gauges")
 legende <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(1,5)]
@@ -27,13 +27,15 @@ hydrogeo <- read.csv("./data/geo_landuse/hydrogeo.csv")
 
 date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
 date_seq_long =seq.Date(from= ymd("1970-01-01"), to = ymd("2009-12-31"), by= "day")
-catch_n <- 338 # number of catchments
+catch_n <- 337 # number of catchments; originally 338 but last catchment has been altered, the water gauge has not been mantained which caused it to be filled up over the time
 no_cores = detectCores() #for parallel computing
 my_catch = colnames(precip)
 agg_month =c(1, 2, 3, 6, 12, 24)
 # transforming data ----------------------------------------------------------------
 
 #precip####
+#removing last column see commentary line 30 for explanation
+precip = precip[,c(1:catch_n)]
 colnames(precip) <- 1:catch_n
 precip_long <- load_file(precip, "sum_mm")
 unique(precip_long$gauge)
@@ -48,6 +50,7 @@ mt_sm_p_wide <- spread(mt_sm_p, key=gauge, value=month_sum, drop=F) %>% dplyr::s
 
 
 #discharge####
+streamflow = streamflow[,c(1:catch_n)]
 q_long <- load_file(streamflow, "q")
 q_wide <- spread(q_long, key= gauge, value = q)
 q_wide %<>% dplyr::select(-date) %>% as.data.frame()
@@ -62,6 +65,7 @@ mt_mn_q <- q_long %>%
 mt_mn_q_wide <- spread(mt_mn_q, key = gauge, value = q_mean) %>% dplyr::select(-c(yr_mt,month)) %>% as.data.frame()
 
 #temperature####
+tempera = tempera[,c(1:catch_n)]
 colnames(tempera) <- 1:catch_n
 temp_long <- load_file(file=tempera, value_name = "temp", origin = "1950-01-01")
 temp_long %<>% filter(date>= "1970-01-01" & date <= "2009-12-31") 
@@ -80,10 +84,6 @@ mt_mn_temp <- temp_long %>%
 
 
 remove(tempera,streamflow)
-# temp %>% 
-#   filter(gauge < 10) %>%
-# ggplot()+
-#   geom_smooth(aes(x=date, y=temp, colour=as.factor(gauge), group=gauge), se=F)
 
 #landuse####
 colnames(legende) <- c("ID","LaNu")
@@ -109,16 +109,19 @@ gauges$landuse = landuse[int,2]
 
 # na_ign = is.na(int) %>% which() %>% my_catch[.] 
 # na_ign %in% colnames(gesamt) # three catchments have no landuse
-remove(legende, landuse_v1, summen, gesamt, legende2, ebenen,aussort, int)
+remove(legende, landuse_v1, summen, gesamt, legende2, ebenen,aussort, int, landuse, ebene3)
 
 #hydro geology #####
 gauges$hydrogeo = hydrogeo$Hydrogeologie #K= klüfte P= poren alles andere ist gemisch KA= karst M=what is 
 gauges$hydrogeo_simple = "other"
 gauges$hydrogeo_simple[which(hydrogeo$Hydrogeologie == "P")] = "P"
 gauges$hydrogeo_simple[which(hydrogeo$Hydrogeologie == "K")] = "K"
-
-
-# plot(gauges$hydrogeo)
+which(gauges$hydrogeo_simple == "K") %>% length()
+which(gauges$hydrogeo_simple == "P") %>% length()
+which(gauges$hydrogeo_simple == "other") %>% length()
+#shapefile adjustment####
+# removing catchment 338
+gauges= gauges[c(1:catch_n),]
 
 #extending of time series ####
 sum(ymd(hydrogeo$Ztrhnbg.C.80)<ymd("1960-1-2")) #if time series would be extended to 1.1.1960 there would be 201 catchments
