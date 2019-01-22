@@ -245,24 +245,22 @@ for (e in 1:max(temp1$event_no)){
 #retrieving length of drought. since def.vol is in m³/day it has to be multiplied by the length of the drought (in days)
   mt_yr = NULL
    mt_yr = seq.Date(from=ymd(temp1$dr_start[e]), to= ymd(temp1$dr_end[e]), by="month")
-   if(month(ymd(temp1$dr_start[e])) !=  month(ymd(temp1$dr_end[e]))){
+   #problem: the seq leaves out the last month if the day (in the month) of drought end is before the day (in the month) of the drought start
+   if(day(ymd(temp1$dr_end[e])) <  day(ymd(temp1$dr_start[e]))){
      mt_yr = c(mt_yr, ymd(temp1$dr_end[e]))
    }
-     year_y = year(mt_yr) - (min(year_ta)-1)
-  month_x = month(mt_yr)
+     year_y = year(mt_yr) - (min(year_ta)-1) #to set row indice in matrix
+  month_x = month(mt_yr) # to set column indice in matrix
 
 #writing to matrix
- if(all(is.na(mat_def[cbind(year_y, month_x)]))){
-   if(length(month_x)>2){ 
-    mat_def[cbind(year_y[2:(length(year_y)-1)],month_x[2:(length(month_x)-1)])] = temp1$def_vol[e]*as.numeric(days_in_month(month_x[2:(length(month_x)-1)]))
-    mat_days[cbind(year_y[2:(length(year_y)-1)],month_x[2:(length(month_x)-1)])] = days_in_month(month_x[2:(length(month_x)-1)]) %>% as.numeric()
-   }
-    mat_def[year_y[1],month_x[1]] = temp1$def_vol[e]*(30-day(ymd(temp1$dr_start[e])))
-    mat_def[year_y[length(year_y)],month_x[length(month_x)]] = temp1$def_vol[e]*day(ymd(temp1$dr_end[e]))
-    mat_days[year_y[1],month_x[1]] = 30-day(ymd(temp1$dr_start[e]))
-    mat_days[year_y[length(year_y)],month_x[length(month_x)]] = day(ymd(temp1$dr_end[e]))
- 
- }else{ # if there was already a drought in that month the new drought event needs to be added to the drought (that already occured in that month). Happens where there are two short droughts right after each other. 
+  if (length(month_x) == 1 ){#if drought starts and ends in the same month
+    mat_def[cbind(year_y,month_x)] = sum(mat_def[cbind(year_y,month_x)],temp1$def_vol[e]*as.numeric(ymd(temp1$dr_end[e])-ymd(temp1$dr_start[e]))) #sum to include the information of the previous event, if for example there was a drought already at the beginning of the month
+    #def.vol * number of days = total deficit of the drought event
+    mat_days[year_y[1],month_x[1]] = sum(mat_days[cbind(year_y,month_x)],as.numeric(ymd(temp1$dr_end[e])-ymd(temp1$dr_start[e])))
+    # drought end - drought beginning = number of days with drought 
+  }else { #
+  # }else{ 
+  # if there was already a drought in that month the new drought event needs to be added to the drought (that already occured in that month). Happens where there are two short droughts right after each other. 
    
    if(length(month_x)>2){ 
      mat_def[cbind(year_y[2:(length(year_y)-1)],month_x[2:(length(month_x)-1)])] = temp1$def_vol[e]*as.numeric(days_in_month(month_x[2:(length(month_x)-1)]))
@@ -270,10 +268,10 @@ for (e in 1:max(temp1$event_no)){
    }
     mat_def[year_y[1],month_x[1]] = sum(mat_def[year_y[1],month_x[1]],temp1$def_vol[e]*(30-day(ymd(temp1$dr_start[e]))))
     mat_def[year_y[length(year_y)],month_x[length(month_x)]] = sum(mat_def[year_y[length(year_y)],month_x[length(month_x)]],temp1$def_vol[e]*day(ymd(temp1$dr_end[e])))
-    mat_days[year_y[1],month_x[1]] = sum(mat_days[year_y[1],month_x[1]],30-day(ymd(temp1$dr_start[e])))
+    mat_days[year_y[1],month_x[1]] = sum(mat_days[year_y[1],month_x[1]],(days_in_month(month_x[1])+1)-day(ymd(temp1$dr_start[e])))#retrieving the days of in the first month of drought, +1 because the first day of the drought count's as drought
     mat_days[year_y[length(year_y)],month_x[length(month_x)]] = sum(mat_days[year_y[length(year_y)],month_x[length(month_x)]],day(ymd(temp1$dr_end[e])))
- 
- }
+  }#
+# }#
     }
    
   
@@ -344,7 +342,7 @@ for (i in 1:catch_n){
 }
 
 #counting number of events depending on severity threshhold
-spi_06_long
+
 
 dr_count <- function(severity = -1, datax=ssi_1_long){
   try(if(severity < min(datax[,3], na.rm = T)) stop ("Too low severity. Choose higher SSI Value!!!!!"))
@@ -373,15 +371,15 @@ for (g in 1:catch_n){
     data  <- raw_data[[g]]
     res   <- matrix(nrow = max(data$event_n), ncol=6) 
 for (d in 1:max(data$event_n)){
-  res[d,1]        <- sum(filter(data, event_n == d) %>%  dplyr::select(3)-severity)
-  res[d,2]        <- d
-  res[d,3]        <- data$yr_mt[data$event_n == d][1] 
-  res[d,4]        <- tail(data$yr_mt[data$event_n == d],1)
+  res[d,1]        <- sum(filter(data, event_n == d) %>%  dplyr::select(3)-severity) # summing the deviation from the threshhold as the drought dsi
+  res[d,2]        <- d # event number
+  res[d,3]        <- data$yr_mt[data$event_n == d][1]  # drought beginning
+  res[d,4]        <- tail(data$yr_mt[data$event_n == d],1) # drought end
  if(res[d,4] - res[d,3] == 0){
      res[d,5] =  days_in_month(as.Date(res[d,3], origin = "1970-01-01"))}else{
-       res[d,5] =  res[d,4] - res[d,3]
+       res[d,5] =  res[d,4] - res[d,3] # drought length
      }
-  res[d,6] = res[d,1]/((month(res[d,4]) - month(res[d,3]))+1)
+  res[d,6] = res[d,1]/((month(res[d,4]) - month(res[d,3]))+1) #drought intensity: dsi/drought length. basically the mean deviation from the threshold
   }
     colnames(res) <- c("dsi", "event_n", "dr_start", "dr_end", "dr_length", "dr_intens")
     res <- as.data.frame(res)
@@ -391,7 +389,7 @@ for (d in 1:max(data$event_n)){
     }
 return(res_list)
 }
-dr_severity(datax = spi_06_long)
+
 #plot functions ####
 
 sig_plot = function(p_value = .1, x_data = "mmkh_mar_mn", y_data = "mmkh_yearly_q10", output = "sr"){
@@ -474,7 +472,8 @@ output= ggplot()+
 
 if(factor== TRUE){
   output = output+
-    scale_color_discrete(color)
+      scale_color_discrete(color)#,c("Summer", "Winter"))
+
 }else {
   output = output+
     scale_color_continuous(color)
