@@ -2,6 +2,7 @@
 
 # source("./R/masta_v1/functions.R")# has to run before if not objects will be missing!
 # source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missing!
+
 #SAAR ####
 #standart climate period 1971 bis 2000 (see DWD)
 # standart period averae annual rainfall
@@ -26,6 +27,7 @@ remove(median_drought_duration)
 #7 day moving average in summer than calculate :
   # min for every year
   # date of min
+#summer = mai to november
 q_wide_summer = q_long %>% 
     filter(month(date) >= 5 & month(date)<= 11) %>% 
     group_by(gauge, year(date)) %>% 
@@ -36,7 +38,7 @@ q_wide_summer = q_long %>%
 
 ms7 = rollapply(q_wide_summer, FUN = mean, width = 7, align="right", by.column=TRUE, fill=NA)
 
-int= rep(c(1:40*214),each =7)-c(207:213)#where the rollapply result hast to be NA because it calculates moving average continues (ie end of 1970 will be partially used to calculate moving average for beginning 1971)
+int= rep(c(1:40*214),each =7)-c(207:213)#where the rollapply result hast to be NA because it calculates moving average continues (ie end of 1970 will be partially used to calculate moving average for beginning 1971), but end november can not be used partially to calculate rolling mean for beginning of mai
 
 ms7[int,] = NA 
 ms7_df = as.data.frame(ms7)
@@ -109,16 +111,16 @@ ms30_min = ms30_summer %>%
 
 
 #ms30_date and ms7_date do differ a lot see Plots
-for (i in sample(338)){
-plot(ms30_date[,i]~ms7_date[,i], main=i)
-  Sys.sleep(1)
-  }
+# for (i in sample(338)){
+# plot(ms30_date[,i]~ms7_date[,i], main=i)
+#   Sys.sleep(1)
+#   }
 
 remove(ms30, ms30_df, ms30_summer)
 
 #comparing ms7 with ms30
 
-plot(ms30_min[,11] ~ ms7_min[,11])
+#plot(ms30_min[,11] ~ ms7_min[,11])
 
 #high flow ####
 #since the data shows that the discharge in march tend to increase do the also tend to be earlier and/or more severe 
@@ -284,7 +286,6 @@ yearly_mn_t = mt_mn_temp %>%
   as.data.frame()
 
 gauges$mean_t = colMeans(yearly_mn_t)
-save(gauges , file="./output/gauges.Rdata")
 
 d30_mn_t = rollapply(data = da_temp_wide,FUN= mean, width=30, by.column=TRUE, fill=NA, align="center") 
 d30_mn_t %<>% as.data.frame()
@@ -331,3 +332,4 @@ yearly_sm_p = mt_sm_p %>%
 
 
 #precipitation monthly ####
+
