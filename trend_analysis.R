@@ -151,9 +151,11 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 # "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"
 #"p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"
 #"march_dy_drought_q", "march_dy_drought_p","march_sm_def_p","march_sm_def_q","june_dy_drought_q", "june_dy_drought_p","june_sm_def_p","june_sm_def_q"
+mmky_mar_mn_q$sen_slope[gauges$sr_new==2 & mmky_mar_mn_q$new_p<0.05]  %>% range()
 
-p=sig_plot(x_data = "mmky_wi_q10", y_data = "mmky_su_q10", output = "sr_new", p_value = 1) 
-p + geom_abline(slope=1, intercept=0)
+p=sig_plot(x_data = "mmky_dec_mn_q", y_data = "mmky_mar_mn_q", output = "sr_new", p_value = .05) 
+p 
+ geom_abline(slope=1, intercept=0)
 ggsave(plot = p, "./plots/5_choice/mmky_speichertransfer.png")
 
 plot(su_sm_p$`100`)
@@ -161,14 +163,19 @@ abline(a= median(su_sm_p$`100`), b = mmky_su_sm_p$sen_slope[100])
 which.min(mmky_su_sm_p$sen_slope)
 40*mmky_su_sm_p$sen_slope[100]
 
-gauges$cor_spi_n
+which(mmky_mar_mn_q$sen_slope > 0 & mmky_mar_mn_q$new_p < 0.05 & gauges$sr_new == 0) %>%  length() /length(which(gauges$sr_new == 0))
 
 yearly_sm_p$`21` %>% plot(type="l")
+gauges$hydrogeo_simple
 
-p = catch_plot(p_value=.05, color="sr_new", x_data="saar", y_data= "mmky_yearly_sm_p" , factor =T)
+p = catch_plot(p_value=.05, color="sr_new", x_data="hydrogeo_simple", y_data= "mmky_su_q10" , factor =T)
+p
+p= p + xlab("SAAR [mm]")+
+  ylab("Jan. mean q trend (slope) [m³/s/a]")+
+  scale_color_discrete("Seasonality",labels = c("Summer", "Winter"))
 p
 
-ggsave(plot = p, "./plots/5_choice/mmky_wi_p_pet.png")
+ggsave(plot = p, "./plots/5_choice/jan_trend.png")
 
 
 p_value=.05; color="saar"; x_data="cor_spi_n"; y_data= "mmky_q10" 
@@ -191,6 +198,21 @@ ggplot()+
   xlab(paste(x_data, "sen's slope"))+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_continuous("Hydro Geo.")
+
+
+p_value=.05; color="sr_new";x_data="hydrogeo_simple"; y_data= "mmky_ms30_min" ;gauges_df = gauges %>% as.data.frame();z_value = as.factor(dplyr::select(gauges_df, color)[,1])
+
+
+ggplot()+
+  geom_boxplot( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value)], x=dplyr::select(gauges_df, x_data)[which(get(y_data)$new_p<p_value),], col=z_value[which(get(y_data)$new_p<p_value)]), position = "dodge")+
+    annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value ))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab("Hydrogeology")+
+  ylab("ms30 trend (slope) [m³/s/a]")+
+  scale_color_discrete("Seasonality",labels = c("Summer", "Winter"))
+
+ggsave("./plots/5_choice/hydrogeology.pdf")
+
 
 
 #trend linear regression ####
@@ -250,5 +272,17 @@ ggplot()+
 ggsave("./30_year_moving_window2.png")
 
 
-
-
+ms7_min_med = apply(ms7_min, 1, median)
+yearly_max_t_mean = apply(yearly_max_t, 1, mean)
+rects <- data.frame(xstart = seq(1969.5,2008.5,1), 
+                    xend = seq(1970.5,2009.5,1), 
+                col = yearly_max_t_mean)
+ggplot() + geom_point(aes(x=1970:2009, y=ms7_min_med)) +
+           geom_rect(data=rects, aes(ymin=0, ymax=.5, 
+                                     xmin=xstart,
+                      xmax=xend, fill=col), alpha =0.5)+
+ scale_fill_continuous("mean yearly max T [°C]", low="blue", high = "red")+
+  xlab("")+
+  ylab("median ms7 [m³/s]")
+  
+ggsave("./plots/5_choice/max_temp_med_ms7.png")
