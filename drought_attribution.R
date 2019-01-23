@@ -37,7 +37,7 @@ remove(clust_ana)
 cor_mat = round(cor(data_clus, use="na.or.complete", method="p"),2)
 xtable::xtable(cor_mat)
 #rule of thumb .7 (dorman)
-glm
+
 
 #variance inflation factor ####
 fm = glm(mmkh_ms7_min$sen_slope ~ ., data=cbind(clust_ana2, clust_ana3))
