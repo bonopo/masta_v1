@@ -7,23 +7,6 @@ setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 #source("./R/masta_v1/clustering.R")
 
 
-#month with max drought overall####
-
-
-
-mnq30_month <- c()
-for ( i in 1:catch_n){
-data <- mt_mn_q %>% 
-  filter(gauge == i)
-data_by <- data %>% group_by(year(yr_mt)) %>% 
-  summarise(mon_min = month(yr_mt[which.min(q_mean)]))  
-  mnq30_month[i] <- names(which.max(table(data_by$mon_min))) %>% as.integer()
-}
-
-
-gauges$mnq30_month = mnq30_month
-
-remove(data, data_by, mnq30_month)
 #number of months in a year affected by drought ####
 
 
@@ -279,7 +262,7 @@ p_sum_def_yr = apply(p_sum_def_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:
 q_sum_def_yr = apply(q_sum_def_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 
 
-#decadal analysis
+#decadal analysis####
 #in the 70s there was a major drought dominating the trends (leading to mainly neg. trends since all droughts after the 70s were less severe).
 p_days_of_drought_list <- lapply(p_seas, function(x) x[[1]]) 
 q_days_of_drought_list <- lapply(q_seas, function(x) x[[1]]) 
@@ -516,7 +499,7 @@ drought_p_80 = drought_p %>%
  dsi_spi_6 =  dr_severity(datax = spi_06_long, severity = -1)
  dsi_ssi   =  dr_severity(datax = ssi_1_long, severity = -1)
  
- #calculating mit date to plot in the next step
+ #calculating mid date to plot in the next step
  
  drought_p_spi_6= list() 
  for( i in 1:catch_n) {
