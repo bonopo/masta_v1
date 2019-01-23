@@ -153,10 +153,10 @@ aov(sen_slope ~ month, data=aov_data)%>% summary()
 #"march_dy_drought_q", "march_dy_drought_p","march_sm_def_p","march_sm_def_q","june_dy_drought_q", "june_dy_drought_p","june_sm_def_p","june_sm_def_q"
 mmky_mar_mn_q$sen_slope[gauges$sr_new==2 & mmky_mar_mn_q$new_p<0.05]  %>% range()
 
-p=sig_plot(x_data = "mmky_dec_mn_q", y_data = "mmky_mar_mn_q", output = "sr_new", p_value = .05) 
-p 
- geom_abline(slope=1, intercept=0)
-ggsave(plot = p, "./plots/5_choice/mmky_speichertransfer.png")
+p=sig_plot(x_data = "mmky_ms7_min", y_data = "mmky_yearly_7_min", output = "sr_new", p_value =.05) 
+p+
+geom_abline(slope=1, intercept=0)
+  ggsave(plot = p, "./plots/trend_analysis/ms7_sig_7min.png")
 
 plot(su_sm_p$`100`)
 abline(a= median(su_sm_p$`100`), b = mmky_su_sm_p$sen_slope[100])
@@ -166,16 +166,15 @@ which.min(mmky_su_sm_p$sen_slope)
 which(mmky_mar_mn_q$sen_slope > 0 & mmky_mar_mn_q$new_p < 0.05 & gauges$sr_new == 0) %>%  length() /length(which(gauges$sr_new == 0))
 
 yearly_sm_p$`21` %>% plot(type="l")
-gauges$hydrogeo_simple
-
-p = catch_plot(p_value=.05, color="sr_new", x_data="hydrogeo_simple", y_data= "mmky_su_q10" , factor =T)
+gauges$lt_memoryeffect
+p = catch_plot(p_value=.05, color="mn_deficit", x_data="lt_memoryeffect", y_data= "mmky_ms30_min" , factor =F)
 p
 p= p + xlab("SAAR [mm]")+
-  ylab("Jan. mean q trend (slope) [m³/s/a]")+
-  scale_color_discrete("Seasonality",labels = c("Summer", "Winter"))
+  ylab("ms30 trend (slope) [m³/s/a]")+
+  scale_color_discrete("ln mean deficit [m³]",labels = c("9-11", "11-13","13-15"))
 p
 
-ggsave(plot = p, "./plots/5_choice/jan_trend.png")
+ggsave(plot = p, "./plots/trend_analysis/ms30_mean_def.png")
 
 
 p_value=.05; color="saar"; x_data="cor_spi_n"; y_data= "mmky_q10" 
@@ -214,7 +213,10 @@ ggplot()+
 ggsave("./plots/5_choice/hydrogeology.pdf")
 
 
-
+which(mmky_yearly_7_min$sen_slope[mmky_yearly_7_min$new_p<.05] >0 & gauges$sr_new[mmky_yearly_7_min$new_p<.05] == 2) %>% length()
+#10 winter lf catchments have a neg trend for the whole year and 6 a positive
+#if only looking at summer (ms7) 10 have a negative and 7 a positve
+#both at significance level 0.05
 #trend linear regression ####
 #----> see script drought_attribution
 
