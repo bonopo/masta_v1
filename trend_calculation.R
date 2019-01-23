@@ -36,7 +36,9 @@ dev.off()
 # mk_tests_par(raw_data = "jun_mean_df")
 # mk_tests_par(raw_data = c("mar_mean_df","jul_mean_df"))
 
-mmky_par("su_p_pet")
+
+mmky_par("mw7_min")
+mmky_par(c("su_p_pet", "yearly_30_min", "yearly_7_min", "yearly_7_date"))
 
 mmky_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p", "sp_sm_p", "year_p_pet", "su_p_pet", "wi_p_pet"))
 
@@ -66,7 +68,7 @@ for ( i in 1:12) monthly_t[i] =paste0(str_to_lower(month.abb[i]),"_mn_t")
 
 mmky_par(raw_data = monthly_t)
 remove(monthly_q, monthly_t)
-remove(res,  int, df )
+
 
 #why NAs? ####
 #problem of sqrt(VS) = na produced 
