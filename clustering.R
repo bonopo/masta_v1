@@ -6,6 +6,18 @@
 # source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missing!
 #source("./R/masta_v1/climate_characteristics.R") # has to run before if not objects will be missing!
 
+#SAAR ####
+#standart climate period 1971 bis 2000 (see DWD)
+# standart period averae annual rainfall
+saar <- precip_long %>% 
+  filter(year(date) >1970 & year(date) < 2001) %>% 
+  group_by(gauge) %>% 
+  summarise(sum_mm_yr = sum(sum_mm)/30)
+
+gauges$saar <- saar$sum_mm_yr
+remove(saar)
+
+
 #seasonality ratio (SR)####
 
 # creating two time series one winter one summer
@@ -68,43 +80,27 @@ gauges$bfi_class = cut(gauges$bfi, breaks=c(0,.4,.6,.8,1), labels=c("<.4", ".4-.
 which(gauges$bfi_class == ".8-1") %>% length()
 
 
+#month with max drought overall####
+
+
+
+mnq30_month <- c()
+for ( i in 1:catch_n){
+data <- mt_mn_q %>% 
+  filter(gauge == i)
+data_by <- data %>% group_by(year(yr_mt)) %>% 
+  summarise(mon_min = month(yr_mt[which.min(q_mean)]))  
+  mnq30_month[i] <- names(which.max(table(data_by$mon_min))) %>% as.integer()
+}
+
+
+gauges$mnq30_month = mnq30_month
+
+gauges$mnq30_month[gauges$sr_new == 2]
+remove(data, data_by, mnq30_month)
 #mean q####
 mean_q = apply(q_wide, 2, mean)
 gauges$mn_q = mean_q
-#maximum duration ####
-max_drought_duration = c()
-  for (g in 1:catch_n){
-    max_drought_duration[g] = dsi_1[[g]]$dr_length %>% max()
-  }
-
-gauges$max_dr_dur = max_drought_duration
-remove(max_drought_duration)
-#median severity####
-median_drought_severity = c()
-  for (g in 1:catch_n){
-    median_drought_severity[g] = dsi_1[[g]]$dsi %>% median()
-  }
-
-gauges$med_dr_sev = median_drought_severity
-remove(median_drought_severity)
-#median intensity ####
-
-median_drought_inten = c()
-  for (g in 1:catch_n){
-    median_drought_inten[g] = dsi_1[[g]]$dr_intens %>% median()
-  }
-
-gauges$med_dr_int  =median_drought_inten
-remove(median_drought_inten)
-#maximum severity####
-max_drought_sev = c()
-  for (g in 1:catch_n){
-    max_drought_sev[g] = dsi_1[[g]]$dsi%>% min() #min!!!!!!!!!!!
-  }
-
-gauges$max_dr_sev  =max_drought_sev
-remove(max_drought_sev)
-
 #total number of events####
 
 n_events = c()
@@ -114,6 +110,135 @@ n_events = c()
 
 gauges$n_events = n_events
 remove(n_events)
+#alpine rivers####
+#one can see big gap between all winter catchments: further definition with catchments with higher precipitation than 1200mm (alpine vs Harz/Blackforest)
+
+gauges$alpine = 0
+gauges$alpine[which(gauges$sr_new==2)] = 1
+#after visual check removing following catchments: 221 238 42 305
+gauges$alpine[c(42,221,238,305)] = 0
+#spplot(gauges, "alpine", identify=T)
+
+#longterm (lt) memory effect of catchments####
+#defining long term memory as the spearman correlation between ssi and spi_12
+lt_cor_spi = cor_sci_ssi(sci_n = c(12), sci="spi_v2_", cor_met = "s", ssi="ssi_1")
+
+
+gauges$lt_memoryeffect = lt_cor_spi[,1]
+
+
+
+#corellation SSI (during drought) with SPI/SPEI-n ####
+ #-----> see drought attribution script
+
+#which best spi-n aggregation month and correlation value ####
+  #this calculates the best spi-n aggregation month for every catchment individually and the cor value itself too. The correlation is calculated between all ssi values (not only drought) and the spi-n value. In the next step the best one is selected and stored in the gauges attribution as a characteristic describing the catchment. All ssi (and not only the ssi values that are negative; indicating drought) are considered in this step because it is an attribute describing the catchment. Spearman correlation is used (because I am interested in the rank based corelation and the actual values)
+cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="s", sci="spi_v2_", ssi="ssi_1")#correlation:  spi~ ssi
+cor_spei_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="s", sci="spei_v2_", ssi="ssi_1") # correlation: spei~ssi
+
+
+best_spi = c()
+  value_spi = c()
+best_spei = c()
+  value_spei = c()
+
+for(r in 1:catch_n){
+ best_spi[r] = cor_spi_ssi_v2[r,] %>% which.max() #%>% agg_month[.]
+ value_spi[r] = cor_spi_ssi_v2[r,] %>% max()}
+
+for(r in 1:catch_n){
+ best_spei[r] = cor_spei_ssi_v2[r,] %>% which.max()#%>% agg_month[.]
+ value_spei[r] = cor_spei_ssi_v2[r,] %>% max()}
+
+gauges$cor_spei_n = best_spei
+gauges$cor_spi_n = best_spi
+gauges$cor_spi = value_spi
+gauges$cor_spei = value_spei
+
+remove(value_spei, value_spi, best_spei, best_spi, cor_spei_ssi_v2,cor_spi_ssi_v2)
+
+#mean deficit per drought event as clusterin method of the catchments ####
+load("./output/drought_q.Rdata", verbose = TRUE)
+drought_q= output
+mean_intensity =c()
+mean_deficit =c()
+mean_length = c()
+n_events=c()
+for (i in 1:catch_n){
+  temp1 =  drought_q %>% 
+    filter(catchment== i)
+  mean_intensity[i] = mean(temp1$threshhold - temp1$mn_q) #deviation of the mean discharge during the drought event and the varying threshhold that defines the drought (80th percentile method van Loon 2015)
+  mean_length[i] = mean(as.numeric(ymd(temp1$dr_end) - ymd(temp1$dr_start))) %>% round(.,0) #mean drought length similar to van Loon 2015
+  mean_deficit[i] = mean(as.numeric(ymd(temp1$dr_end) - ymd(temp1$dr_start))*temp1$def_vol) #same calculation method as van Loon 2015 # mean(number of days * deficit)
+  n_events[i]= nrow(temp1)
+  
+}
+
+hist(log(mean_deficit))
+
+
+#gauges$mean_deficit_overall = log(mean_deficit_per_gauge)
+gauges$mn_deficit = log(mean_deficit)
+gauges$mn_length = mean_length
+gauges$mn_intensity = mean_intensity
+gauges$n_events80 = n_events
+#gauges$mean_deficit_class = base::cut(log(mean_deficit), breaks=c(11,14,17,20) )
+#gauges$mean_deficit_overall_class = base::cut(gauges$mean_deficit_overall, breaks=c(7,9,11,13,15) )
+remove(mean_deficit,mean_length, mean_intensity,temp1, drought_q, output, n_events)
+
+
+save(gauges, file="./output/gauges.Rdata")
+# End of clustering -------------------------------------------------------
+
+
+
+
+#do the catchments with high bfi have longer droughts? and higher deficits? definig bfi > 0.75  (see: hist(gauges$bfi))####
+# length of droughts is the same for every catchment per definition since, per definition everything below the 20th quantile counts as drought
+
+high_bfi = which(gauges$bfi > .75)
+tot_deficit = q_sum_def_yr %>% apply(., 2, sum) 
+mean_deficit = q_sum_def_yr %>% apply(., 2, mean) 
+
+boxplot( tot_deficit ~gauges$hydrogeo_simple)
+
+ggplot()+
+  geom_boxplot( aes(y=tot_deficit, x=gauges$hydrogeo_simple, col=gauges$bfi_class), position = "dodge")+
+  xlab("Hydrogeology")+
+  ylab("cumulative discharge deficit during drought [m³]")+
+  scale_color_discrete("BFI",labels = c("<0.4", "0.4-0.6", "0.6-0.8", ">0.8"))
+
+ggsave("./plots/clustering/hydrogeo_deficit.pdf")
+
+
+ggplot()+
+  geom_boxplot( aes(y=mmky_ms7_min$sen_slope[mmky_ms7_min$new_p < 0.05], x=gauges$hydrogeo_simple[mmky_ms7_min$new_p < 0.05], col=gauges$bfi_class[mmky_ms7_min$new_p < 0.05]), position = "dodge")+
+  xlab("Hydrogeology")+
+  ylab("ms7 trend (slope) [m³/s/a]")+
+  # annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms7_min$new_p < 0.05))))+
+  # annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.05")+
+  scale_color_discrete("BFI",labels = c("<0.4", "0.4-0.6", "0.6-0.8", ">0.8"))
+
+temp_df = cbind.data.frame(as.numeric(mmky_ms7_min$sen_slope[mmky_ms7_min$new_p < 0.05]), gauges$hydrogeo_simple[mmky_ms7_min$new_p < 0.05],gauges$bfi_class[mmky_ms7_min$new_p < 0.05])
+ggplot()+
+  geom_boxplot()+
+  stat_summary(
+    fun.data = stat_box_data, 
+    geom = "text", 
+    hjust = 0.5,
+    vjust = 0.9
+  )
+  
+ggsave("./plots/clustering/hydrogeo_ms7_min.pdf")
+
+
+#comparison between ssi drought definition and 80th method drought definition####
+#ssi method: discharge below ssi > -1 is equal to drought. intensity, severity and drought length rely on deviation of the SSI value of that month. Leading to droughts that always last at least one month
+#80th method: 30 day moving average deviation of the 20th quantile = drought
+
+plot(gauges$n_events ~ n_events)
+
+
 #clustered plots #### 
 #see barker et al
 
@@ -182,66 +307,3 @@ dev.off()
 
 
 
-
-#alpine rivers####
-#one can see big gap between all winter catchments: further definition with catchments with higher precipitation than 1200mm (alpine vs Harz/Blackforest)
-
-gauges$alpine = 0
-gauges$alpine[which(gauges$sr_new==2)] = 1
-#after visual check removing following catchments: 221 238 42 305
-gauges$alpine[c(42,221,238,305)] = 0
-#spplot(gauges, "alpine", identify=T)
-
-#longterm (lt) memory effect of catchments####
-lt_cor_spi = cor_sci_ssi(sci_n = c(12,24), sci="spi_v2_")
-
-
-gauges$lt_memoryeffect = 0
-gauges$lt_memoryeffect[which(lt_cor_spi$`24`>=.5)] =1 #defining all catchments with a correlation 0.5 or higher with the spi_24 as a longterm memory catchment (very crude definition but sufficient since it will not be used in the final analysis)
-
-#corellation SSI (during drought) with SPI/SPEI-n ####
- #-----> see drought attribution script
-
-#which best spi-n aggregation month and correlation value ####
-  #this calculates the best spi-n aggregation month for every catchment individually and the cor value itself too. The correlation is calculated between all ssi values (not only drought) and the spi-n value. In the next step the best one is selected and stored in the gauges attribution as a characteristic describing the catchment. All ssi (and not only the ssi values that are negative; indicating drought) are considered in this step because it is an attribute describing the catchment. 
-cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spi_v2_", ssi="ssi_1")
-cor_spei_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="p", sci="spei_v2_", ssi="ssi_1")
-
-
-best_spi = c()
-  value_spi = c()
-best_spei = c()
-  value_spei = c()
-
-for(r in 1:catch_n){
- best_spi[r] = cor_spi_ssi_v2[r,] %>% which.max() #%>% agg_month[.]
- value_spi[r] = cor_spi_ssi_v2[r,] %>% max()}
-
-for(r in 1:catch_n){
- best_spei[r] = cor_spei_ssi_v2[r,] %>% which.max()#%>% agg_month[.]
- value_spei[r] = cor_spei_ssi_v2[r,] %>% max()}
-
-gauges$cor_spei_n = best_spei
-gauges$cor_spi_n = best_spi
-gauges$cor_spi = value_spi
-gauges$cor_spei = value_spei
-
-remove(value_spei, value_spi, best_spei, best_spi, cor_spei_ssi_v2,cor_spi_ssi_v2)
-
-#do the catchments with high bfi have longer droughts? and higher deficits? definig bfi > 0.75  (see: hist(gauges$bfi))####
-# length of droughts is the same for every catchment per definition since, per definition everything below the 20th quantile counts as drought
-
-high_bfi = which(gauges$bfi > .75)
-tot_deficit = q_sum_def_yr %>% apply(., 2, sum) 
-mean_deficit = q_sum_def_yr %>% apply(., 2, mean) 
-
-boxplot( tot_deficit ~gauges$hydrogeo_simple)
-
-ggplot()+
-  geom_boxplot( aes(y=tot_deficit, x=gauges$hydrogeo_simple, col=gauges$bfi_class), position = "dodge")+
-  xlab("Hydrogeology")+
-  ylab("cumulative discharge deficit during drought [m³]")+
-  scale_color_discrete("BFI",labels = c("<0.4", "0.4-0.6", "0.6-0.8", ">0.8"))
-
-ggsave("./plots/clustering/hydrogeo_deficit.pdf")
-#similar hypothesis for chasm aquifer (hydrogeo_simple == K)
