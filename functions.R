@@ -451,6 +451,22 @@ geo =  ggplot()+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_discrete("Hydro Geo.")
 
+mn_def =  ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$mean_deficit_overall[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("Mean deficit [m³]")
+
+mn_def_ev = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$mean_deficit_per_event[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("Mean deficit events [m³]")
+
 return(get(output))
 }
 
@@ -480,6 +496,16 @@ if(factor== TRUE){
 }
 
 return(output)
+}
+
+#from https://medium.com/@gscheithauer/how-to-add-number-of-observations-to-a-ggplot2-boxplot-b22710f7ef80
+stat_box_data <- function(y, upper_limit = max(mmky_ms7_min$sen_slope) * 1.15) {
+  return( 
+    data.frame(
+      y = 0.95 * upper_limit,
+      label = paste('count =', length(y))
+    )
+  )
 }
 
 monthly_cor_sci_yr = function(sr_x=0, sci_typex="spi"){ #calculates it for spring+summer month
