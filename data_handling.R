@@ -3,7 +3,7 @@
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 # save.image(file="./data/r_temp_image/basic.Rdata")
 load(file="./data/r_temp_image/basic.Rdata")
-
+load(file="./output/gauges.Rdata")
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest", "gridExtra", "foreach",  "doSNOW", "snow", "itertools"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 #install.packages("itertools")
@@ -17,7 +17,6 @@ source("./R/masta_v1/functions.R")
 load("./data/catchments/eobs_pr_part.Rdata", verbose = T) #precipiatation
 load("./data/catchments/eobs_temp_part.Rdata", verbose = T) # temperature
 load("./data/catchments/streamflow.Rdata", verbose = T)# streamflow
-#gauges  <- readOGR(dsn="./data/raster/gauges", layer= "gauges")
 gauges  <- shapefile("./data/raster/gauges")
 legende <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(1,5)]
 legende2 <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(1,3:5)]
@@ -45,7 +44,7 @@ mt_sm_p <- precip_long %>%
   summarise(month_sum = sum(sum_mm)) %>%
   ungroup()
 
-
+remove(precip)
 mt_sm_p_wide <- spread(mt_sm_p, key=gauge, value=month_sum, drop=F) %>% dplyr::select(-yr_mt) %>% as.data.frame()
 
 
@@ -122,8 +121,9 @@ which(gauges$hydrogeo_simple == "other") %>% length()
 #shapefile adjustment####
 # removing catchment 338
 gauges= gauges[c(1:catch_n),]
+remove(hydrogeo)
 
-#extending of time series ####
+#possibly extending of time series? ####
 sum(ymd(hydrogeo$Ztrhnbg.C.80)<ymd("1960-1-2")) #if time series would be extended to 1.1.1960 there would be 201 catchments
 
 
