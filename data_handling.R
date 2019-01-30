@@ -107,9 +107,6 @@ verallge <- function(x,ind){
 }
 ebene3 <- apply(ebenen[,-(1:4)],MARGIN = 2,verallge, ind=3)
 landuse <- cbind(colnames(ebene3),apply(ebene3,MARGIN = 2,function(x) rownames(ebene3)[which.max(x)])) #selecting the dominating land use form
-head(ebene3)
-ebene3[,2]
-landuse %>% head()
 int= pmatch(my_catch,landuse[,1])
 gauges$landuse = landuse[int,2]
 
