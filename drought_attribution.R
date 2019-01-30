@@ -4,25 +4,25 @@
 #cluster analysis & PCA ####
 #problem: too many response variables that are highly corrlinated since they are calculated from the same data set. picking only the ones that are not correlated.
 
-clust_ana = cbind(mmkh_ms7_min$sen_slope, mmkh_ms7_date$sen_slope, mmkh_ms30_min$sen_slope, mmkh_su_q10$sen_slope, mmkh_wi_q10$sen_slope, mmkh_yearly_mn_q$sen_slope, mmkh_yearly_q10$sen_slope, mmkh_mar_mn_q$sen_slope, mmkh_jun_mn_q$sen_slope) %>% as.data.frame()
+clust_ana = cbind(mmky_ms7_min$sen_slope, mmky_ms7_date$sen_slope, mmky_ms30_min$sen_slope, mmky_su_q10$sen_slope, mmky_wi_q10$sen_slope, mmky_yearly_mn_q$sen_slope, mmky_yearly_q10$sen_slope, mmky_mar_mn_q$sen_slope, mmky_jun_mn_q$sen_slope) %>% as.data.frame()
 colnames(clust_ana)= c( "ms7_date", "ms7_min", "ms30_min", "su_q10", "wi_q10","yearly_mn_q","yearly_q10","mar_mn_q","jun_mn_q")
 
-clust_ana2 = cbind(mmkh_su_mn_t$sen_slope, mmkh_wi_mn_t$sen_slope,mmkh_yearly_mn_t$sen_slope, mmkh_yearly_max_t$sen_slope, mmkh_yearly_sm_p$sen_slope, mmkh_su_sm_p$sen_slope, mmkh_wi_sm_p$sen_slope, mmkh_mar_mn_t$sen_slope, mmkh_jun_mn_t$sen_slope)%>% as.data.frame()
+clust_ana2 = cbind(mmky_su_mn_t$sen_slope, mmky_wi_mn_t$sen_slope,mmky_yearly_mn_t$sen_slope, mmky_yearly_max_t$sen_slope, mmky_yearly_sm_p$sen_slope, mmky_su_sm_p$sen_slope, mmky_wi_sm_p$sen_slope, mmky_mar_mn_t$sen_slope, mmky_jun_mn_t$sen_slope)%>% as.data.frame()
 
 colnames(clust_ana2)= c( "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p","mar_mn_t","jun_mn_t")
 
-clust_ana3 = cbind( gauges$alpine, gauges$sr_new, as.factor(gauges$hydrogeo_simple), as.factor(gauges$landuse), gauges$q_mean, gauges$saar, gauges$bfi, gauges$Enzgsg_) %>% as.data.frame()
+clust_ana3 = cbind( gauges$alpine, gauges$sr_new, as.factor(gauges$hydrogeo_simple), as.factor(gauges$landuse), gauges$mn_q, gauges$saar, gauges$bfi, gauges$Enzgsg_, gauges$mn_t, gauges$lt_memoryeffect,gauges$mn_deficit, gauges$mn_intensity, gauges$mn_length, gauges$cor_spei, gauges$cor_spi, gauges$cor_spei_n, gauges$cor_spi_n, gauges$Hochwrt ) %>% as.data.frame()
 
-colnames(clust_ana3) =c("alpine",  "seasonality","hydro_geo","landuse","q_mean","saar","BFI","catchment_km")
+colnames(clust_ana3) =c("alpine",  "seasonality","hydro_geo","landuse","q_mean","saar","BFI","catchment_km", "mn_t", "memory_effect", "mn_deficit","mn_intensity","mn_length","cor_spei","cor_spi","cor_spei_n","cor_spi_n", "hochwert")
 library(scales)
 data_clus = cbind(clust_ana2, clust_ana3)#[,-c(3,4)]
 
 pdf("./plots/3_choice/cluster_response.pdf" )
-plot(Hmisc::varclus(~., data=data_clus), las=1, cex.lab=1.5)
+plot(Hmisc::varclus(~., data=clust_ana3), las=1, cex.lab=1.5)
 abline(h=.5, lty=2)
 dev.off()
 options(na.action)
-pca <- prcomp(cbind(clust_ana2, clust_ana3), scale=T, na.action= na.omit)
+pca <- prcomp(cbind(clust_ana2, clust_ana3), scale=T, na.action= na.delete)
 summary(pca)
 screeplot(pca)
 biplot(pca)
@@ -40,10 +40,10 @@ xtable::xtable(cor_mat)
 
 
 #variance inflation factor ####
-fm = glm(mmkh_ms7_min$sen_slope ~ ., data=cbind(clust_ana2, clust_ana3))
+fm = glm(mmky_ms7_min$sen_slope ~ ., data=cbind(clust_ana2, clust_ana3))
 summary(fm)
 car::vif(fm)
-#schwellenwert von 10 (dorman)
+#schwellenwert von 10 (dorman) or 5 bachmair et al 2018
 #problem with yearly_mn_t, yearly_sm_p and su_mn_t, wi_mn_t
 #yearly_mn_t with su_mn_t and wi_mn_t
 #yearly_sm_p with su_sm_p and wi_sm_p
