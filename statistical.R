@@ -46,13 +46,13 @@ which.min(mmky_su_sm_p$sen_slope)
 40*mmky_su_sm_p$sen_slope[100]
 
 #field significance ####
-
-s= mmky_su_p_pet$S
-s_r = mean(s)
-var(s_r)
-#see barker ( i think)
+#see renard 2008 and Burn et al 2002
 
 
+res= field.significance(loc_sig = 0.1, data_x= ms30_min, global_sig=0.1, nsim=600)
+
+hist(res)
+quantile(res,.05)
 # linear regression -------------------------------------------------------
 
 #ms30 ~ long term memory effect
@@ -78,3 +78,93 @@ ggplot(data= data_plot, aes(y=y, x=x1, col=x2))+
   scale_color_continuous("mean drought \n deficit ln [m³]")
 
 ggsave("./plots/statistical/ms30_ltmemory.png")
+
+#climatic trends####
+#anova if alpine catchments have a significant lower yearly temperature increase than non-alpine catchments#
+t.test(mmky_wi_mn_t$sen_slope, mmky_wi_mn_t$sen_slope, var.equal = F)
+
+lm(mmky_su_mn_t$sen_slope ~ gauges$sr_new) %>% summary()
+anova(lm(mmky_su_mn_t$sen_slope ~ gauges$sr_new)) %>% summary()
+
+hist(mmky_su_mn_t$sen_slope[gauges$sr_new ==2] %>% sqrt()) #not normal so wilcoxen-mann-whitney test
+
+wilcox.test(x= mmky_su_mn_t$sen_slope[gauges$sr_new ==2], mmky_su_mn_t$sen_slope[gauges$sr_new ==0], paired = F)
+# significant? looking at graph: NO!!!!
+
+fm = lm(mmky_wi_mn_t$sen_slope ~ gauges$mn_t) %>% summary() #significant
+fm2 = lm(mmky_wi_mn_t$sen_slope[gauges$sr_new ==0] ~ gauges$Hochwrt[gauges$sr_new ==0]) %>% summary()
+#significant
+hist(residuals(fm))
+hist(mmky_wi_mn_t$sen_slope)
+gauges$mn_t %>% hist()
+
+data_plot = cbind.data.frame(y= mmky_wi_mn_t$sen_slope, x1=gauges$mn_t, x2= gauges$Hochwrt)
+
+ggplot(data= data_plot, aes(y=y, x=x1, col=x2))+
+  geom_point()+
+  geom_smooth(method="lm", se = TRUE, show.legend = F)+
+  annotate( geom="text", -Inf, Inf,  hjust = -0.2, vjust = 2.5, label=paste("n = ", length(data_plot$y)))+
+  annotate(geom="text", -Inf, Inf,  hjust = -0.2, vjust = 1, label=paste("p = 0.05"))+
+  annotate(geom="text", -Inf, Inf,  hjust =-0.2, vjust = 4, label=paste("r²=",round(fm$adj.r.squared,2)))+
+  xlab("mean t [°C]")+
+  ylab("winter mean t trend (slope) [°C/a]")+
+  scale_color_continuous("Hochwert")
+
+ggsave("./plots/statistical/winter_mn_t.pdf")
+
+## decompose time series into trend and seasonal part ---------------------
+
+install.packages("fpp")
+require(fpp)
+ts = ts(mt_mn_q_wide, start=c(1970,1), end=c(2009,12), deltat=1/12)
+ssi_dec <- decompose(ts[,1])
+plot(ssi_dec)
+res=decompose(ts)
+plot(res)
+res$trend[,1] %>% plot()
+stl_res = stl(ts[,2], "periodic")
+str(stl_res)
+plot(stl_res)
+trend = stl_res$time.series[,2]
+seas = stl_res$time.series[,1]
+dum_var = cbind(trend, seas)
+y= ts[,2]
+fit2 = tslm(y ~ trend + season)
+n <- length(y)
+plot(y)
+lines(ts(fit2$coef[1]+fit2$coef[2]*(1:n)+mean(fit2$coef[-(1:2)]),
+  start=start(y),f=12),col="red")
+
+trend = fit2$coef[2] ##this is the linear trend
+#compare to mmky sen's slope
+mmky(mt_mn_q_wide$`1`)
+res = arima(y, xreg =dum_var) %>% summary()
+
+str(res)
+
+#sen's slope conf intervals####
+
+install.packages("zyp")
+library(zyp)
+mmky_mar_mn_q %>% head()
+zyp::zyp.trend.vector(mt_mn_q_wide$`1`, method="yuepilon")
+
+install.packages("EnvStats")
+library(EnvStats)
+
+kendallTrendTest(y= mar_mn_q$`1` )
+mmky_mar_mn_q[1,]
+(1.96 * sd(mmky_mar_mn_q$S))/2 +
+  
+qt(1-(.95/2), 38) * sqrt(7366)
+relaimpo::calc.relimp()
+
+
+#t.test####
+t.test(x = mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05 & gauges$sr_new == 2], y= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05 & gauges$sr_new == 0])
+
+hist(mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05 & gauges$sr_new == 2] %>% exp())
+
+wilcox.test(x = mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05 & gauges$sr_new == 2], y= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05 & gauges$sr_new == 0])
+
+wilcox.test(x = mmky_ms7_date$sen_slope[mmky_ms7_date$new_p < 0.05 & gauges$sr_new == 2], y= mmky_ms7_date$sen_slope[mmky_ms7_date$new_p < 0.05 & gauges$sr_new == 0])
