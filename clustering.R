@@ -18,6 +18,14 @@ gauges$saar <- saar$sum_mm_yr
 remove(saar)
 
 
+#mean t####
+mean_t = mt_mn_temp %>% 
+  filter(year(yr_mt) >1970 & year(yr_mt) < 2001) %>% 
+  group_by(gauge) %>% 
+  summarise(mn_t = mean(temp_m))
+
+gauges$mn_t = mean_t$mn_t
+remove(mean_t)
 #seasonality ratio (SR)####
 
 # creating two time series one winter one summer
@@ -185,11 +193,93 @@ gauges$n_events80 = n_events
 #gauges$mean_deficit_class = base::cut(log(mean_deficit), breaks=c(11,14,17,20) )
 #gauges$mean_deficit_overall_class = base::cut(gauges$mean_deficit_overall, breaks=c(7,9,11,13,15) )
 remove(mean_deficit,mean_length, mean_intensity,temp1, drought_q, output, n_events)
-
+plot(gauges$mn_deficit ~ gauges$mn_q)
 
 save(gauges, file="./output/gauges.Rdata")
 # End of clustering -------------------------------------------------------
 
+#clustering analysis####
+clust_ana3 = cbind( gauges$alpine, gauges$sr_new, as.factor(gauges$hydrogeo_simple), as.factor(gauges$landuse), gauges$mn_q, gauges$saar, gauges$bfi, gauges$Enzgsg_, gauges$mn_t, gauges$lt_memoryeffect,gauges$mn_deficit, gauges$mn_intensity, gauges$mn_length, gauges$cor_spei, gauges$cor_spi, gauges$cor_spei_n, gauges$cor_spi_n, gauges$Hochwrt ) %>% as.data.frame()
+
+colnames(clust_ana3) =c("alpine",  "seasonality","hydro_geo","landuse","q_mean","saar","BFI","catchment_km", "mn_t", "memory_effect", "mn_deficit","mn_intensity","mn_length","cor_spei","cor_spi","cor_spei_n","cor_spi_n", "hochwert")
+#library(scales)
+pdf("./plots/clustering/varclus.pdf")
+plot(Hmisc::varclus(~., data=clust_ana3), las=1, cex.lab=1.5)
+abline(h=.5, lty=2)
+dev.off()
+cor_mat = round(cor(clust_ana3, use="na.or.complete", method="p"),2)
+
+
+plot(gauges$mn_t ~ gauges$Hochwrt)
+plot(gauges$saar ~ gauges$Hochwrt)
+plot(gauges$bfi~ gauges$mn_length)
+plot(gauges$bfi~ gauges$mn_length)
+#latitude has high cor with saar and mn_t
+#alpine and sr_ew 
+#mn_intensity is highly cor. with mean discharge
+
+#throw out: Alpine, mn_intensity, latitude, mn_length, mn_deficit
+clust_ana4 = dplyr::select(clust_ana3,-hochwert,-alpine,-mn_intensity, -mn_length, -mn_deficit)#, -landuse)
+plot(Hmisc::varclus(~., data=clust_ana4), las=1, cex.lab=1.5)
+abline(h=.5, lty=2)
+#still some are too highly corrilineated
+plot(x=gauges$mn_q ,y=gauges$mn_deficit)
+
+fm = glm(mmky_ms7_min$sen_slope ~ ., data= clust_ana4)
+summary(fm)
+car::vif(fm)
+
+#choosing between spi or spei??
+plot(y=mmky_ms30_min$sen_slope , x = gauges$cor_spei_n)
+#are both very bad throw out
+
+install.packages("relaimpo")
+trend_chara = cbind.data.frame(mmky_ms30_min$sen_slope[mmky_ms30_min$new_p<0.05], clust_ana5[mmky_ms30_min$new_p<0.05,])
+rel_impo_gauges = relaimpo::calc.relimp(trend_chara, rela=F, type="lmg")
+plot(rel_impo_gauges)
+
+fm = glm(mmky_ms30_min$sen_slope ~ ., data= clust_ana4)
+summary(fm)
+rel_impo_gauges = relaimpo::calc.relimp(fm)
+
+plot(mmky_ms30_min$sen_slope[mmky_ms30_min$new_p<0.05] ~ gauges$mn_q[mmky_ms30_min$new_p < 0.05])
+#removing landuse because ther are NAs and landuse is not explainatory
+ggplot()+
+geom_point(aes(y= mmky_ms30_min$sen_slope, x= gauges$landuse))
+
+
+#pca
+pca <- prcomp(na.omit(clust_ana5), scale=T)
+names(pca$sdev) = abbreviate(colnames(clust_ana5))
+clust_ana5$catchment_km
+
+png("./plots/clustering/screeplot.png", width=1000, height=750)
+screeplot(pca)
+dev.off()
+
+
+
+#stepwise regression####
+clust_ana5 = dplyr::select(clust_ana4,-cor_spi, -cor_spi_n)
+#removing the NAs from landuse
+clust_ana5 = clust_ana5[-c(24,26,270),]
+ms30_trend =mmky_ms30_min$sen_slope[-c(24,26,270)]
+fm = step(lm(ms30_trend[mmky_ms30_min$new_p < 0.05] ~., data=clust_ana5[mmky_ms30_min$new_p < 0.05,]), direction = "both", k= log(catch_n)) #calculating bic as model comparison, 
+#stepwise regression with spei best model bic:-1911.75,. spei cor is in the best model +  q_mean , + catchment_km , +memoryeffect
+clust_ana5 = dplyr::select(clust_ana4, -cor_spei, -cor_spei_n)
+clust_ana5 = clust_ana5[-c(24,26,270),]
+fm2 = step(lm(ms30_trend[mmky_ms30_min$new_p < 0.05] ~., data=clust_ana5[mmky_ms30_min$new_p < 0.05,]), direction = "both", k= log(catch_n))
+#best model is seasonality , q mean, catchment size and memory effect but not cor spi. bic:-1907.77
+relaimpo::calc.relimp(fm) %>% plot()
+relaimpo::calc.relimp(fm2) %>% plot()
+#is spei really the better predictor ? my intuition would way I made a mistake. This can not be true. In any ways the models are very bad. 
+
+
+ 
+
+#the lower the bic the better the model, but all models are quite bad see relaimpo output
+
+#stepwise regression with interaction####
 
 
 
@@ -201,6 +291,17 @@ tot_deficit = q_sum_def_yr %>% apply(., 2, sum)
 mean_deficit = q_sum_def_yr %>% apply(., 2, mean) 
 
 boxplot( tot_deficit ~gauges$hydrogeo_simple)
+class(tot_deficit)
+y_val =mmky_ms30_min$sen_slope
+ggplot()+
+  geom_boxplot( aes(y=y_val, x=gauges_df$sr_new, colour=gauges_df$bfi_class), position = "dodge")+
+  xlab("Hydrogeology")+
+  ylab("cumulative discharge deficit during drought [m³]")+
+  scale_color_discrete("BFI",labels = c("<0.4", "0.4-0.6", "0.6-0.8", ">0.8"))
+
+plot(gauges$sr_new ~ gauges$bfi)
+
+
 
 ggplot()+
   geom_boxplot( aes(y=tot_deficit, x=gauges$hydrogeo_simple, col=gauges$bfi_class), position = "dodge")+
@@ -210,27 +311,52 @@ ggplot()+
 
 ggsave("./plots/clustering/hydrogeo_deficit.pdf")
 
+gauges$hydrogeo_simple
 
 ggplot()+
-  geom_boxplot( aes(y=mmky_ms7_min$sen_slope[mmky_ms7_min$new_p < 0.05], x=gauges$hydrogeo_simple[mmky_ms7_min$new_p < 0.05], col=gauges$bfi_class[mmky_ms7_min$new_p < 0.05]), position = "dodge")+
+  geom_boxplot( aes(y=mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05], x=gauges$hydrogeo_simple[mmky_ms30_min$new_p < 0.05], col=gauges$bfi_class[mmky_ms30_min$new_p < 0.05]), position = "dodge")+
   xlab("Hydrogeology")+
-  ylab("ms7 trend (slope) [m³/s/a]")+
+  ylab("ms30 trend (slope) [m³/s/a]")+
   # annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms7_min$new_p < 0.05))))+
   # annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.05")+
   scale_color_discrete("BFI",labels = c("<0.4", "0.4-0.6", "0.6-0.8", ">0.8"))
 
-temp_df = cbind.data.frame(as.numeric(mmky_ms7_min$sen_slope[mmky_ms7_min$new_p < 0.05]), gauges$hydrogeo_simple[mmky_ms7_min$new_p < 0.05],gauges$bfi_class[mmky_ms7_min$new_p < 0.05])
-ggplot()+
-  geom_boxplot()+
-  stat_summary(
-    fun.data = stat_box_data, 
-    geom = "text", 
-    hjust = 0.5,
-    vjust = 0.9
-  )
-  
-ggsave("./plots/clustering/hydrogeo_ms7_min.pdf")
+ggsave("./plots/clustering/hydrogeo_ms30_bfi.pdf")
 
+
+give.n <- function(x){
+  return(c(y = median(x)+2.5, label = length(x)))
+  # experiment with the multiplier to find the perfect position
+}
+temp_df = cbind.data.frame(as.numeric(mmky_ms7_date$sen_slope[mmky_ms7_date$new_p < 0.05]), gauges$hydrogeo_simple[mmky_ms7_date$new_p < 0.05],gauges$bfi_class[mmky_ms7_date$new_p < 0.05],gauges$sr_new[mmky_ms7_date$new_p < 0.05])
+colnames(temp_df) = c("date","hydrogeo","bfi", "sr")
+
+
+ggplot(temp_df, aes(x= factor(hydrogeo),y= date, color=factor(sr)))+
+  geom_boxplot() +
+     stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+                  position = position_dodge(width = 0.75))+
+  xlab("Hydrogeology")+
+  ylab("ms7 timing trend (slope) [d/y]")+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms7_date$new_p < 0.05))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.05")
+  
+ggsave("./plots/clustering/hydrogeo_ms7_timing2.pdf")
+
+temp_df = cbind.data.frame(sr =gauges_df$sr_new[mmky_ms30_min$new_p < 0.05], ms30= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05])
+
+
+ggplot(data = temp_df, aes(x= factor(sr),y= ms30))+
+  geom_boxplot() +
+     stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+                  position = position_dodge(width = 0.75))+
+  xlab("Seasonality")+
+  scale_x_discrete(labels=c("Summer","Winter"))+
+  ylab("ms30 trend (slope) [m³/s/y]")+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms30_min$new_p < 0.05))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.05")
+  
+ggsave("./plots/clustering/sr.pdf")
 
 #comparison between ssi drought definition and 80th method drought definition####
 #ssi method: discharge below ssi > -1 is equal to drought. intensity, severity and drought length rely on deviation of the SSI value of that month. Leading to droughts that always last at least one month
@@ -242,16 +368,28 @@ plot(gauges$n_events ~ n_events)
 #clustered plots #### 
 #see barker et al
 
-# gauges_df = as.data.frame(gauges)
-# 
-# head(gauges_df)
-# 
-# ggplot(data=gauges_df)+
-#   geom_point(aes(x=saar, y= n_events, alpha= bfi))
-# 
-# ggplot(data=gauges_df)+
-#   geom_point(aes(x=saar, y= best_spi, alpha= bfi))
-# 
+ gauges_df = as.data.frame(gauges)
+
+gauges$n_events
+
+ggplot(data = gauges_df)+
+  geom_point(aes(x=lt_memoryeffect, y= bfi))
+
+ggsave("./plots/clustering/bfi_memoryeffect.pdf")
+ 
+ ggplot(data=gauges_df)+
+   geom_point(aes(x=, y= bfi, col= lt_memoryeffect))+
+   xlab("mean drought length [d]")+
+   ylab("BFI")+
+   scale_color_continuous("Aquifer \nmemory")
+ggsave("./plots/clustering/mn_length_bfi_lt.png")
+
+ggplot()+
+  geom_boxplot(aes(x=factor(gauges$sr_new[mmky_ms30_min$new_p < 0.05]), y= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05]))
+
+ t.test(x= mmky_ms7_min$sen_slope[mmky_ms7_min$new_p < 0.05 & gauges$sr_new == 0], y = mmky_ms7_min$sen_slope[mmky_ms7_min$new_p < 0.05 & gauges$sr_new == 2])
+ which(mmky_ms7_date$sen_slope >0 & mmky_ms7_date$new_p < 0.05) %>% length()
+ 
  
 # ggplot(data=gauges_df)+
 #   geom_point(aes(x=saar, y= best_spei, col= bfi))
