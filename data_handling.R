@@ -13,14 +13,21 @@ sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI",  "lubrid
 
 # Load data ---------------------------------------------------------------
 
+
 source("./R/masta_v1/functions.R")
-load("./data/catchments/eobs_pr_part.Rdata", verbose = T) #precipiatation
-load("./data/catchments/eobs_temp_part.Rdata", verbose = T) # temperature
-load("./data/catchments/streamflow.Rdata", verbose = T)# streamflow
-gauges  <- shapefile("./data/raster/gauges")
+#precipiatation
+load("./data/catchments/eobs_pr_part.Rdata", verbose = T) 
+# temperature
+load("./data/catchments/eobs_temp_part.Rdata", verbose = T) 
+# streamflow
+load("./data/catchments/streamflow.Rdata", verbose = T)
+#shapefile
+#gauges  <- shapefile("./data/raster/gauges") #
+#landuse data
 legende <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(1,5)]
 legende2 <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(1,3:5)]
 landuse_v1 <- read.csv("./data/geo_landuse/LaNu_per_EZG.csv")
+#hydrogeo data
 hydrogeo <- read.csv("./data/geo_landuse/hydrogeo.csv")
 # User defined constants --------------------------------------------------
 
@@ -100,8 +107,9 @@ verallge <- function(x,ind){
 }
 ebene3 <- apply(ebenen[,-(1:4)],MARGIN = 2,verallge, ind=3)
 landuse <- cbind(colnames(ebene3),apply(ebene3,MARGIN = 2,function(x) rownames(ebene3)[which.max(x)])) #selecting the dominating land use form
-
-
+head(ebene3)
+ebene3[,2]
+landuse %>% head()
 int= pmatch(my_catch,landuse[,1])
 gauges$landuse = landuse[int,2]
 
@@ -113,10 +121,10 @@ remove(legende, landuse_v1, summen, gesamt, legende2, ebenen,aussort, int, landu
 #hydro geology #####
 gauges$hydrogeo = hydrogeo$Hydrogeologie #K= klüfte P= poren alles andere ist gemisch KA= karst M=what is 
 gauges$hydrogeo_simple = "other"
-gauges$hydrogeo_simple[which(hydrogeo$Hydrogeologie == "P")] = "P"
-gauges$hydrogeo_simple[which(hydrogeo$Hydrogeologie == "K")] = "K"
-which(gauges$hydrogeo_simple == "K") %>% length()
-which(gauges$hydrogeo_simple == "P") %>% length()
+gauges$hydrogeo_simple[which(hydrogeo$Hydrogeologie == "P")] = "p"
+gauges$hydrogeo_simple[which(hydrogeo$Hydrogeologie == "K")] = "f"
+which(gauges$hydrogeo_simple == "f") %>% length() #fractured
+which(gauges$hydrogeo_simple == "p") %>% length() # porous
 which(gauges$hydrogeo_simple == "other") %>% length()
 #shapefile adjustment####
 # removing catchment 338
