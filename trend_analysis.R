@@ -2,65 +2,24 @@
 # trend analysis ----------------------------------------------------------
 
 
-#plotting mann-kendall ####
+#plotting sen slope ####
+#per catchment characteristic
+p = catch_plot(p_value=.05, color="alpine", x_data="saar", y_data= "mmky_ms7_min" , factor =T)
+p= p+ylab("ms7 trend (slope) [m³/s/a]")+
+  xlab("saar [mm]")+
+  scale_color_discrete("Seasonality" , labels =c("Summer","Winter"))+
+  ylim(c(-0.015, 0.026))
+p
+ggsave(plot = p, "./plots/trend_analysis/saar_ms7.pdf")
 
-mmkh_winter_q10 = as.data.frame(mmkh_winter_q10)
-
-colnames(mmkh_winter_q10) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
-
-
-data_bb = as.data.frame(bb_jun_mean_df)
-plot(unlist(data_bb$`Sen's slope`)~mmkh_jun_mean_df$sen_slope)
-      plot(mmkh_jun_mean_df$corrected_z  ~ mmkh_jun_mean_df$new_p)
-which(mmkh_jun_mean_df$new_p < .05) %>% length()
-
- # plot(mmkh_summer_ave_q_df$Tau ~ mmkh_summer_min_q_df$)
-
-ggsave("q_mean_mk_nq7.png")
-
-ggplot()+
-  geom_point(data = data_bb, aes(y=new_tau, x=as.factor(gauges$mnq30_month), col= gauges$bfi),inherit.aes = FALSE)+
-  xlab("month of mnq30")+
-  ylab("mk tau of yearly q10")+
-  scale_color_continuous("BFI")
-
-ggplot()+
-  geom_point(data = data_mmkh, aes(y=Tau, col=gauges$bfi, x=gauges$Enzgsg_),inherit.aes = FALSE)+
-  xlab("catchment size [km²]")+
-  ylab("mk tau of yearly q10")+
-  scale_color_continuous("BFI")
-
-ggplot()+
-  geom_point(data = data_mmkh, aes(y=Tau, x=gauges$saar),inherit.aes = FALSE)+ 
-  geom_point(data= data_mmkh[which(data_mmkh$new_p<.05),] , aes(y=Tau, x=gauges$saar[which(data_mmkh$new_p<.05)], col="p<0.05"))+
-  xlab("SAAR [mm]")+
-  ylab("mk tau of yearly q10")+
-  scale_color_discrete("Significance")
-
-ggplot()+
-  geom_point(data = data_bb, aes(y=tau, x=gauges$q_mean ,col=gauges$cor_spi))+
-  xlab("q mean [unit???]")+
-  ylab("mk tau of nq7 summer")+
-  scale_color_continuous("Correlation of \n SPI-n")
+#trend vs trend
+p=sig_plot(x_data = "mmky_su_mn_t", y_data = "mmky_ms7_min", output = "bfi_class", p_value =1) 
+p
+p+
+geom_abline(slope=1, intercept=0)
+  ggsave(plot = p, "./plots/trend_analysis/wi_su_mn_t_latitude.png")
 
 
-ggplot()+
-  geom_point(data = data_bb[1:50,], aes(y=tau, x=gauges$saar[1:50], col=gauges$bfi[1:50]),inherit.aes = FALSE)+
- geom_errorbar(data =data_bb[1:50,], aes(x=gauges$saar[1:50], ymin= lb , ymax= ub), colour=2, width = .05,inherit.aes = FALSE)
-
-ggplot()+
-  geom_point(data = data_bb[1:50,], aes(y=tau, x=1:50),inherit.aes = FALSE)+
- geom_errorbar(data =data_bb[1:50,], aes(x=1:50, ymin= lb , ymax= ub), colour=2, width = .05,inherit.aes = FALSE)
-
-
-ggplot()+
-  geom_point(aes(y=mmkh_summer_q10$tau , x=mmkh_winter_q10$tau, col=as.factor(gauges_df$sr)))+
-  geom_abline(slope = 1, intercept =  0)+
-  ylab("summer q10 mmkh tau")+
-  xlab("winter q10 mmkh tau")+
-  scale_color_discrete("Season of \n low flow", label=c("summer", "unclear", "winter"))
-
-ggsave("winter_summer_q10.png")
 # trends in drought charachteristics --------------------------------------
 
 #looking only at the catchments that have a negative trend in q10 values:
@@ -121,61 +80,16 @@ spplot(gauges, c("mmkh_q10"), col.regions = rainbow(100, start = 4/6, end = 1),
 )
 
 
-#monthly trend analysis ####
-res=c()
-for ( i in 1:12) res[i] =paste0("mmkh_",str_to_lower(month.abb[i]),"_mean_df")
-
-
-
-
-monthly_mmkh_sen = sapply(1:12, function(x) get(res[x])$sen_slope[which(get(res[x])$new_p <.1)]) 
-#monthly_mmkh_sen = sapply(1:12, function(x) get(res[x])$sen_slope) 
-
-png("./plots/further_investigate/monthly_mmkh_bxplt.png", width=1000, height = 500)
-boxplot(monthly_mmkh_sen, names = month.abb, ylab="mmkh significant sen's slope of monthly mean" )
-dev.off()
-
-monthly_mmkh_aov = sapply(1:12, function(x) get(res[x])$sen_slope[which(get(res[x])$new_p <.1)]) 
-
- aov_data = matrix(ncol=2, nrow=0)
- for (i in 1:12){
-   aov_data = rbind(aov_data, cbind(monthly_mmkh_aov[[i]], rep(i, times=length(monthly_mmkh_aov[[i]]))))
-  }  
-aov_data %<>% as.data.frame()
-colnames(aov_data)= c("sen_slope", "month")
-head(aov_data)
-aov(sen_slope ~ month, data=aov_data)%>% summary()
 
 #trend analysis with sen's slope####
 
 # "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p"
 #"p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"
 #"march_dy_drought_q", "march_dy_drought_p","march_sm_def_p","march_sm_def_q","june_dy_drought_q", "june_dy_drought_p","june_sm_def_p","june_sm_def_q"
-mmky_mar_mn_q$sen_slope[gauges$sr_new==2 & mmky_mar_mn_q$new_p<0.05]  %>% range()
 
-p=sig_plot(x_data = "mmky_ms7_min", y_data = "mmky_yearly_7_min", output = "sr_new", p_value =.05) 
-p+
-geom_abline(slope=1, intercept=0)
-  ggsave(plot = p, "./plots/trend_analysis/ms7_sig_7min.png")
 
-plot(su_sm_p$`100`)
-abline(a= median(su_sm_p$`100`), b = mmky_su_sm_p$sen_slope[100])
-which.min(mmky_su_sm_p$sen_slope)
-40*mmky_su_sm_p$sen_slope[100]
 
-which(mmky_mar_mn_q$sen_slope > 0 & mmky_mar_mn_q$new_p < 0.05 & gauges$sr_new == 0) %>%  length() /length(which(gauges$sr_new == 0))
-
-yearly_sm_p$`21` %>% plot(type="l")
-gauges$lt_memoryeffect
-p = catch_plot(p_value=.05, color="mn_deficit", x_data="lt_memoryeffect", y_data= "mmky_ms30_min" , factor =F)
-p
-p= p + xlab("SAAR [mm]")+
-  ylab("ms30 trend (slope) [m³/s/a]")+
-  scale_color_discrete("ln mean deficit [m³]",labels = c("9-11", "11-13","13-15"))
-p
-
-ggsave(plot = p, "./plots/trend_analysis/ms30_mean_def.png")
-
+#other plots####
 
 p_value=.05; color="saar"; x_data="cor_spi_n"; y_data= "mmky_q10" 
 z_value = dplyr::select(gauges_df, color)[,1]
@@ -198,6 +112,14 @@ ggplot()+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_continuous("Hydro Geo.")
 
+x_data = "mmky_mw7_min";y_data = mmky_ms7_min[gauges$sr_new == 2,]
+ggplot()+
+  geom_point( aes(y=(y_data)$sen_slope[which((y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which((y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$saar[which((y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which((y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("Hydro Geo.")
 
 p_value=.05; color="sr_new";x_data="hydrogeo_simple"; y_data= "mmky_ms30_min" ;gauges_df = gauges %>% as.data.frame();z_value = as.factor(dplyr::select(gauges_df, color)[,1])
 
@@ -210,7 +132,7 @@ ggplot()+
   ylab("ms30 trend (slope) [m³/s/a]")+
   scale_color_discrete("Seasonality",labels = c("Summer", "Winter"))
 
-ggsave("./plots/5_choice/hydrogeology.pdf")
+ggsave("./plots/trend_analysis/hydrogeology_ms30.pdf")
 
 
 which(mmky_yearly_7_min$sen_slope[mmky_yearly_7_min$new_p<.05] >0 & gauges$sr_new[mmky_yearly_7_min$new_p<.05] == 2) %>% length()
