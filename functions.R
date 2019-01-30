@@ -115,6 +115,39 @@ return(df)
 }
 
 
+#bfi sci analysis ####
+bfi_sci =function(threshold =0){
+threshold = 0
+res.list=list()
+l=0
+mat_res = list()
+bfi_class=levels(gauges$bfi_class)
+for(i in bfi_class){
+
+for (c in which(gauges$bfi_class == i)){
+    l=l+1
+df= cbind.data.frame(ssi = ssi_1[,c], spi_v2_1[,c], spi_v2_2[,c], spi_v2_3[,c], spi_v2_6[,c], spi_v2_12[,c], spi_v2_24[,c], spei_v2_1[,c], spei_v2_2[,c], spei_v2_3[,c], spei_v2_6[,c], spei_v2_12[,c], spei_v2_24[,c]) 
+df_drought = df %>% filter(ssi < threshold)
+colnames(df_drought) = c("ssi", "spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1","spei_2","spei_3", "spei_6", "spei_12","spei_24")
+res.list[[l]] =df_drought
+
+}
+mat = matrix(nrow=length(which(gauges$bfi_class == i)), ncol=12)
+
+for (n in 2:13)
+  {
+mat[,(n-1)]= sapply(1:length(which(gauges$bfi_class == i)), function(x) cor(x= res.list[[x]]$ssi,y= res.list[[x]][,n], use="na.or.complete", method = "spearman"))# spearman because we want rank correlation since ssi is nonparametric (limited to -1.97) and spi is parametric (not limited)
+}
+
+mat_cor = mat %>% as.data.frame()
+colnames(mat_cor) = c("spi_01", "spi_02", "spi_03", "spi_06", "spi_12", "spi_24", "spei_01","spei_02","spei_03", "spei_06", "spei_12","spei_24")
+mat_cor_long = gather(mat_cor, key=sci_type, value=cor)
+mat_res[[i]] = mat_cor_long
+}
+return(mat_res)
+}
+
+
 #monthly sci analysis ####
 monthly_sci = function(month=3, threshold = 0){
 res.list = list()  
@@ -132,7 +165,7 @@ mat = matrix(nrow=catch_n, ncol=12)
 
 for (n in 2:13)
   {
-mat[,(n-1)]= sapply(1:catch_n, function(c) cor(x= res.list[[c]]$ssi,y= res.list[[c]][,n], use="na.or.complete", method = "spearman"))# spearman because we want rank correlation since ssi is nonparametric (limited to -1.97) and spi is parametric (not limited)
+mat[,(n-1)]= sapply(1:catch_n, function(x) cor(x= res.list[[x]]$ssi,y= res.list[[x]][,n], use="na.or.complete", method = "spearman"))# spearman because we want rank correlation since ssi is nonparametric (limited to -1.97) and spi is parametric (not limited)
 }
 mat_cor = mat %>% as.data.frame()
 colnames(mat_cor) = c("spi_1", "spi_2", "spi_3", "spi_6", "spi_12", "spi_24", "spei_1","spei_2","spei_3", "spei_6", "spei_12","spei_24")
@@ -394,6 +427,15 @@ return(res_list)
 
 sig_plot = function(p_value = .1, x_data = "mmkh_mar_mn", y_data = "mmkh_yearly_q10", output = "sr"){
 
+  bfi_class = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$bfi_class[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
+    annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_discrete("BFI \nclass", label=c("<.4", ".4-.6", ".6-.8", ".8-1"))
+
+  
 sr = ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
@@ -498,15 +540,11 @@ if(factor== TRUE){
 return(output)
 }
 
-#from https://medium.com/@gscheithauer/how-to-add-number-of-observations-to-a-ggplot2-boxplot-b22710f7ef80
-stat_box_data <- function(y, upper_limit = max(mmky_ms7_min$sen_slope) * 1.15) {
-  return( 
-    data.frame(
-      y = 0.95 * upper_limit,
-      label = paste('count =', length(y))
-    )
-  )
+#from  stack over flow to give number of observations
+give.n <- function(x){
+  return(c(y = median(x)+.0275, label = length(x)))
 }
+
 
 monthly_cor_sci_yr = function(sr_x=0, sci_typex="spi"){ #calculates it for spring+summer month
 
@@ -718,9 +756,8 @@ mmky_edit = function(x)
 }
 
 
-mmky
-#mmky subset
-
+#mmky for subset####
+#to see how large the influence is of the time period considered
 mmky_sbst = function(raw_data =ms7_min, width = 10, start_y=1970){
   n=nrow(raw_data)
   mat = matrix(nrow=catch_n, ncol=(n-width))
@@ -733,28 +770,6 @@ mmky_sbst = function(raw_data =ms7_min, width = 10, start_y=1970){
   colnames(mat) = c(start_y:(start_y+n-width-1))
   return(mat)
 }
-
-
-
-mk_tests = function(raw_data =c("yearly_mean_q", "yearly_min_q","summer_ave_q","summer_min_q","summer_q_q10")){
-res_bb = data.frame()
-res_mmkh = list()
-res_mmky = list()
-for(d in raw_data){
-  ts_data = as.ts(get(d), frequency =frequency, start=start)
-  for(i in 2:ncol(ts_data)){
-temp_bb <-  bbsmK_mod(c(ts_data[,i]))
-res_bb = rbind(res_bb, temp_bb)
-res_mmkh[[i]] =  mmkh(c(ts_data[,i]))
-res_mmky[[i]] = mmky(c(ts_data[,i]))
-cat(round((i/(ncol(ts_data)*length(raw_data))), 4), "% & i =", i, "\n" )
-
-
-  }
-  assign(paste0("bb_",d, "_df" ), res_bb, envir = .GlobalEnv)
-  assign(paste0("mmkh_", d,"_list"), res_mmkh, envir = .GlobalEnv )
-  assign(paste0("mmky_", d,"_list"), res_mmky, envir = .GlobalEnv )
-}}
 
 
 
@@ -1029,4 +1044,34 @@ data$z_anom_end[data$gauge == g]
 }
 
 
+#statistics####
+#field significance after renard 2008 and Burn et al 2002
+field.significance = function(loc_sig = 0.05, data_x= ms30_min, global_sig= 0.05, nsim=600){ #burn et al worked with both levels at 0.1
+  catch_nx = ncol(data_x)
+  n_x=nrow(data_x)
+  set.seed(1)
+  loc_sig_dist = c()
+  
+  simulation = function(x){
+  for (i in x){
+  resample_mat = sapply(1:catch_nx, function(x) sample(data_x[,x], size= n_x,  replace=T))
+  mkttest_res = apply(resample_mat,2,mkttest)
+  loc_sig_dist = length(which(mkttest_res[5,]< loc_sig))/catch_nx # %of catchments that are significant at local significance level
+  }
+  return(loc_sig_dist)
+  }
+  
+cl<-makeCluster(no_cores-1) # it is 4 times faster than the sequential loop!
+registerDoSNOW(cl)
+pb <- txtProgressBar(max = catch_n, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
+res <- foreach::foreach(c = 1:nsim, .packages = "modifiedmk",
+                        .options.snow = opts, .inorder = F,.combine = "c")%dopar%{ 
+   simulation(x=c)
+                        }
+close(pb)
+stopCluster(cl)
+return(quantile(res,global_sig))
+}
 
