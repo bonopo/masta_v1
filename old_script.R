@@ -59,31 +59,7 @@ mean(ssi_sorted$V100)
 
 
 
-# decompose time series into trend and seasonal part ---------------------
 
-install.packages("fpp")
-require(fpp)
-ts = ts(mt_mn_q_wide, start=c(1970,1), end=c(2009,12), deltat=1/12)
-ssi_dec <- decompose(ts[,1])
-plot(ssi_dec)
-res=decompose(ts)
-plot(res)
-res$trend[,1] %>% plot()
-stl_res = stl(ts[,1], "periodic")
-str(stl_res)
-trend = stl_res$time.series[,2]
-seas = stl_res$time.series[,1]
-dum_var = cbind(trend, seas)
-y= ts[,1]
-fit2 = tslm(y ~ trend + season)
-n <- length(y)
-plot(y)
-lines(ts(fit2$coef[1]+fit2$coef[2]*(1:n)+mean(fit2$coef[-(1:2)]),
-  start=start(y),f=12),col="red")
-
-res = arima(y, xreg =dum_var) %>% summary()
-
-str(res)
 #compare to mmky#
 resi = list()
 for (i in 1:catch_n){
