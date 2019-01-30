@@ -243,6 +243,26 @@ lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,2][order(predicted.
 lines(spei_v2_1$V1[order(spei_v2_1$V1)],predicted.intervals[,3][order(predicted.intervals[,1])],col=1,lwd=3)
 
 
+#sci analysis per bfi class ####
+bfi_cor_ssi_0 = bfi_sci(threshold = 0)
+
+bfi1 = ggplot()+
+  geom_boxplot(data = filter(bfi_cor_ssi_0$`<.4`,str_detect(sci_type, "spi")), aes(x=sci_type, y=cor))+
+  ylim(c(0,.7))
+
+
+bfi2 = ggplot()+
+  geom_boxplot(data = filter(bfi_cor_ssi_0$`.4-.6`,str_detect(sci_type, "spi")), aes(x=sci_type, y=cor))+
+  ylim(c(0,.7))
+
+bfi3 = ggplot()+
+  geom_boxplot(data = filter(bfi_cor_ssi_0$`.6-.8`,str_detect(sci_type, "spi")), aes(x=sci_type, y=cor))+
+  ylim(c(0,.7))
+
+bfi4 = ggplot()+
+  geom_boxplot(data = filter(bfi_cor_ssi_0$`.8-1`,str_detect(sci_type, "spi")), aes(x=sci_type, y=cor))+
+  ylim(c(0,.7))
+grid.arrange(bfi1,bfi2,bfi3,bfi4, ncol=4)
 
 #plots####
   gauges_df = gauges %>% as.data.frame()
