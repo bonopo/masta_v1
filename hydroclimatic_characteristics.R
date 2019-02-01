@@ -50,7 +50,8 @@ ms7_date = ms7_min %>%
 ms7_min %<>%  dplyr::select(gauge, ms7_min, year) %>% 
   spread(key=gauge, value=ms7_min) %>% 
   dplyr::select(-year) 
-remove(ms7_df, ms7, q_wide_summer, ms7_min_temp, int)
+remove(ms7_df, ms7, q_wide_summer, int)
+save(list= c("ms7_min", "ms7_date"), file="./output/ms7.Rdata")
 #since there are catchments that have their lowflow in winter the ms7 and ms7 date will relate to their non-snowfall caused drought. 
 #to look at the regime minima would mean to calculate the 7 day minima for the wintermonths for sr == 2 ; 29 catchments
 
@@ -348,6 +349,13 @@ remove(res, int, monthly_mean_t)
 
 
 #temp seasonal####
+sp_mn_t= mt_mn_temp %>% 
+  filter(month(yr_mt) >= 3 & month(yr_mt) <= 5) %>% 
+  group_by(gauge, year(yr_mt)) %>% 
+  summarise(mean_temp = mean(temp_m)) %>% 
+  spread(key=gauge, value=mean_temp) %>% 
+  dplyr::select(-`year(yr_mt)`) %>% 
+  as.data.frame()
 
 su_mn_t = mt_mn_temp %>% 
   filter(month(yr_mt) >= 5 & month(yr_mt) <= 11) %>% 
@@ -370,6 +378,15 @@ wi_mn_t = mt_mn_temp %>%
 
 gauges$wi_mn_t = colMeans(wi_mn_t)
 
+wi_days_below_0 = temp_long %>% 
+  filter(month(date) < 5 | month(date) > 11) %>% 
+  group_by(gauge, year(date)) %>% 
+  filter(temp < 0) %>% 
+  summarise(n_days = n()) %>% 
+  spread(key=gauge, value=n_days) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  as.data.frame()
+
 
 #temp yearly####
 yearly_mn_t = mt_mn_temp %>% 
@@ -381,19 +398,36 @@ yearly_mn_t = mt_mn_temp %>%
 
 gauges$mean_t = colMeans(yearly_mn_t)
 
-d30_mn_t = rollapply(data = da_temp_wide,FUN= mean, width=30, by.column=TRUE, fill=NA, align="center") 
-d30_mn_t %<>% as.data.frame()
+d30_mn_t = rollapply(data = da_temp_wide,FUN= mean, width=30, by.column=TRUE, fill=NA, align="center") %>% as.data.frame()
 
 
-yearly_max_t = d30_mn_t %>% 
+yearly_max_t = d30_mn_t %>%  #yearly max temp based on 30 day moving average
   mutate(date = date_seq_long) %>% 
   gather(key=gauge, value=d30_mn_t, -date) %>% 
-  group_by(gauge, year(date)) %>% 
-  summarise(mean_temp = max(d30_mn_t, na.rm=T)) %>% 
-  spread(key=gauge, value=mean_temp) %>% 
-  dplyr::select(-`year(date)`) %>% 
+  mutate(gauge=as.integer(gauge), year= as.integer(year(date))) %>% 
+  group_by(gauge, year) %>% 
+  summarise(max_temp = max(d30_mn_t, na.rm=T)) %>% 
+  spread(key=gauge, value=max_temp) %>% 
+  dplyr::select(-year) %>% 
   as.data.frame()
 
+yearly_min_t = d30_mn_t %>%  #yearly min temp based on 30 day moving average
+  mutate(date = date_seq_long) %>% 
+  gather(key=gauge, value=d30_mn_t, -date) %>% 
+  mutate(gauge=as.integer(gauge), year= as.integer(year(date))) %>% 
+  group_by(gauge, year) %>% 
+  summarise(min_temp = min(d30_mn_t, na.rm=T)) %>% 
+  spread(key=gauge, value=min_temp) %>% 
+  dplyr::select(-year) %>% 
+  as.data.frame()
+
+yr_days_below_0 = temp_long %>%  #yearly number of days below 0
+  group_by(gauge, year(date)) %>% 
+  filter(temp < 0) %>% 
+  summarise(n_days = n()) %>% 
+  spread(key=gauge, value=n_days) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  as.data.frame()
 
 remove(d30_mn_t)
 
