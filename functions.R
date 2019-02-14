@@ -435,6 +435,14 @@ sig_plot = function(p_value = .1, x_data = "mmkh_mar_mn", y_data = "mmkh_yearly_
   ylab(paste(y_data, "sen's slope"))+
   scale_color_discrete("BFI \nclass", label=c("<.4", ".4-.6", ".6-.8", ".8-1"))
 
+  mn_t = ggplot()+
+  geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$mn_t[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
+    annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  xlab(paste(x_data, "sen's slope"))+
+  ylab(paste(y_data, "sen's slope"))+
+  scale_color_continuous("Mean T [°C]")
+  
   
 sr = ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
@@ -456,7 +464,7 @@ hochwert = ggplot()+
 sr_new = ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=as.factor(gauges$sr_new[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)])))+
     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
-  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", round(p_value,3)))+
   xlab(paste(x_data, "sen's slope"))+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_discrete("Seasonality", label=c("summer", "winter"))
@@ -524,7 +532,7 @@ gauges_df = gauges %>% as.data.frame()
 output= ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value)], x=dplyr::select(gauges_df, x_data)[which(get(y_data)$new_p<p_value),], col=z_value[which(get(y_data)$new_p<p_value)]))+
     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value ))))+
-  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", round(p_value,3)))+
   xlab(x_data)+
   ylab(paste(y_data, "sen's slope"))
 
@@ -540,9 +548,17 @@ if(factor== TRUE){
 return(output)
 }
 
-#from  stack over flow to give number of observations
+#from  stack over flow to give number of observations for boxplots
+
+
 give.n <- function(x){
-  return(c(y = median(x)+.0275, label = length(x)))
+  return(c(y= -0.25, label = length(x))) #y = median(x)+.0275
+}
+give.n.summer <- function(x){
+  return(c(y= -.25, label = round(length(x)/n_summer,2)*100)) #y = median(x)+.0275
+}
+give.n.winter <- function(x){
+  return(c(y= -.25, label = round(length(x)/n_winter,2)*100)) #y = median(x)+.0275
 }
 
 
@@ -657,16 +673,6 @@ for(d in raw_data){
   assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
 }}
 
-mmkh_par = function(raw_data =c("ms7_min")){
-
-for(d in raw_data){
-  ts_data = get(d)
-  #modified mk test
-  res_mmkh = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmkh))
-  colnames(res_mmkh) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var")
-  assign(paste0("mmkh_", d), as.data.frame(res_mmkh), envir = .GlobalEnv )
-}}
-
 #calculating man kandell trend with correction for serial correlated data using Yue and Wang's (2004) approach
 mmky_par = function(raw_data =c("ms7_min", "ms30_min")){
 
@@ -678,6 +684,7 @@ for(d in raw_data){
   assign(paste0("mmky_", d), as.data.frame(res_mmky), envir = .GlobalEnv )
 }
 }
+
 
 mmky_edit = function(x)
 {
@@ -754,7 +761,6 @@ mmky_edit = function(x)
         `Original Z` = z0, `old P.value` = pval0, Tau = Tau, 
         `Sen's slope` = slp, old.variance = var.S, new.variance = VS,s_stat = S))
 }
-
 
 #mmky for subset####
 #to see how large the influence is of the time period considered
@@ -1043,6 +1049,84 @@ data$z_anom_end[data$gauge == g]
 
 }
 
+#drought attribution####
+ #drought attribution correlation monthly pet and t and p ~ monthly q trends
+ 
+ monthly.cor = function(p_y="fs_mt_med_q", p_x="fs_mn_t", cor_x= "_med_t", cor_y= "_med_q", no_sig=F){
+ string_x = c()
+ string_y=c()
+ res=c()
+ n_obs = c()
+ "non_sig" = rep(10, 12)
+ if(no_sig==T) {
+ p_y = "non_sig"
+ p_x = "non_sig"
+   }
+ for(i in 1:12){
+   string_y[i] = paste0("mmky_",str_to_lower(month.abb[i]),cor_y) #y
+   string_x[i] = paste0("mmky_",str_to_lower(month.abb[i]),cor_x) #x
+   res[i]= cor(x= get(string_x[i])$sen_slope[get(string_x[i])$new_p < get(p_x)[i] & get(string_y[i])$new_p < get(p_y)[i]], y= get(string_y[i])$sen_slope[get(string_x[i])$new_p < get(p_x)[i] & get(string_y[i])$new_p < get(p_y)[i]])
+   n_obs[i] = length(which(get(string_x[i])$new_p < get(p_x)[i] & get(string_y[i])$new_p < get(p_y)[i]))
+ }
+ res2 = cbind(res, n_obs)
+ colnames(res2) = c(cor_x,paste0(cor_x, "_n"))
+ return(res2)
+ }
+
+agg.meteo = function(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=NULL){
+  res = matrix(nrow=12, ncol=length(agg_t))
+  n_obs = matrix(nrow=12, ncol=length(agg_t))
+  n=1
+dat_x = dat %>%
+  mutate(date = ymd(date_seq))
+if(is.numeric(subset)){
+  dat_x = dat_x[,c(subset,catch_n+1)]
+}
+  for (a in agg_t){
+    for ( m in 1:12){
+          if(is.null(subset)){
+        dat_y = get(paste0("mmky_",str_to_lower(month.abb[m]),cor_y) )
+          }else{
+        dat_y = get(paste0("mmky_",str_to_lower(month.abb[m]),cor_y) )[subset,]
+      }
+      if(a ==1) {
+        meteo = dat_x %>% filter(month(date) == m) %>% 
+          dplyr::select(-date) 
+      }else{
+        meteo = rollapply(
+          data=dat_x %>% dplyr::select(-date),
+          width=a,
+          FUN=sum,
+          by.column = TRUE,
+          fill=NA,
+          align="right") %>%  #rolling sum
+          as.data.frame %>% 
+          mutate(date = ymd(date_seq)) %>%
+          filter(month(date) == m)%>%  #filtering all the month of interest
+          dplyr::select(-date) 
+        if(is.numeric(is.na(meteo[,1]))){
+          meteo = meteo[-which(is.na(meteo[,1])),] #removing the NA preoduced by rollapply
+        }
+      }
+      
+        res_1_mmky = t(sapply(c(meteo[,1:ncol(meteo)]), FUN =mmky_edit)) %>% 
+          set_colnames(c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var","S")) %>% 
+          as.data.frame %>% 
+          dplyr::select("new_p", "sen_slope")
+        #print(warnings())
+    res[m,n]= cor(x= res_1_mmky$sen_slope[res_1_mmky$new_p < fs & dat_y$new_p < fs], y= dat_y$sen_slope[res_1_mmky$new_p < fs & dat_y$new_p < fs], use="na.or.complete")
+    
+   n_obs[m,n] = length(which(res_1_mmky$new_p < fs & dat_y$new_p < fs))
+   
+   }
+    cat(round(n/length(agg_t),2)*100,"%","\n") 
+    n=n+1
+    
+  }
+return(list(n_obs, res))
+}
+
+
 
 #statistics####
 #field significance after renard 2008 and Burn et al 2002
@@ -1061,7 +1145,7 @@ field.significance = function(loc_sig = 0.05, data_x= ms30_min, global_sig= 0.05
   return(loc_sig_dist)
   }
   
-cl<-makeCluster(no_cores-1) # it is 4 times faster than the sequential loop!
+cl<-makeCluster(no_cores-1) # it is 4 times faster than the sequential loop
 registerDoSNOW(cl)
 pb <- txtProgressBar(max = catch_n, style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
@@ -1073,5 +1157,30 @@ res <- foreach::foreach(c = 1:nsim, .packages = "modifiedmk",
 close(pb)
 stopCluster(cl)
 return(quantile(res,global_sig))
+}
+#statistical####
+#wilcox test
+wilcox.test.modified = function(x_m="mmky_wi_mn_t", y_m= NULL, fs_x=NULL, fs_y = NULL){
+  
+  if(is.null(y_m)) y_m=get(x_m)
+  if(is.null(fs_x)){
+  fs_x= get(paste0("fs_",substr(x_m,6, str_count(x_m))))
+  }
+  if(is.null(fs_y)) fs_y = fs_x
+  wilcox.test(x = get(x_m)$sen_slope[get(x_m)$new_p < fs_x  & gauges$sr_new == 0], y= y_m$sen_slope[y_m$new_p < fs_y& gauges$sr_new == 2])
+
+}
+
+#sens slope error bars
+# after Gilbert 1987
+
+error.bar = function(data= "mar_mn_q"){
+  dat = get(data)
+  sen_dat= get(paste0("mmky_", data))
+  res = apply(dat, 2, EnvStats::kendallTrendTest) # calculating the sens slope confidence intervals with the EnvStats package; default is exactly what I want to calculate
+  low_lim = sapply(1:catch_n, function(x) res[[x]]$interval$limits[1]) #extracting the lower limit
+  upp_lim = sapply(1:catch_n, function(x) res[[x]]$interval$limits[2]) # upper limit
+  # assign(x= paste0("error_",data), cbind.data.frame(low_lim, upp_lim  , sen_dat=  sen_dat$sen_slope), envir = .GlobalEnv)
+  return(cbind.data.frame(low_lim, upp_lim  , sen_dat=  sen_dat$sen_slope))
 }
 

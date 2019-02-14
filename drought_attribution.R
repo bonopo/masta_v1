@@ -289,41 +289,44 @@ hist(gauges$sr_new) # normal
 hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==0]) #not normal
 hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==2]) # not normal
 
-y= mmky_mar_mn_q # mmky_mar_mn_q 
-x1= mmky_jun_mn_q # mmky_jun_mn_q
+y= mmky_jun_mn_q # mmky_jun_mn_q
+x1= mmky_mar_mn_q # mmky_mar_mn_q 
 x2= gauges$sr_new #or gauges$sr
-alpine = gauges$alpine
 
-lm_y = y$sen_slope[which(x1$new_p<.05 & y$new_p<.05)]
-lm_x1 = x1$sen_slope[which(x1$new_p<.05 & y$new_p<.05)]
-lm_x2 = x2[which(x1$new_p<.05 & y$new_p<.05)]
-alp = alpine[which(x1$new_p<.05 & y$new_p<.05)]
-data_plot = cbind.data.frame(lm_y,lm_x1, lm_x2, alp)
-
+lm_y = y$sen_slope[which(x1$new_p<fs_jun_mn_q & y$new_p< fs_mar_mn_q)]
+lm_x1 = x1$sen_slope[which(x1$new_p<fs_jun_mn_q & y$new_p< fs_mar_mn_q)]
+lm_x2 = x2[which(x1$new_p<fs_jun_mn_q & y$new_p<fs_mar_mn_q)]
+#alp = alpine[which(x1$new_p<.05 & y$new_p<.05)]
+data_plot = cbind.data.frame(lm_y,lm_x1, lm_x2)#, alp)
+sig_points = which(x1$new_p<fs_jun_mn_q & y$new_p< fs_mar_mn_q)
 #transformation to normal
 lm_x1_w = lm_x1[which(lm_x2 == 2)] #winter lf
 lm_x1_s = lm_x1[which(lm_x2 != 2)] #not winter low flows
 hist(lm_x1_w)
 hist(lm_x1_s)
-lm_y_norm = abs(min(lm_y))+lm_y 
-lm_x1_w_norm= (lm_x1_w+abs(min(lm_x1_w))) 
-lm_x1_s_norm= (lm_x1_s+abs(min(lm_x1_w))) #adding the minima of winter (!) to both summer and winter
+lm_y_norm = abs(min(lm_y))+lm_y # adding minim
+lm_x1_w_norm= (lm_x1_w+abs(min(lm_x1_s))) 
+lm_x1_s_norm= (lm_x1_s+abs(min(lm_x1_s))) #adding the minima of summer (!) to both summer and winter
+lm_x1_norm =  abs(min(lm_x1)-0.0000001)+lm_x1 # adding the minima +0.0000001 to enable log transform of the data tp normalize
 
 
 #lm_x1_w_norm[which(lm_x1_w_norm == 0)] = 0.01
-hist(exp(lm_x1_s_norm)) #normal
-hist(exp(lm_x1_w_norm))#normal
-hist(sqrt(lm_y_norm)) #normal
+hist(log(lm_x1_s_norm)) #normal
+hist(log(lm_x1_w_norm))#normal
+hist(exp(lm_y_norm)) #normal
 
-lm_x1_norm= lm_x1+abs(min(lm_x1))
-data_lm = cbind.data.frame(lm_y_norm,lm_x1_norm, lm_x2, alp)
+lm_y_norm %>% .^5 %>% hist
+data_lm = cbind.data.frame(lm_y_norm,lm_x1_norm, lm_x2)
 #head(data_df)
 #problem one variable is normal the other is positivly skewed
-fm = lm(sqrt(lm_y_norm) ~ exp(lm_x1_norm)*lm_x2, data=data_lm[-c(42,50,52,143,172,181),])
-
+fm = lm((lm_y_norm)^5 ~ log(lm_x1_norm)*lm_x2, data=data_lm)
+fm2= lm((lm_y_norm)^5 ~ log(lm_x1_norm)*lm_x2, data=data_lm[-c(49,59,154, 174),]) #[-c(42,50,52,143,172,181),]) #without points with high leverage
 summary(fm)
+#what are the catchments with hich leverage
+data_lm[c(49,59,154, 174),]
+#can not be thrown out, are not "measuring" errors
 
-plot(fm)
+plot(fm2)
 hist(residuals(fm))
 
 
@@ -340,20 +343,24 @@ lm_x2[ which(table > .04)]
 
 #without the following data points re run a linear modell 41,42,52,192
  #or without 42 50 52 143 172 181
-
-ggplot(data= data_plot, aes(y=lm_x1, x=lm_y, col=as.factor(lm_x2)))+
+error_jun_mn_q = error.bar("jun_mn_q")
+ 
+ggplot(data= data_plot, aes(y=lm_y, x=lm_x1, col=as.factor(lm_x2)))+
   geom_point()+
   geom_smooth(method="lm", se = TRUE, show.legend = F)+
  geom_point(data=  data_plot[data_plot$alp==0 & lm_x2 == 2,] , aes(x=lm_y, y=lm_x1), col="blue", show.legend = F)+
   annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -2.5, label=paste("n = ", length(lm_y)))+
-  annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -1, label=paste("p = 0.05"))+
+  annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -1, label=paste(paste("p =", round(fs_mar_mn_q,3))))+
   annotate(geom="text", -Inf, -Inf,  hjust =-0.2, vjust = -4, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))+
-  ylab(paste("mmky June mean q sen's slope"))+
-  xlab(paste("mmky March mean q sen's slope"))+
-  scale_color_discrete("Seasonality", label=c("summer", "winter"))
+  ylab(paste("June mean q trend (slope) [m³/s/a]"))+
+  xlab(paste("March mean q trend (slope) [m³/s/a]"))+
+ geom_linerange(alpha= .4,aes( ymin=low_lim, ymax = upp_lim ), data = error_jun_mn_q[sig_points,])+
+  scale_color_discrete("Seasonality", label=c("Summer", "Winter"))
+
+
 #this is linear model with normal distribution not with selm and skewed normal distr
 
-ggsave("./plots/3_choice/jun_march_v3.png")
+ggsave("./plots/trend_analysis/jun_march_v3.pdf")
 
 hist(mmky_su_q10$sen_slope) #normal
 hist(mmky_wi_q10$sen_slope) #normal
@@ -414,9 +421,9 @@ ggplot(data= data_plot, aes(y=lm_y, x=lm_x1))+
 #stepwise regression ####
 mmky_ms7_min$sen_slope %>% hist()
 y = mmky_ms7_min$sen_slope
-
-step_fm=step(lm(mmky_ms7_min$sen_slope ~ mmky_jun_mn_q$sen_slope + mmky_mar_mn_q$sen_slope+ mmky_wi_mn_t$sen_slope+mmky_su_mn_t$sen_slope + mmky_yearly_max_t$sen_slope + mmky_su_mn_t$sen_slope + mmky_wi_mn_t$sen_slope ), direction = "both" , k=log(catch_n))
-
+mmky_
+step_fm=step(lm(mmky_ms30_min$sen_slope ~ mmky_wi_mn_t$sen_slope+mmky_su_mn_t$sen_slope + mmky_yearly_max_t$sen_slope + mmky_su_sm_p$sen_slope + mmky_wi_mn_t$sen_slope, mmky_su_p_pet$sen_slope, mmky_yr_days_below_0$sen_slope, mmky_wi_sm_p$sen_slope, mmky_yearly_mn_t$sen_slope ), direction = "forward" , k=log(catch_n))
+summary(step_fm)
 lm(mmky_ms7_min$sen_slope ~ mmky_jun_mn_q$sen_slope + mmky_mar_mn_q$sen_slope+ mmky_wi_mn_t$sen_slope+mmky_su_mn_t$sen_slope + mmky_yearly_max_t$sen_slope + mmky_su_mn_t$sen_slope + mmky_wi_mn_t$sen_slope ) %>% summary()
 
 summary(lm(mmky_ms7_min$sen_slope ~ mmky_jun_mn_q$sen_slope + mmky_mar_mn_q$sen_slope+ mmky_wi_mn_t$sen_slope+mmky_su_mn_t$sen_slope + mmky_yearly_max_t$sen_slope + mmky_su_sm_p$sen_slope + mmky_wi_sm_p$sen_slope))
@@ -532,3 +539,79 @@ summary(fm)
 
 lm(mmky_wi_p_pet$sen_slope ~ mmky_wi_mn_q$sen_slope) %>% summary()
 lm(mmky_su_p_pet$sen_slope ~ mmky_su_sm_p$sen_slope) %>% summary()
+
+#interaction catchment characteristics####
+data_plot = cbind.data.frame()
+
+glm(mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < fs_ms30] ~ gauges$bfi[mmky_ms30_min$new_p < fs_ms30] * gauges$sr_new[mmky_ms30_min$new_p < fs_ms30]) %>% summary()
+
+ggplot(data= data_plot, aes(y=lm_x1, x=lm_y, col=as.factor(lm_x2)))+
+  geom_point()+
+  geom_smooth(method="lm", se = TRUE, show.legend = F)+
+ geom_point(data=  data_plot[data_plot$alp==0 & lm_x2 == 2,] , aes(x=lm_y, y=lm_x1), col="blue", show.legend = F)+
+  annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -2.5, label=paste("n = ", length(lm_y)))+
+  annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -1, label=paste("p = 0.05"))+
+  annotate(geom="text", -Inf, -Inf,  hjust =-0.2, vjust = -4, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))+
+  ylab(paste("mmky June mean q sen's slope"))+
+  xlab(paste("mmky March mean q sen's slope"))+
+  scale_color_discrete("Seasonality", label=c("summer", "winter"))
+
+#correlation seasonal temp and discharge
+data_plot =cbind.data.frame(summer = cor(x=su_mn_q, y=su_mn_t) %>% diag, winter = cor(x=wi_mn_q, y=wi_mn_t) %>% diag, sr=gauges$sr_new)
+ggplot(data_plot)+
+  geom_point(aes(x=summer, y=winter, col=as.factor(sr)))
+
+data_plot =cbind.data.frame(summer = cor(x=su_q10, y=su_mn_t) %>% diag, winter = cor(x=wi_q10, y=wi_mn_t) %>% diag, sr=gauges$sr_new)
+ggplot(data_plot)+
+  geom_point(aes(x=summer, y=winter, col=as.factor(sr)))+
+  xlab("pearson cor. summer q10 ~ mean temp ")+
+    ylab("pearson cor. winter q10 ~ mean temp ")+
+  scale_color_discrete("Seasonality", labels=c("summer","winter"))
+ ggsave("./plots/drought_attribution/pearson_cor_q10.png")
+
+cor(x=mmky_su_q10$sen_slope, y=mmky_wi_q10$sen_slope)
+cor(x=mmky_wi_sm_p$sen_slope, y=mmky_wi_med_q$sen_slope)
+cor(x=wi_sm_p, y=wi_med_q)%>% diag %>% hist()
+cor(x=su_sm_p[gauges$sr_new == 0], y=su_med_q[gauges$sr_new == 0])%>% diag %>% hist()
+cor(x=su_sm_p[gauges$sr_new == 2], y=su_med_q[gauges$sr_new == 2])%>% diag %>% hist()
+cor(x=yearly_sm_p, y=yearly_mn_q)%>% diag %>% hist()
+
+data_plot =cbind.data.frame(summer = cor(x=su_sm_p, y=su_med_q)%>% diag, winter = cor(x=wi_sm_p, y=wi_med_q) %>% diag, sr=gauges$sr_new)
+ggplot(data_plot)+
+  geom_point(aes(x=summer, y=winter, col=as.factor(sr)))+
+  xlab("pearson cor. summer median q~ precipitation sum ")+
+    ylab("pearson cor. winter median q ~ precipitation sum ")+
+  scale_color_discrete("Seasonality", labels=c("summer","winter"))
+ ggsave("./plots/drought_attribution/pearson_cor_med_q_p.pdf")
+ 
+ #drought attribution correlation monthly pet and t and p ~ monthly q trends####
+ 
+# res1=monthly.cor(p_y="fs_mt_med_q", p_x="fs_mn_t", cor_x= "_med_t", cor_y= "_med_q", no_sig=T)
+mn_t= monthly.cor(p_y="fs_mt_med_q", p_x="fs_mn_t", cor_x= "_med_t", cor_y= "_med_q", no_sig=F)
+p_pet= monthly.cor(p_y="fs_mt_med_q", p_x="fs_mt_p_pet", cor_x= "_p_pet", cor_y= "_med_q", no_sig=F)
+prec = monthly.cor(p_y="fs_mt_med_q", p_x="fs_sm_p", cor_x= "_sm_p", cor_y= "_med_q", no_sig=F)
+data_plot = cbind.data.frame(mn_t[,1], p_pet[,1], prec[,1]) %>% 
+  set_colnames(c("med_t","p_pet","prec")) %>% 
+  mutate(month=1:12) %>% 
+  gather(value=cor, key=meteo, -month) %>% 
+  as.tbl
+
+ggplot(data_plot)+
+  geom_line(aes(x=month, y=cor,col=as.factor(meteo)))+
+  xlab("")+
+  ylab("pearson correlation with median monthly discharge trends")+
+  scale_x_continuous(breaks=c(1:12), labels=month.abb)+
+  scale_color_discrete("Meteorology",labels=c)
+
+
+#precip aggregated (similar to spi-n)
+
+
+precip_agg = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
+precip_agg = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
+
+p_pet_agg = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
+p_pet_agg = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
+
+p_pet_temp = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
+p_pet_temp = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))

@@ -36,13 +36,21 @@ dev.off()
 # mk_tests_par(raw_data = "jun_mean_df")
 # mk_tests_par(raw_data = c("mar_mean_df","jul_mean_df"))
 
+mmky_par( c("yr_days_below_0", "wi_days_below_0"))
+mmky_par(c("sp_mn_t", "sp_sm_p"))
+mmky_par(c("su_mn_q","wi_mn_q"))
+mmky_par(c("wi_med_q", "su_med_q"))
 
-mmky_par("mw7_date")
+mmky(wi_days_below_0$`1`)
 mmky_par(c("su_p_pet", "yearly_30_min", "yearly_7_min", "yearly_7_date","mw7_min", "mw7_date"))
+class(wi_days_below_0)
+any(is.infinite(wi_days_below_0))
 
 mmky_par(raw_data = c( "ms7_date", "ms7_min", "ms30_min", "yearly_q10","yearly_mn_q","su_q10", "wi_q10", "su_mn_t", "wi_mn_t","yearly_mn_t", "yearly_max_t", "yearly_sm_p",    "su_sm_p", "wi_sm_p", "sp_sm_p", "year_p_pet", "su_p_pet", "wi_p_pet"))
 
 mmky_par(raw_data = c( "p_days_of_drought_yr" ,"q_days_of_drought_yr","p_sum_def_yr","q_sum_def_yr"))
+
+
 
 mmky_par(raw_data = c("march_dy_drought_q", "march_dy_drought_p","march_sm_def_p","march_sm_def_q","june_dy_drought_q", "june_dy_drought_p","june_sm_def_p","june_sm_def_q")) # no trends can be seen!
 
@@ -50,6 +58,18 @@ mmky_par(raw_data = c("march_dy_drought_q", "march_dy_drought_p","march_sm_def_p
 
 mmky_par(raw_data = c( "def_vol_q","def_vol_p","days_dr_q","days_dr_p"))
 
+
+monthly_dy_drought=c()
+for ( i in 1:12) monthly_dy_drought[i] =paste0(str_to_lower(month.abb[i]),"_dy_drought_q")
+mmky_par(raw_data = monthly_dy_drought)
+
+monthly_sum_def=c()
+for ( i in 1:12) monthly_sum_def[i] =paste0(str_to_lower(month.abb[i]),"_sum_drought_q")
+mmky_par(raw_data = monthly_sum_def)
+
+monthly_p_pet=c()
+for ( i in 1:12) monthly_p_pet[i] =paste0(str_to_lower(month.abb[i]),"_p_pet")
+mmky_par(raw_data = monthly_p_pet)
 
 png("./plots/further_investigate/final/sen_vs_p_value.png", width=1000, height=500)
 par(mfrow=c(2,1))
@@ -59,15 +79,41 @@ plot(mmkh_ms7_min$sen_slope ~ mmkh_ms7_min$new_p, ylab="mmkh sen's slope")
 dev.off()
 
 monthly_q=c()
-for ( i in 1:12) monthly_q[i] =paste0(str_to_lower(month.abb[i]),"_mn_q")
+for ( i in 1:12) monthly_q[i] =paste0(str_to_lower(month.abb[i]),"_med_q")
+mmky_par(raw_data = monthly_q)
+remove(monthly_q)
 
+monthly_q=c()
+for ( i in 1:12) monthly_q[i] =paste0(str_to_lower(month.abb[i]),"_mn_q")
 mmky_par(raw_data = monthly_q)
 
 monthly_t= c()
 for ( i in 1:12) monthly_t[i] =paste0(str_to_lower(month.abb[i]),"_mn_t")
-
 mmky_par(raw_data = monthly_t)
-remove(monthly_q, monthly_t)
+
+monthly_med_t= c()
+for ( i in 1:12) monthly_med_t[i] =paste0(str_to_lower(month.abb[i]),"_med_t")
+mmky_par(raw_data = monthly_med_t)
+
+monthly_p= c()
+for ( i in 1:12) monthly_p[i] =paste0(str_to_lower(month.abb[i]),"_sm_p")
+mmky_par(raw_data = monthly_p)
+
+monthly_pet= c()
+for ( i in 1:12) monthly_pet[i] =paste0(str_to_lower(month.abb[i]),"_pet")
+mmky_par(raw_data = monthly_pet)
+
+
+remove(monthly_q, monthly_t,monthly_p,monthly_pet,monthly_med_t)
+
+#precip trend without the years 1971, 1976,2003
+data_x = yearly_sm_p[-c(2,7,34),]
+mmky_par(raw_data = "data_x")
+remove(data_x)
+
+#precip trend without the 70s
+yr_sm_p_no70 = yearly_sm_p[-c(1:10),]
+mmky_par(raw_data = "yr_sm_p_no70")
 
 
 #why NAs? ####

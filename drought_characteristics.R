@@ -290,6 +290,24 @@ june_dy_drought_q = seasonal_80th_trend(month = 6, datax= q_days_of_drought_list
 june_sm_def_p = seasonal_80th_trend(month = 6, datax= p_sum_def_list) 
 june_sm_def_q = seasonal_80th_trend(month = 6, datax= q_sum_def_list) 
 
+for (i in 1:12){
+  
+  assign(paste0(str_to_lower(month.abb[i]),"_dy_drought_q"), seasonal_80th_trend(month = i, datax= q_days_of_drought_list))
+  
+}
+
+for (i in 1:12){
+  
+  assign(paste0(str_to_lower(month.abb[i]),"_sum_drought_q"), seasonal_80th_trend(month = i, datax= q_sum_def_list))
+  
+}
+
+march_dy_drought_q = seasonal_80th_trend(month = 3, datax= q_days_of_drought_list)
+march_dy_drought_q = seasonal_80th_trend(month = 3, datax= q_days_of_drought_list)
+
+march_dy_drought_q = seasonal_80th_trend(month = 3, datax= q_days_of_drought_list)
+june_dy_drought_q = seasonal_80th_trend(month = 6, datax= q_days_of_drought_list)
+
 #tot deficit
 png("./plots/5_choice/boxplot_geo.png")
 boxplot(log10(apply(q_sum_def_yr, 2, sum)) ~ gauges$hydrogeo_simple)
@@ -538,3 +556,17 @@ drought_p_80 = drought_p %>%
  
  #problem: calculating correlation. Since the 80th method and the dsi method lead to different amount of droughts (according to their definition). This causing f.e. more doughts in precipitation in one catchment than measured in streamflow. 
  
+ 
+ #drought charachteristics####
+ plot(gauges$mn_length~ gauges$saar)
+ 
+lm(gauges$mn_length~ gauges$saar) %>% summary
+ 
+#with only poros aquifer? or low bfi?
+gauges_df= gauges %>% as.data.frame()
+lm(gauges_df$mn_intensity~ gauges_df$saar, subset=which(gauges$bfi <.5)) %>% summary()
+
+
+plot(mn_length~ saar, data= gauges_df[which(gauges_df$bfi <.6),])
+ 
+lm(gauges$mn_deficit~ gauges$saar, subset=which(gauges$hydrogeo_simple == "P")) %>% summary()

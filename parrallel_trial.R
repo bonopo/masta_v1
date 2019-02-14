@@ -1,3 +1,145 @@
+#parrallel version (not working)  monthly aggregation cor
+agg.meteo_par = function(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q"){
+  res = matrix(nrow=12, ncol=length(agg_t))
+  n_obs = matrix(nrow=12, ncol=length(agg_t))
+  n=1
+dat_x = dat %>%
+  mutate(date = ymd(date_seq))
+
+mmky_edit = function(x)
+{
+    x = x
+    z = NULL
+    z0 = NULL
+    pval = NULL
+    pval0 = NULL
+    S = 0
+    Tau = NULL
+    essf = NULL
+    if (is.vector(x) == FALSE) {
+        stop("Input data must be a vector")
+    }
+    if (any(is.finite(x) == FALSE)) {
+        x <- x[-c(which(is.finite(x) == FALSE))]
+        warning("The input vector contains non-finite numbers. An attempt was made to remove them")
+    }
+    n <- length(x)
+    V <- rep(NA, n * (n - 1)/2)
+    k = 0
+    for (i in 1:(n - 1)) {
+        for (j in (i + 1):n) {
+            k = k + 1
+            V[k] = (x[j] - x[i])/(j - i)
+        }
+    }
+    slp <- median(V, na.rm = TRUE)
+    t = 1:length(x)
+    xn = (x[1:n]) - ((slp) * (t))
+    for (i in 1:(n - 1)) {
+        for (j in (i + 1):n) {
+            S = S + sign(x[j] - x[i])
+        }
+    }
+    ro <- acf(xn, lag.max = (n - 1), plot = FALSE)$acf[-1]
+    rof <- rep(NA, length(ro))
+    for (i in 1:(length(ro))) {
+        rof[i] <- ro[i]
+    }
+    ess = 0
+    for (k in 1:(n - 1)) {
+        ess = ess + (1 - (k/n)) * rof[k]
+    }
+    essf = 1 + 2 * (ess)
+    var.S = n * (n - 1) * (2 * n + 5) * (1/18)
+    if (length(unique(x)) < n) {
+        aux <- unique(x)
+        for (i in 1:length(aux)) {
+            tie <- length(which(x == aux[i]))
+            if (tie > 1) {
+                var.S = var.S - tie * (tie - 1) * (2 * tie + 
+                  5) * (1/18)
+            }
+        }
+    }
+    VS = var.S * essf
+    if (S == 0) {
+        z = 0
+        z0 = 0
+    }
+    if (S > 0) {
+        z = (S - 1)/sqrt(VS)
+        z0 = (S - 1)/sqrt(var.S)
+    }
+    else {
+        z = (S + 1)/sqrt(VS)
+        z0 = (S + 1)/sqrt(var.S)
+    }
+    pval = 2 * pnorm(-abs(z))
+    pval0 = 2 * pnorm(-abs(z0))
+    Tau = S/(0.5 * n * (n - 1))
+    return(c(`Corrected Zc` = z, `new P-value` = pval, `N/N*` = essf, 
+        `Original Z` = z0, `old P.value` = pval0, Tau = Tau, 
+        `Sen's slope` = slp, old.variance = var.S, new.variance = VS,s_stat = S))
+}
+
+
+simulation = function(x){
+  for (a in x){
+    for ( m in 1:12){
+      string_y = paste0("mmky_",str_to_lower(month.abb[m]),cor_y) 
+      if(a ==1) 
+        {
+        meteo = dat_x %>% filter(month(date) == m) %>% 
+          dplyr::select(-date) 
+      }else{
+        meteo = rollapply(
+          data=dat,
+          width=a,
+          FUN=sum,
+          by.column = TRUE,
+          fill=NA,
+          align="right") %>%  #rolling sum
+          as.data.frame %>% 
+          mutate(date = ymd(date_seq)) %>%
+          filter(month(date) == m)%>%  #filtering all the month of interest
+          dplyr::select(-date) 
+        meteo = meteo[-c(1:a),] #removing the NA preoduced by rollapply
+      }
+      
+        res_1_mmky = t(sapply(c(meteo[,1:ncol(meteo)]), FUN =mmky_edit)) %>% 
+          set_colnames(c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var","S")) %>% 
+          as.data.frame %>% 
+          dplyr::select("new_p", "sen_slope")
+        
+    res[m,n]= cor(x= res_1_mmky$sen_slope[res_1_mmky$new_p < fs & get(string_y, envir = .GlobalEnv)$new_p < fs], y= get(string_y, envir = .GlobalEnv)$sen_slope[res_1_mmky$new_p < fs & get(string_y, envir = .GlobalEnv)$new_p < fs])
+    
+   n_obs[m,n] = length(which(res_1_mmky$new_p < fs & get(string_y, envir = .GlobalEnv)$new_p < fs))
+    }
+    n=n+1
+   
+  }
+return(list(n_obs, res))
+}
+cl<-makeCluster(no_cores-1) # it is 4 times faster than the sequential loop
+registerDoSNOW(cl)
+pb <- txtProgressBar(max = catch_n, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
+agg_res<- foreach::foreach(c = agg_t,
+                           .packages = c("zoo","modifiedmk", "stringr","tidyverse", "lubridate","magrittr"),
+                        .options.snow = opts, .inorder = T,.combine = "c")%dopar%{ 
+  simulation(x=c)
+                        }
+close(pb)
+stopCluster(cl)
+return(agg_res)
+}
+
+
+
+
+
+#####
 no_cores=detectCores()
 cl<-makeCluster(no_cores-1) 
 registerDoSNOW(cl)

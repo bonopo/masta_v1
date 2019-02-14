@@ -60,6 +60,8 @@ gauges$sr <- as.numeric(q_sr$sr_value) # 0 = summer, 1= no clear seasonality 2=w
 gauges$sr_new <- as.numeric(q_sr$sr_value_new) # 2= winter 12- 0= summer low flow
 
 remove(q_sr, q_sr_s, q_sr_w)
+n_summer= length(which(gauges$sr_new == 0)) 
+n_winter= length(which(gauges$sr_new == 2))
 #spplot(gauges, "sr")
 
 
@@ -141,7 +143,7 @@ gauges$lt_memoryeffect = lt_cor_spi[,1]
 
 #which best spi-n aggregation month and correlation value ####
   #this calculates the best spi-n aggregation month for every catchment individually and the cor value itself too. The correlation is calculated between all ssi values (not only drought) and the spi-n value. In the next step the best one is selected and stored in the gauges attribution as a characteristic describing the catchment. All ssi (and not only the ssi values that are negative; indicating drought) are considered in this step because it is an attribute describing the catchment. Spearman correlation is used (because I am interested in the rank based corelation and the actual values)
-cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="s", sci="spi_v2_", ssi="ssi_1")#correlation:  spi~ ssi
+cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,3,6,12), cor_met="s", sci="spi_v2_", ssi="ssi_1")#correlation:  spi~ ssi
 cor_spei_ssi_v2 = cor_sci_ssi(sci_n= c(1,2,3,6,12,24), cor_met="s", sci="spei_v2_", ssi="ssi_1") # correlation: spei~ssi
 
 
@@ -164,6 +166,10 @@ gauges$cor_spi = value_spi
 gauges$cor_spei = value_spei
 
 remove(value_spei, value_spi, best_spei, best_spi, cor_spei_ssi_v2,cor_spi_ssi_v2)
+
+plot( x= gauges$saar, y=value_spi)
+spplot(gauges, "cor_spi_n")
+
 
 #mean deficit per drought event as clusterin method of the catchments ####
 load("./output/drought_q.Rdata", verbose = TRUE)
@@ -203,11 +209,11 @@ clust_ana3 = cbind( gauges$alpine, gauges$sr_new, as.factor(gauges$hydrogeo_simp
 
 colnames(clust_ana3) =c("alpine",  "seasonality","hydro_geo","landuse","q_mean","saar","BFI","catchment_km", "mn_t", "memory_effect", "mn_deficit","mn_intensity","mn_length","cor_spei","cor_spi","cor_spei_n","cor_spi_n", "hochwert")
 #library(scales)
-pdf("./plots/clustering/varclus.pdf")
-plot(Hmisc::varclus(~., data=clust_ana3), las=1, cex.lab=1.5)
-abline(h=.5, lty=2)
-dev.off()
-cor_mat = round(cor(clust_ana3, use="na.or.complete", method="p"),2)
+# pdf("./plots/clustering/varclus.pdf")
+# plot(Hmisc::varclus(~., data=clust_ana3), las=1, cex.lab=1.5)
+# abline(h=.5, lty=2)
+# dev.off()
+cor_mat = round(cor(x= ms7_date_trend , y= clust_ana5, use="na.or.complete", method="s"),2)
 
 
 plot(gauges$mn_t ~ gauges$Hochwrt)
@@ -246,16 +252,10 @@ plot(mmky_ms30_min$sen_slope[mmky_ms30_min$new_p<0.05] ~ gauges$mn_q[mmky_ms30_m
 #removing landuse because ther are NAs and landuse is not explainatory
 ggplot()+
 geom_point(aes(y= mmky_ms30_min$sen_slope, x= gauges$landuse))
+plot(pca)
+biplot(pca)
+round(pca$rotation,2)
 
-
-#pca
-pca <- prcomp(na.omit(clust_ana5), scale=T)
-names(pca$sdev) = abbreviate(colnames(clust_ana5))
-clust_ana5$catchment_km
-
-png("./plots/clustering/screeplot.png", width=1000, height=750)
-screeplot(pca)
-dev.off()
 
 
 
@@ -264,32 +264,92 @@ clust_ana5 = dplyr::select(clust_ana4,-cor_spi, -cor_spi_n)
 #removing the NAs from landuse
 clust_ana5 = clust_ana5[-c(24,26,270),]
 ms30_trend =mmky_ms30_min$sen_slope[-c(24,26,270)]
+ms7_trend =mmky_ms7_min$sen_slope[-c(24,26,270)]
+ms7_date_trend =mmky_ms7_date$sen_slope[-c(24,26,270)]
 fm = step(lm(ms30_trend[mmky_ms30_min$new_p < 0.05] ~., data=clust_ana5[mmky_ms30_min$new_p < 0.05,]), direction = "both", k= log(catch_n)) #calculating bic as model comparison, 
 #stepwise regression with spei best model bic:-1911.75,. spei cor is in the best model +  q_mean , + catchment_km , +memoryeffect
-clust_ana5 = dplyr::select(clust_ana4, -cor_spei, -cor_spei_n)
+
+summary(fm)
+clust_ana5 = dplyr::select(clust_ana4)
 clust_ana5 = clust_ana5[-c(24,26,270),]
 fm2 = step(lm(ms30_trend[mmky_ms30_min$new_p < 0.05] ~., data=clust_ana5[mmky_ms30_min$new_p < 0.05,]), direction = "both", k= log(catch_n))
 #best model is seasonality , q mean, catchment size and memory effect but not cor spi. bic:-1907.77
 relaimpo::calc.relimp(fm) %>% plot()
 relaimpo::calc.relimp(fm2) %>% plot()
-#is spei really the better predictor ? my intuition would way I made a mistake. This can not be true. In any ways the models are very bad. 
+#is spei really the better predictor ? my intuition would way I made a mistake. 
+#This can not be true. In any ways the models are very bad. 
+
+#normalizing data 
+clust_ana5 = clust_ana4[-c(24,26,270),]
+clust_ana5$q_mean %>%  log10 %>% hist()
+clust_ana5$saar %>%log10 %>% hist()
+clust_ana5$BFI  %>%  hist()
+clust_ana5$catchment_km %>% sqrt %>%  hist()
+clust_ana5$mn_t %>% hist
+clust_ana5$memory_effect %>%sqrt %>%  hist()
+clust_ana6$`gauges$cor_spei[-c(24, 26, 270)]`%>%     hist
+clust_ana5$cor_spi_n %>% hist
+
+clust_ana5$q_mean = clust_ana5$q_mean %>%log10 
+clust_ana5$saar =clust_ana5$saar %>%log10
+clust_ana5$catchment_km = clust_ana5$catchment_km %>% sqrt
+clust_ana5$memory_effect  = clust_ana5$memory_effect%>%sqrt 
+#with interaction
+#without spei and spi correlation
+clust_ana5<-na.omit(clust_ana5)
+clust_ana6 = dplyr::select(clust_ana5, -cor_spi, -cor_spi_n, -cor_spei, -cor_spei_n)
+#ms30
+init_mod = lm(ms30_trend[mmky_ms30_min$new_p < fs_ms30] ~., data=clust_ana6[mmky_ms30_min$new_p < fs_ms30,])
+#ms7 timing
+init_mod = lm(ms7_date_trend[mmky_ms7_date$new_p < fs_ms7_date] ~., data=clust_ana6[mmky_ms7_date$new_p < fs_ms7_date,])
+#ms7
+init_mod = lm(ms7_trend[mmky_ms7_min$new_p < fs_ms7] ~., data=clust_ana6[mmky_ms7_min$new_p < fs_ms7,])
+#step
+fm = step(init_mod,  direction = "both")#scope= . ~ .^2,
+summary(fm)
+#with spei
+clust_ana6 = dplyr::select(clust_ana5, -cor_spi, -cor_spi_n)
+init_mod = lm(ms7_trend[mmky_ms7_min$new_p < fs_ms7] ~., data=clust_ana6[mmky_ms7_min$new_p < fs_ms7,])
+fm = step(init_mod,  direction = "forward")#scope= . ~ .^2,
+summary(fm)
+#with spi
+clust_ana6 = dplyr::select(clust_ana5, -cor_spei, -cor_spei_n)
+init_mod = lm(ms7_trend[mmky_ms7_min$new_p < fs_ms7] ~., data=clust_ana6[mmky_ms7_min$new_p < fs_ms7,])
+fm = step(init_mod,  direction = "both")#scope= . ~ .^2,
+summary(fm)
+#with spei and spi
+clust_ana6 = clust_ana5
+init_mod = lm(ms7_trend[mmky_ms7_min$new_p < fs_ms7] ~., data=clust_ana6[mmky_ms7_min$new_p < fs_ms7,])
+fm = step(init_mod,  direction = "forward")#scope= . ~ .^2 interaction
+summary(fm)
 
 
- 
+#weird result: too many significant predictors. Model overfitted
+
+
 
 #the lower the bic the better the model, but all models are quite bad see relaimpo output
 
-#stepwise regression with interaction####
+# how much of the variance of the summer low flow trends can be explained by the catchment properties####
 
+#pca
+#only continues variables
+pca <- prcomp(na.omit(clust_ana6[,c(4:9)]), scale=T) 
+names(pca$sdev) = abbreviate(colnames(clust_ana6[,c(4:9)]))
+clust_ana5$catchment_km
+summary(pca)
 
-
+png("./plots/clustering/screeplot.png", width=1000, height=750)
+screeplot(pca)
+dev.off()
+round(pca$rotation,2)
 #do the catchments with high bfi have longer droughts? and higher deficits? definig bfi > 0.75  (see: hist(gauges$bfi))####
 # length of droughts is the same for every catchment per definition since, per definition everything below the 20th quantile counts as drought
 
 high_bfi = which(gauges$bfi > .75)
 tot_deficit = q_sum_def_yr %>% apply(., 2, sum) 
 mean_deficit = q_sum_def_yr %>% apply(., 2, mean) 
-
+gauges_df = gauges
 boxplot( tot_deficit ~gauges$hydrogeo_simple)
 class(tot_deficit)
 y_val =mmky_ms30_min$sen_slope
@@ -411,11 +471,11 @@ ggplot()+
 #   geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
 # ggsave("max_dr_dur_med_dr_int_bfi.png")
 # 
-gauges$ms30 = mmky_ms30_min$sen_slope
+
 gauges$ms7_date = mmky_ms7_date$sen_slope
 min(mmky_ms7_date$sen_slope)
-rtb = c('#ca0020','#f4a582','#bababa','#92c5de','#0571b0')
-germany = raster::getData("GADM",country="Germany",level=0)
+rtb = c('#ca0020','#f4a582','#bababa','#92c5de','#0571b0') # colors for spplot
+
 
 png("./plots/5_choice/gauges_msdate.png", width=800, height=1000)
 #pdf("./plots/5_choice/gauges_msdate.pdf")
@@ -439,9 +499,21 @@ spplot(gauges, "mnq30_month",
        scales = list(draw = TRUE))
 dev.off()
 
-# gauges$cor_spi_n
-# 
-# gauges$sr
+gauges$ms30 = mmky_ms30_min$sen_slope
+gauges$ms30[mmky_ms30_min$new_p < fs_ms30] = 5
+gauges$ms30 = cut(gauges$ms30, breaks = c(-3,-0.001,0.001,3,5)) 
+tofy2 = c("#de2d26","#9ecae1","#3182bd","#bdbdbd")
 
+pdf(file= "./plots/clustering/ms30_trends.pdf")
+spplot(gauges, "ms30", 
+      col.regions = tofy2,
+       
+       legendEntries = c("negative", "~0",  "positive","not significant"),
+       sp.layout = germany,
+     #  colorkey=T#,
+      scales = list(draw = TRUE)
+      )
+dev.off()
 
-
+spplot(gauges, "cor_spi_n")
+gauges$cor_spi_n

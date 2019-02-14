@@ -3,7 +3,10 @@
 setwd("C:/Users/Menke/Dropbox/masterarbeit/R")
 # save.image(file="./data/r_temp_image/basic.Rdata")
 load(file="./data/r_temp_image/basic.Rdata")
+load(file="./output/hydro_year.Rdata")
 load(file="./output/gauges.Rdata")
+load(file="./output/ms7.Rdata", verbose = T)
+load(file="./output/fs.Rdata", verbose = T)
 #install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest", "gridExtra", "foreach",  "doSNOW", "snow", "itertools"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 #install.packages("itertools")
@@ -29,6 +32,8 @@ legende2 <- read.csv("./data/geo_landuse/clc_legend.csv", sep=";", header=T)[,c(
 landuse_v1 <- read.csv("./data/geo_landuse/LaNu_per_EZG.csv")
 #hydrogeo data
 hydrogeo <- read.csv("./data/geo_landuse/hydrogeo.csv")
+# germany shapefile
+germany = raster::getData("GADM",country="Germany",level=0)
 # User defined constants --------------------------------------------------
 
 date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
@@ -37,6 +42,7 @@ catch_n <- 337 # number of catchments; originally 338 but last catchment has bee
 no_cores = detectCores() #for parallel computing
 my_catch = colnames(precip)
 agg_month =c(1, 2, 3, 6, 12, 24)
+
 # transforming data ----------------------------------------------------------------
 
 #precip####
@@ -45,7 +51,7 @@ precip = precip[,c(1:catch_n)]
 colnames(precip) <- 1:catch_n
 precip_long <- load_file(precip, "sum_mm")
 unique(precip_long$gauge)
-mt_sm_p <- precip_long %>%
+mt_sm_p <- precip_long %>% #monthly (calender based) sum
   mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>%
   group_by(gauge,yr_mt) %>%
   summarise(month_sum = sum(sum_mm)) %>%
@@ -132,10 +138,7 @@ remove(hydrogeo)
 sum(ymd(hydrogeo$Ztrhnbg.C.80)<ymd("1960-1-2")) #if time series would be extended to 1.1.1960 there would be 201 catchments
 
 
-# SPEI Preperation --------------------------------------------------------
 # PET calculation with thornwaite -----------------------------------------
-
-
 
 
 #Gauss Krueger converted to WGS84
@@ -151,7 +154,7 @@ latitude <- coordinates(xy_wgs84) %>%
   cbind("gauge" = unique(mt_mn_temp$gauge)) %>%
   as.tbl()
 
-#calculating Potential Evapotranspiration with thornthwaite
+#calculating monthly Potential Evapotranspiration with thornthwaite in mm
 pet_th <- list(NA)
 for(i in unique(mt_mn_temp$gauge)){
   data <- mt_mn_temp$temp_m[mt_mn_temp$gauge==i]
@@ -166,27 +169,41 @@ pet_th_vec <- pet_th[unique(mt_mn_temp$gauge)] %>%
   unlist() %>%
   as.numeric()
 
+
 spei_data <- mt_sm_p %>%
     mutate(pet_th = pet_th_vec) %>%
     mutate(p_pet = month_sum - pet_th) 
+# dx= spei_data %>% filter(.,gauge==1)
+# plot(x=dx$yr_mt, y=dx$pet_th, type="l")
 
-wi_p_pet = spei_data %>% 
-  filter(month(yr_mt) < 5 | month(yr_mt) > 11) %>% 
-  dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame() %>% 
-set_colnames(1:catch_n)
-
-su_p_pet = spei_data %>% 
-  filter(month(yr_mt) > 4 & month(yr_mt) < 12) %>% 
-  dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame() %>% 
-set_colnames(1:catch_n)
 
 spei_data_mat <- spei_data %>% dplyr::select(gauge,yr_mt, p_pet) %>% spread(gauge, p_pet) %>% dplyr::select(-yr_mt) %>% as.data.frame() %>% 
 set_colnames(1:catch_n)
 
 year_p_pet = spei_data_mat
 
-remove(spei_data,pet_th, latitude,pet_th_vec)
+remove(pet_th, latitude,pet_th_vec)
 remove(data, i, res_ts, xy_gk, xy_wgs84)
+
+#defining hydrological year beginning on 1.april because then there are no droughts (see plot below)
+gauges$mnq30_month %>% plot()
+
+year <- as.numeric(format(date_seq_long, "%Y"))
+  begin_year <- year[1]
+  end_year <- year[length(year)]  
+  begin_date <- date_seq_long[1]  
+  end_date <- date_seq_long[length(date_seq_long)]
+  
+  breaks <- seq(as.Date(begin_date), length = end_year - begin_year +2, by="year")
+  hydro_year <- cut(date_seq_long, breaks = breaks, labels= c((begin_year +1):(end_year +1)))
+  
+
+length(hydro_year)
+hydro_year = as.character(hydro_year) %>% as.integer()
+hydro_year_wi = c(rep(1970,4),rep(1971:2009, each=5))
+#save(list= c("hydro_year","hydro_year_wi"), file = "./output/hydro_year.Rdata")
+remove(year, begin_year, end_year, begin_date, end_date, breaks)
+
 #von Neumann homogenity test ####
 #Under the null hypothesis of constant mean, i.e., homogenous time series, the expected value of the von Neumann ratio is 2. However, it tends to be < 2 for the non-homogenous time series 
 # n72 = mt_mn_q_wide[,72]
