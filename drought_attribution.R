@@ -604,14 +604,15 @@ ggplot(data_plot)+
   scale_color_discrete("Meteorology",labels=c)
 
 
-#precip aggregated (similar to spi-n)
+#meteo aggregated (similar to spi-n)
 
 
 precip_agg = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
-precip_agg = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
+precip_agg_w = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
 
 p_pet_agg = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
-p_pet_agg = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
+p_pet_agg_w = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
 
 p_pet_temp = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
-p_pet_temp = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
+p_pet_temp_w = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
+save(file="./output/agg_meteo.Rdata", list=c("precip_agg", "precip_agg_w","p_pet_agg","p_pet_agg_w","p_pet_temp","p_pet_temp_w"))
