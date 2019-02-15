@@ -241,7 +241,7 @@ data_plot = yearly_sm_p %>%
   mutate(sr=rep(gauges$sr_new, times = 40)) %>% 
   as.tbl
 
-ggplot(data_plot)+
+ggplot(data_plot %>% filter(gauge==1)  )+
          geom_smooth(aes(x=year, y=sm_p), method = "loess", span=0.3)+
   ylab("precipitation sum [mm/year]")+
     scale_color_discrete("Seasonality", labels=c("summer","winter"))+
@@ -280,29 +280,104 @@ ggplot(data_plot)+
 #drought trends
   #q_days_of_drought_yr
   
+   data_plot = q_days_of_drought_yr %>% 
+            mutate(year = 1970:2009) %>% 
+            gather(value=days_q, key=gauge, -year) %>% 
+            mutate(gauge=as.integer(gauge)) %>% 
+            mutate(sr=rep(gauges$sr_new, times=40) )%>% 
+            group_by(year,sr) %>% 
+            summarise(yr_med =  rollmedian(days_q, algin="center", k=catch_n), sd_neg=quantile(days_q,.25), sd_pos=quantile(days_q,.75)) %>% 
+            as.tbl %>% 
+            ungroup
+  
+  
+   
+
+ggplot(data_plot)+
+  geom_line(aes(x=year, y=yr_med), col="#56B4E9")+
+  geom_line(aes(x=year, y=sd_neg),linetype="dashed", col="#56B4E9")+
+  geom_line(aes(x=year, y=sd_pos),linetype="dashed", col="#56B4E9")+
+  ylab("days of drought  [d/a]")+
+  xlab("")
+ggsave("./plots/statistical/drought_sum_q_winter.pdf")
+
+
+loess()
+  
   
   data_plot = q_days_of_drought_yr %>% 
   mutate(year = 1970:2009) %>% 
   gather(., key=gauge, value=days_dr,-year) %>% 
   mutate(sr=rep(gauges$sr_new, times = 40)) %>% 
   as.tbl
-  data_plot2 = p_days_of_drought_yr %>% 
+  data_plot = p_days_of_drought_yr %>% 
   mutate(year = 1970:2009) %>% 
   gather(., key=gauge, value=days_dr,-year) %>% 
   mutate(sr=rep(gauges$sr_new, times = 40)) %>% 
   as.tbl
 
-ggplot(data_plot)+
-         geom_smooth(aes(x=year, y=days_dr,col="darkblue"), method = "loess", span=0.3)+
-        geom_smooth(data= data_plot2, aes(x=year, y=days_dr,col="red"), method = "loess", span=0.3)+
+  
+  ggplot(data_plot,aes(x=year, y=days_dr))+
+    geom_smooth( method = "loess", span=.3)+
+    facet_wrap(~sr)
+  
+  ggplot(data_plot,aes (x=year, y=days_dr, col=as.factor(gauge)))+
+    geom_smooth(show.legend = F, se=F, span=.3, method="loess")
+  
+ ggplot(data_plot )+
+         geom_smooth(aes(x=year, y=days_dr,col="darkblue"), method = "loess", span=.3)#+
+       # geom_smooth(data= data_plot2, aes(x=year, y=days_dr,col="red"), method = "loess", span=0.2)+
   ylab("days of drought [d/year]")+
   xlab("")+
   scale_color_discrete("Drought indice", labels=c("streamflow","precipitation"))
   ggsave("./plots/statistical/drought_days.png")
   
-  #p_sum_def_yr
-
+  #q_sum_def_yr
+  
   data_plot = q_sum_def_yr %>% 
+            mutate(year = 1970:2009) %>% 
+            gather(value=sum_q, key=gauge, -year) %>% 
+            mutate(gauge=as.integer(gauge)) %>% 
+            mutate(sr=rep(gauges$sr_new, times=40) )%>% 
+            group_by(year,sr) %>% 
+            summarise(yr_med = median(sum_q), sd_neg=quantile(sum_q,.25), sd_pos=quantile(sum_q,.75)) %>% 
+            as.tbl
+   
+
+ggplot(data_plot %>% filter(sr==2))+
+  geom_line(aes(x=year, y=yr_med), col="#56B4E9")+
+  geom_line(aes(x=year, y=sd_neg),linetype="dashed", col="#56B4E9")+
+  geom_line(aes(x=year, y=sd_pos),linetype="dashed", col="#56B4E9")+
+  ylab("cumulative discharge deficit  [m³/a]")+
+  xlab("")
+ggsave("./plots/statistical/drought_sum_q_winter.pdf")
+
+#p_sum_def
+
+
+
+
+   data_plot = p_sum_def_yr %>% 
+            mutate(year = 1970:2009) %>% 
+            gather(value=sum_p, key=gauge, -year) %>% 
+            mutate(gauge=as.integer(gauge)) %>% 
+            mutate(sr=rep(gauges$sr_new, times=40) )%>% 
+            group_by(year,sr) %>% 
+            summarise(yr_med = median(sum_p), sd_neg=quantile(sum_p,.25), sd_pos=quantile(sum_p,.75)) %>% 
+            as.tbl
+   
+   
+   ggplot(data_plot %>% filter(sr==2))+
+  geom_line(aes(x=year, y=yr_med), col=2)+
+  geom_line(aes(x=year, y=sd_neg),linetype="dashed", col=2)+
+  geom_line(aes(x=year, y=sd_pos),linetype="dashed", col=2)+
+  ylab("cumulative precipitation deficit  [mm/a]")+
+  xlab("")
+ggsave("./plots/statistical/drought_sum_p_winter.pdf")
+
+
+
+   data_plot = q_sum_def_yr %>% 
   mutate(year = 1970:2009) %>% 
   gather(., key=gauge, value=sum_def,-year) %>% 
   mutate(sr=rep(gauges$sr_new, times = 40)) %>% 

@@ -3,7 +3,7 @@
 
 #plotting sen slope ####
 #per catchment characteristic
-  p = catch_plot(p_value=fs_wi_sm_p, color="sr_new", x_data="saar", y_data= "mmky_p_days_of_drought_yr" , factor =T)
+  p = catch_plot(p_value=.03, color="sr_new", x_data="saar", y_data= "mmky_q_days_of_drought_yr" , factor =T)
 p
 
 
@@ -14,14 +14,14 @@ p
 ggsave(plot = p, "./plots/trend_analysis/su_mn_t_hochwert.png")
 
 #trend vs trend
-p=sig_plot(x_data = "mmky_p_sum_def_yr", y_data = "mmky_q_sum_def_yr", output = "sr_new", p_value =.05) 
+p=sig_plot(x_data = "mmky_wi_sm_p", y_data = "mmky_wi_med_q", output = "sr_new", p_value =1) 
 p
 p+
 #geom_abline(slope=1, intercept=0)+
   xlab("winter sum precipitation trend (slope) [mm/a]")+
   ylab("winter median q trend (slope) [m³/s/a]")
   ggsave( "./plots/trend_analysis/wi_p_med_q_sr.png")
-
+scale_color_discrete("Seasonality" , labels =c("Summer","Winter"))
 
 # trends in drought charachteristics --------------------------------------
 
@@ -492,10 +492,11 @@ remove(mmky_monthly_p_pet, check, sr_new_l, d, data_plot)
 mmky_monthly_t = c()
 data_plot=list()
 sr_new_l=list()
+fs = 10
 for(i in 1:12) {
   mmky_monthly_t = paste0("mmky_",str_to_lower(month.abb[i]),"_mn_t")
-data_plot[[i]]  = get(mmky_monthly_t)$sen_slope[get(mmky_monthly_t)$new_p < fs_mn_t[i]]
-sr_new_l[[i]] = gauges$sr_new[get(mmky_monthly_t)$new_p < fs_mn_t[i]]
+data_plot[[i]]  = get(mmky_monthly_t)$sen_slope[get(mmky_monthly_t)$new_p < fs]
+sr_new_l[[i]] = gauges$sr_new[get(mmky_monthly_t)$new_p < fs]
 }
 
 
@@ -505,13 +506,40 @@ d <- data.frame(x = unlist(data_plot),
                 )
 ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) + 
   geom_boxplot()+
-  stat_summary(fun.data = give.n, geom = "text", fun.y = median,
-                  position = position_dodge(width = 1), size=3)+
+  #stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+  #                position = position_dodge(width = 1), size=3)+
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
   ylab("monthly mean t trend (slope) [°C/a]")+
   scale_color_discrete("Seasonality", labels=c("summer","winter"))
   ggsave("./plots/trend_analysis/monthly_t_sr.pdf")
+
+ dat=d %>% 
+    group_by(grp) %>% 
+    summarise(med =median(x))
+ values <- dat$med
+ii <- cut(values, breaks = seq(min(values), max(values), len = 100), 
+          include.lowest = TRUE) 
+colors = colorRampPalette(c(2,"white",4))(99)[ii]
+
+
+RColorBrewer::brewer.pal(n=3, "RdBu")
+  doughnut( rep(1,12) , labels=(month.abb), inner.radius=0.5, col=c(colors), clockwise = T ,  lty=3, density = NULL)
+  
+ 
+ 
+
+# Make the plot
+ggplot(dat, aes(fill=med, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +
+     geom_rect() +
+     coord_polar(theta="y") +
+     xlim(c(0, 4)) +
+     theme(panel.grid=element_blank()) +
+     theme(axis.text=element_blank()) +
+     theme(axis.ticks=element_blank()) +
+     annotate("text", x = 0, y = 0, label = "My Ring plot !") +
+     labs(title="")
+
 
 #monthly median trend
 mmky_monthly_med_t = c()
@@ -819,6 +847,16 @@ ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) +
   ggsave("./plots/trend_analysis/monthly_p_sr.png")
   #no trend
     
+  
+  #summer precip
+  
+  ggplot()+
+    geom_point(aes(x= gauges$saar, y=((mmky_su_sm_p$sen_slope/gauges$saar)*40), col=as.factor(gauges$sr_new)))+
+      ylab("sumer sum precipitation trend (slope) [%/40a]")+
+  xlab("SAAR [mm]")+
+scale_color_discrete("Seasonality" , labels =c("Summer","Winter"))
+  ggsave( "./plots/trend_analysis/su_sm_p_non_sig.pdf")
+  
 #error bars####
 sig_points = which(mmky_yearly_sm_p$new_p < fs_yr_sm_p  )
 error_x = error.bar("yearly_sm_p")
