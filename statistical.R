@@ -230,23 +230,38 @@ wilcox.test.modified(x_m = "mmky_wi_sm_p")#just significant
 boxplot( mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_wi_mn_t] ~ factor(gauges$sr_new))
 length(which(mmky_su_mn_t$sen_slope < fs_su_mn_t))
 
+t.test(x= gauges$cor_spi[gauges$sr_new == 2],y = gauges$cor_spi[gauges$sr_new == 0])
 
 t.test(x = mmky_wi_sm_p$sen_slope[mmky_wi_sm_p$new_p < fs_wi_sm_p & gauges$sr_new == 2], y= mmky_wi_sm_p$sen_slope[mmky_wi_sm_p$new_p < fs_wi_sm_p & gauges$sr_new == 0])
 
-#76' drought effect ####
-
+#time series plots ####
+#precipitation####
 data_plot = yearly_sm_p %>% 
   mutate(year = 1970:2009) %>% 
   gather(., key=gauge, value=sm_p,-year) %>% 
   mutate(sr=rep(gauges$sr_new, times = 40)) %>% 
   as.tbl
+ mn_yr = rollapply(data= yearly_sm_p, FUN= mean,  width=1, align="center",fill = NA, by.column = F)
+  sd=  rollapply(data= yearly_sm_p, FUN= quantile,probs = c(0.25, .75),  width=1, align="center",fill = NA, by.column = F)
+ data_plot = cbind.data.frame(1970:2009, mn_yr, sd) %>% set_colnames(c("year","yr_mn","sd_neg","sd_pos"))
+mean(data_plot$yr_mn)
+major_drought = data_plot$year[which(data_plot$yr_mn < quantile(data_plot$yr_mn,.2))] #defined as 20th quantile of the yearly precipitation sum
+ 
+ ggplot(data_plot)+
+  geom_line(aes(x=year, y=yr_mn), col=1)+
+geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey", alpha=.4)+
+  ylab("yearly mean temperature [°C]")+
+  xlab("")+
+  theme_bw()
+ 
 
-ggplot(data_plot %>% filter(gauge==1)  )+
-         geom_smooth(aes(x=year, y=sm_p), method = "loess", span=0.3)+
-  ylab("precipitation sum [mm/year]")+
-    scale_color_discrete("Seasonality", labels=c("summer","winter"))+
-  xlab("")
-  ggsave("./plots/statistical/yr_sm_p_loess.png")
+ 
+# ggplot(data_plot %>% filter(gauge==1)  )+
+#          geom_smooth(aes(x=year, y=sm_p), method = "loess", span=0.3)+
+#   ylab("precipitation sum [mm/year]")+
+#     scale_color_discrete("Seasonality", labels=c("summer","winter"))+
+#   xlab("")
+#   ggsave("./plots/statistical/yr_sm_p_loess.png")
 
 
 ggplot()+
@@ -263,48 +278,163 @@ for(i in 1:catch_n){
 
 table(res)
 
-#temp trends
-data_plot = yearly_mn_t %>% 
-  mutate(year = 1970:2009) %>% 
-  gather(., key=gauge, value=sm_p,-year) %>% 
-  mutate(sr=rep(gauges$sr_new, times = 40)) %>% 
-  as.tbl
+#temp ####
+ med_yr = rollapply(data= yearly_mn_t, FUN= mean,  width=3, align="center",fill = NA, by.column = F)
+  sd=  rollapply(data= yearly_mn_t, FUN= quantile,probs = c(0.25, .75),  width=3, align="center",fill = NA, by.column = F)
+ data_plot = cbind.data.frame(1970:2009, med_yr, sd) %>% set_colnames(c("year","yr_med","sd_neg","sd_pos"))
+ 
 
 ggplot(data_plot)+
-         geom_smooth(aes(x=year, y=sm_p), method = "loess", span=0.3)+
-  ylab("temperature [°C/year]")+
-    scale_color_discrete("Seasonality", labels=c("summer","winter"))+
-  xlab("")
-  ggsave("./plots/statistical/yr_mn_t_loess.png")
+  geom_line(aes(x=year, y=yr_med), col=1)+
+geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey", alpha=.4)+
+  ylab("yearly mean temperature [°C]")+
+  xlab("")+
+  theme_bw()
+ggsave("./plots/statistical/yr_temp_smooth.png")
+
+# ggplot(data_plot)+
+#          geom_smooth(aes(x=year, y=yr_med), method = "loess", span=0.3)+
+#   ylab("temperature [°C/year]")+
+#     scale_color_discrete("Seasonality", labels=c("summer","winter"))+
+#   xlab("")
+#   ggsave("./plots/statistical/yr_mn_t_loess.png")
   
-#drought trends
-  #q_days_of_drought_yr
+  #drought freq####
+
+# med_yr = rollapply(data= q_drought_freq, FUN= sum,  width=5, by=2,  align="center", by.column = T) 
+
+mn_dr_freq = apply(q_drought_freq,1,mean) #med_yr
+sd_dr_freq= apply(q_drought_freq,1,quantile, probs=c(.25,.75)) %>% t
+data_plot = cbind.data.frame(seq(1970,2009, 1), mn_dr_freq, sd_dr_freq) %>% set_colnames(c("year","yr_mn","sd_neg","sd_pos"))#seq(1974,2009, 5)1970:2009
+ 
+ ggplot(data_plot)+
+ geom_line(aes(x=year, y=yr_mn, color = "mean n droughts  "), linetype = "solid", lwd=1.3)+ #linetype nur als beispiel geändert!!!
+    geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey50", alpha=.3)+ #alternativ kann man auch geom_polygone nutzen
+    geom_blank(aes(color = "IQR "))+ #bracht man für den legendentrick
+    labs(y = "mean number of drougths [n/a/catchment]",
+         x = element_blank())+
+   scale_color_manual(element_blank(), values = c("mean n droughts  " = "black",  "IQR " = "grey50"), guide = guide_legend(override.aes = list(size = c(3.5,1.3), linetype = c("solid", "solid"), alpha = c(.3,1)
+    )))+
+    nice
+ 
+ ggsave("./plots/statistical/drought_freq.pdf")
+ 
+ 
+
+
+  #temp + precip + streamflow####
   
-   data_plot = q_days_of_drought_yr %>% 
-            mutate(year = 1970:2009) %>% 
-            gather(value=days_q, key=gauge, -year) %>% 
-            mutate(gauge=as.integer(gauge)) %>% 
-            mutate(sr=rep(gauges$sr_new, times=40) )%>% 
-            group_by(year,sr) %>% 
-            summarise(yr_med =  rollmedian(days_q, algin="center", k=catch_n), sd_neg=quantile(days_q,.25), sd_pos=quantile(days_q,.75)) %>% 
-            as.tbl %>% 
-            ungroup
+  mn_t = rollapply(data= spei_v2_2, FUN= mean, na.rm=T, width=30, align="center",fill = NA, by.column = F)
+      mn_p = rollapply(data= spi_v2_2, FUN= mean, na.rm=T, width=30, align="center",fill = NA, by.column = F)
+     mn_q= rollapply(data= ssi_1[,1:catch_n], FUN= mean, na.rm=T, width=30, align="center",fill = NA, by.column = F)
   
+ 
+     
+ggplot()+
+    theme_bw()+
+    geom_line(aes(x=date_seq, y=mn_t, color="SPEI-2"), lwd=1)+
+   geom_line(aes(x=date_seq, y=mn_p, color= "SPI-2"), lwd=1)+
+   geom_line(aes(x=date_seq, y=mn_q, color="SSI"), lwd=1)+
+  xlab("")+
+    labs(x=element_blank(),
+         y= "SCI")+
+      scale_color_discrete("")+
+  theme(legend.position="bottom")+
+  geom_hline(yintercept = 0)
   
+  ggsave("./plots/statistical/sci_2.pdf")
+        
+   spi= ggplot()+
+    theme_bw()+
+    geom_line(aes(x=date_seq, y=mn_p))+
+    labs(x="",
+         y= "SPI-3")
+ 
+ grid.arrange(spi,spei, ncol=1)
    
+  
+  
+  ggplot(data_plot)+
+  geom_line(aes(x=year, y=mn_t), col=2)+
+  geom_line(aes(x=year, y=mn_q), col=4)+
+  geom_line(aes(x=year, y=mn_p), col=1)+
+  scale_y_log10()
+  ylab("")+
+  xlab("")+
+  theme_bw()
+#drought trends####
+  #q_days_of_drought_yr
+  med_yr = rollapply(data= q_days_of_drought_yr, FUN= median,  width=1, align="center",fill = NA, by.column = F)
+  sd=  rollapply(data= q_days_of_drought_yr, FUN= quantile,probs = c(0.25, .75),  width=1, align="center",fill = NA, by.column = F)
+ data_plot_q = cbind.data.frame(1970:2009, med_yr, sd) %>% set_colnames(c("year","yr_med","sd_neg","sd_pos"))
+ 
+ apply(q_days_of_drought_yr,2,mean) %>% mean
+  apply(p_days_of_drought_yr,2,mean) %>% mean
+ 
+  apply(p_n_events_yr,2,mean) %>% mean
+    apply(q_n_events_yr,2,mean) %>% mean
+    
+   apply(q_days_of_drought_yr,2,sd) %>% sd
+  apply(p_days_of_drought_yr,2,sd) %>% sd
+  
+  med_yr = rollapply(data= p_days_of_drought_yr, FUN= median,  width=1, align="center",fill = NA, by.column = F)
+  sd=  rollapply(data= p_days_of_drought_yr, FUN= quantile,probs = c(0.25, .75),  width=1, align="center",fill = NA, by.column = F)
+ data_plot_p = cbind.data.frame(1970:2009, med_yr, sd) %>% set_colnames(c("year","yr_med","sd_neg","sd_pos"))
+ 
+ 
+ 
+ggplot(data_plot_q)+
+  geom_line(aes(x=year, y=yr_med), col="#2b8cbe", lwd=1)+
+  geom_ribbon(data = data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#56B4E9", alpha=.3)+
+  ylab("days of drought  [d/a]")+
+  xlab("")+
+    geom_line(data=data_plot_p,aes(x=year, y=yr_med), col="#de2d26",show.legend = T, lwd=1 )+
+    geom_ribbon(data = data_plot_p, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#fc9272", alpha=.3,show.legend = T )+
+  theme_bw()
+  ggsave("./plots/d.pdf", plot = p)
+  
+  
+ 
+ggsave("./plots/statistical/days_of_drought.pdf")
 
-ggplot(data_plot)+
+#same plot but with legend
+
+ 
+
+#theme
+nice <- theme_bw()+
+    theme(legend.position = "bottom",
+          text = element_text(size = 12)) 
+        
+
+ggplot(data_plot_q)+
+    geom_line(aes(x=year, y=yr_med, color = "streamflow  "), linetype = "solid", lwd=1.3)+ #linetype nur als beispiel geändert!!!
+    geom_ribbon(data = data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#56B4E9", alpha=.3)+ #alternativ kann man auch geom_polygone nutzen
+    geom_blank(aes(color = "IQR "))+ #bracht man für den legendentrick
+    labs(y = "days of drought  [d/a]",
+         x = element_blank())+ #besser so dann wird kein "platz" freigehalten, element blank geht nur mit dem labs befehl!!!
+    geom_line(data=data_plot_p,aes(x=year, y=yr_med, color = "precipitation  "), lwd=1.3)+
+    geom_ribbon(data = data_plot_p, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#fc9272", alpha=.3)+ #wichtig das legend=t muss raus!!!
+    geom_blank(aes(color = "IQR  "))+
+   scale_color_manual(element_blank(), values = c("streamflow  " = "#2b8cbe", "precipitation  " = "#de2d26", "IQR " = "#56B4E9", "IQR  " = "#fc9272"), guide = guide_legend(override.aes = list(size = c(3.5, 3.5,1.3,1.3), linetype = c("solid", "solid", "solid", "solid"), alpha = c(.3,.3,1,1)
+    )))+
+    nice
+#scale_color_manuel: element blank steht für keine Überschrift über legende. elemente werden immer alphabetisch sortiert. zur not mit Leerzeichen schummeln. merkt man nicht!
+    ggsave("./plots/statistical/days_drought_med.pdf")
+
+ 
+  
+p= ggplot(data_plot)+
   geom_line(aes(x=year, y=yr_med), col="#56B4E9")+
   geom_line(aes(x=year, y=sd_neg),linetype="dashed", col="#56B4E9")+
   geom_line(aes(x=year, y=sd_pos),linetype="dashed", col="#56B4E9")+
   ylab("days of drought  [d/a]")+
   xlab("")
-ggsave("./plots/statistical/drought_sum_q_winter.pdf")
 
 
-loess()
-  
-  
+grid.arrange(p,q, ncol=1)  
+
+
   data_plot = q_days_of_drought_yr %>% 
   mutate(year = 1970:2009) %>% 
   gather(., key=gauge, value=days_dr,-year) %>% 
@@ -333,49 +463,65 @@ loess()
   ggsave("./plots/statistical/drought_days.png")
   
   #q_sum_def_yr
+  q_sum_def_stan = (q_sum_def_yr-apply(q_sum_def_yr,2,mean))/apply(q_sum_def_yr,2,sd) #standartized
   
-  data_plot = q_sum_def_yr %>% 
+  data_plot_q = q_sum_def_stan %>% 
             mutate(year = 1970:2009) %>% 
             gather(value=sum_q, key=gauge, -year) %>% 
             mutate(gauge=as.integer(gauge)) %>% 
-            mutate(sr=rep(gauges$sr_new, times=40) )%>% 
-            group_by(year,sr) %>% 
+            #mutate(sr=rep(gauges$sr_new, times=40) )%>% 
+            group_by(year) %>% 
             summarise(yr_med = median(sum_q), sd_neg=quantile(sum_q,.25), sd_pos=quantile(sum_q,.75)) %>% 
             as.tbl
    
 
-ggplot(data_plot %>% filter(sr==2))+
-  geom_line(aes(x=year, y=yr_med), col="#56B4E9")+
-  geom_line(aes(x=year, y=sd_neg),linetype="dashed", col="#56B4E9")+
-  geom_line(aes(x=year, y=sd_pos),linetype="dashed", col="#56B4E9")+
-  ylab("cumulative discharge deficit  [m³/a]")+
-  xlab("")
-ggsave("./plots/statistical/drought_sum_q_winter.pdf")
+# q= ggplot(data_plot %>% filter(sr==2))+
+#   geom_line(aes(x=year, y=yr_med), col="#2b8cbe")+
+#  geom_ribbon(aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#56B4E9", alpha=.3)+
+#   ylab("cum. q deficit  [m³/a]")+
+#   xlab("")
+#ggsave("./plots/statistical/drought_sum_q_winter.pdf")
 
 #p_sum_def
 
 
+p_sum_def_stan = (p_sum_def_yr-apply(p_sum_def_yr,2,mean))/apply(p_sum_def_yr,2,sd) #standartized
 
-
-   data_plot = p_sum_def_yr %>% 
+   data_plot_p = p_sum_def_stan %>% 
             mutate(year = 1970:2009) %>% 
             gather(value=sum_p, key=gauge, -year) %>% 
             mutate(gauge=as.integer(gauge)) %>% 
-            mutate(sr=rep(gauges$sr_new, times=40) )%>% 
-            group_by(year,sr) %>% 
+            #mutate(sr=rep(gauges$sr_new, times=40) )%>% 
+            group_by(year) %>% 
             summarise(yr_med = median(sum_p), sd_neg=quantile(sum_p,.25), sd_pos=quantile(sum_p,.75)) %>% 
             as.tbl
    
    
-   ggplot(data_plot %>% filter(sr==2))+
-  geom_line(aes(x=year, y=yr_med), col=2)+
-  geom_line(aes(x=year, y=sd_neg),linetype="dashed", col=2)+
-  geom_line(aes(x=year, y=sd_pos),linetype="dashed", col=2)+
-  ylab("cumulative precipitation deficit  [mm/a]")+
+ggplot(data_plot_p)+
+  geom_line(aes(x=year, y=yr_med), col="#de2d26")+
+  geom_ribbon(aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#fc9272", alpha=.3)+
+  geom_line(data = data_plot_q, aes(x=year, y=yr_med), col="#2b8cbe")+
+  geom_ribbon(data = data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#56B4E9", alpha=.3)+
+  ylab("standardized cumulative deficit")+
   xlab("")
-ggsave("./plots/statistical/drought_sum_p_winter.pdf")
+#ggsave("./plots/statistical/drought_sum_p_winter.pdf")
+
+ggplot(data_plot_q)+
+    geom_line(aes(x=year, y=yr_med, color = "streamflow  "), linetype = "solid", lwd=1.3)+ #linetype nur als beispiel geändert!!!
+    geom_ribbon(data = data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#56B4E9", alpha=.3)+ #alternativ kann man auch geom_polygone nutzen
+    geom_blank(aes(color = "IQR "))+ #bracht man für den legendentrick
+    labs(y = "mean standardized cum. deficit",
+         x = element_blank())+ #besser so dann wird kein "platz" freigehalten, element blank geht nur mit dem labs befehl!!!
+    geom_line(data=data_plot_p,aes(x=year, y=yr_med, color = "precipitation  "), lwd=1.3)+
+    geom_ribbon(data = data_plot_p, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#fc9272", alpha=.3)+ #wichtig das legend=t muss raus!!!
+    geom_blank(aes(color = "IQR  "))+
+   scale_color_manual(element_blank(), values = c("streamflow  " = "#2b8cbe", "precipitation  " = "#de2d26", "IQR " = "#56B4E9", "IQR  " = "#fc9272"), guide = guide_legend(override.aes = list(size = c(3.5, 3.5,1.3,1.3), linetype = c("solid", "solid", "solid", "solid"), alpha = c(.3,.3,1,1)
+    )))+
+    nice
+ggsave("./plots/statistical/cum_def.pdf")
 
 
+grid.arrange(p,q,ncol=1)
 
    data_plot = q_sum_def_yr %>% 
   mutate(year = 1970:2009) %>% 
@@ -400,3 +546,24 @@ ggplot()+
   xlab("")
 
   ggsave("./plots/statistical/p_sum_def.png")
+  
+  #summer drought characteristics
+  
+  med_yr = rollapply(data= summer_dy_drought_q, FUN= mean,  width=1, align="center",fill = NA, by.column = F)
+  sd=  rollapply(data= summer_dy_drought_q, FUN= quantile,probs = c(0.25, .75),  width=1, align="center",fill = NA, by.column = F)
+ data_plot_q = cbind.data.frame(1970:2009, med_yr, sd) %>% set_colnames(c("year","yr_med","sd_neg","sd_pos"))
+ 
+   med_yr = rollapply(data= summer_dy_drought_p, FUN= mean,  width=1, align="center",fill = NA, by.column = F)
+  sd=  rollapply(data= summer_dy_drought_p, FUN= quantile,probs = c(0.25, .75),  width=1, align="center",fill = NA, by.column = F)
+ data_plot_p = cbind.data.frame(1970:2009, med_yr, sd) %>% set_colnames(c("year","yr_med","sd_neg","sd_pos"))
+ 
+
+ggplot(data_plot_p)+
+  geom_line(aes(x=year, y=yr_med), col=2)+
+geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey", alpha=.4)+
+    geom_line(data= data_plot_q, aes(x=year, y=yr_med), col=4)+
+geom_ribbon(data= data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey", alpha=.4)+
+# ylab("yearly mean temperature [°C]")+
+  xlab("")+
+  theme_bw()
+table(res)

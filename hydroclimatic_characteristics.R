@@ -3,6 +3,9 @@
 # source("./R/masta_v1/functions.R")# has to run before if not objects will be missing!
 # source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missing!
 
+#spring march - may
+#winter: dec - april
+
 
 
 # q seasonal data ####

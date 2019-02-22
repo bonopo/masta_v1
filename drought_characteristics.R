@@ -222,13 +222,31 @@ drought_q= output
 load("./output/drought_p.Rdata", verbose = TRUE)
   drought_p = output
 remove(output)
+hydro_year
+#drought frequency as events per year ####
+q_drought_freq =  drought_q %>% 
+  filter(catchment <= catch_n) %>% #because drought_q was calculated with the original number of observations of 338 catchments
+  
+  dplyr::select(catchment, dr_start, dr_end, event_no) %>% 
+  as.tbl() %>% 
+   mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
+  mutate(mid_year = year(dr_start+floor((dr_end-dr_start)/2))) %>%  #attributing the drought to the mid year of every event
+  group_by(catchment,mid_year) %>% 
+  summarise(events=n()) %>% 
+  spread(value=events, key=catchment) %>% 
+  dplyr::select(-mid_year) %>% 
+  set_colnames(1:catch_n) %>% 
+  as.data.frame()
+
+q_drought_freq[is.na(q_drought_freq)] = 0 #NA are produced in those years where there are no droughts therefore the value has to be set to 0 
+
 
 # calculating result through summary (per year and month) 
 # function takes a while and runs on all cores -1 (so please go get a coffee)
 q_seas= seasonal_80th(data = drought_q)
 p_seas= seasonal_80th(data = drought_p)
 
-# returns list with two df for each catchment [[1]] = mat_days (= days of drought per year per month) [[2]] = mat_def (=deficit volume per month (of drought) per year)
+# returns list with 3 df for each catchment [[1]] = mat_days (= days of drought per year per month) [[2]] = mat_def (=deficit volume per month (of drought) per year)
   
 #saving result for next step
 save(q_seas,file="./output/seasonal_q.Rdata")
@@ -243,6 +261,10 @@ load("./output/seasonal_p.Rdata", verbose = T)
 #yearly analysis 
 #(summing all rows to make sums for every year to see changes over the year rather than changes over the seasons) 
 #the result (df with catchments as columns and rows as years) for trend analysis
+#matching drought characteristics to the hydrological year
+# lapply(p_seas, function(x) apply(rbind(x[[1]][2:40,1:3], c(NA,NA,NA))
+# p_seas[[1]]
+
 p_days_of_drought_list = lapply(p_seas, function(x) x[[1]])
 q_days_of_drought_list = lapply(q_seas, function(x) x[[1]])
 p_days_of_drought_df <- lapply(p_seas, function(x) x[[1]]) %>% do.call("rbind", .) 
@@ -253,6 +275,10 @@ q_sum_def_list = lapply(q_seas, function(x) x[[2]])
 p_sum_def_df = lapply(p_seas, function(x) x[[2]]) %>% do.call("rbind", .)
 q_sum_def_df<- lapply(q_seas, function(x) x[[2]]) %>% do.call("rbind", .)
 
+p_n_df = lapply(p_seas, function(x) x[[3]]) %>% do.call("rbind", .)
+q_n_df<- lapply(q_seas, function(x) x[[3]]) %>% do.call("rbind", .)
+
+
 p_days_of_drought_yr = apply(p_days_of_drought_df,1, sum )%>% cbind(days_dr=.,year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40))%>%as.data.frame() %>%  spread(key=gauge, value = days_dr)%>% dplyr::select(-year)
 
 q_days_of_drought_yr = apply(q_days_of_drought_df,1, sum )%>% cbind(days_dr=., year = rep(1970:2009,catch_n),gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = days_dr) %>% dplyr::select(-year)
@@ -260,6 +286,10 @@ q_days_of_drought_yr = apply(q_days_of_drought_df,1, sum )%>% cbind(days_dr=., y
 p_sum_def_yr = apply(p_sum_def_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 
 q_sum_def_yr = apply(q_sum_def_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
+
+p_n_events_yr = apply(p_n_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
+
+q_n_events_yr = apply(q_n_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 
 
 #decadal analysis####
@@ -285,10 +315,20 @@ march_sm_def_p = seasonal_80th_trend(month = 3, datax= p_sum_def_list)
 march_sm_def_q = seasonal_80th_trend(month = 3, datax= q_sum_def_list) 
 
 
-june_dy_drought_p = seasonal_80th_trend(month = 6, datax= p_days_of_drought_list)
-june_dy_drought_q = seasonal_80th_trend(month = 6, datax= q_days_of_drought_list)
-june_sm_def_p = seasonal_80th_trend(month = 6, datax= p_sum_def_list) 
-june_sm_def_q = seasonal_80th_trend(month = 6, datax= q_sum_def_list) 
+summer_dy_drought_p = seasonal_80th_trend(month = 5:11, datax= p_days_of_drought_list)
+summer_dy_drought_q = seasonal_80th_trend(month = 5:11, datax= q_days_of_drought_list)
+summer_sm_def_p = seasonal_80th_trend(month = 5:11, datax= p_sum_def_list) 
+summer_sm_def_q = seasonal_80th_trend(month = 5:11, datax= q_sum_def_list) 
+
+winter_dy_drought_p = seasonal_80th_trend(month = c(12,1,2,3,4), datax= p_days_of_drought_list)
+winter_dy_drought_q = seasonal_80th_trend(month = c(12,1,2,3,4), datax= q_days_of_drought_list)
+winter_sm_def_p = seasonal_80th_trend(month = c(12,1,2,3,4), datax= p_sum_def_list) 
+winter_sm_def_q = seasonal_80th_trend(month = c(12,1,2,3,4), datax= q_sum_def_list) 
+
+spring_dy_drought_p = seasonal_80th_trend(month = 3:5, datax= p_days_of_drought_list)
+spring_dy_drought_q = seasonal_80th_trend(month = 3:5, datax= q_days_of_drought_list)
+spring_sm_def_p = seasonal_80th_trend(month = 3:5, datax= p_sum_def_list) 
+spring_sm_def_q = seasonal_80th_trend(month = 3:5, datax= q_sum_def_list)
 
 for (i in 1:12){
   
@@ -357,6 +397,10 @@ drought_q_ssi= list()
     drought_q_ssi[[i]] = temp
     }
 
+#same procedure but with seasonal approach not dsi method
+drought_q
+
+
 mat= matrix(nrow=catch_n, ncol=4)
 
 #corelating spi with severity. Hypothesis: the higher the severity the higher the correlation with higher spi_n (ie spi_24). result is a matrix of the pearson correlation of the selected spi_n aggregation months with the severity of the drought.
@@ -370,15 +414,8 @@ for( i in 1:catch_n){
         gather(key= spi_n, value=spi, -event_n, -date)
   
   mat[i,] = cor(method = "p", use="na.or.complete", y=drought_q_t$dsi, x=spi_catch)
-#   print(
-#     ggplot()+
-#     geom_point(aes(x= drought_q_t$mid_mt_yr, y=drought_q_t$dsi))+
-#     geom_point(data = spi_catch_long, aes(x=date, y=spi, col=spi_n))+
-#       ylab("spi_n value & DSI")
-# ggsave("./plots/5_choice/explanation_neg_cor.png")
-#     )
-  
-    }
+
+  #instead of correlation looking at the abs differnce meaning durng drought event what is the spi-n  value and the spei-n value. is there a relationchip. Can the 2000 drough be explained?
 
 #converting the correlation matrix into a df so it can be used to plot with ggplot
 drought_severity_spi_cor= mat %>% 

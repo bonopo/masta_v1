@@ -49,89 +49,8 @@ car::vif(fm)
 #yearly_sm_p with su_sm_p and wi_sm_p
 # thow out yearly_mn_t and yearly_sm_p
 
-#correlating discharge drought periods with climate indicators (SCI)####
-
-dr_corr = function(threshhold = -1,  agg_month = c(1,2,3,6,12,24)){
-  
-  result_part= matrix(nrow = 0, ncol=6)
-  result = list()
-  
-
-droughts_q =ssi_1_long %>% 
-  filter(ssi<=threshhold) %>% 
-  as.data.frame()
-
-spi_d = lapply(agg_month, FUN = function(x)  cbind(get(paste0("spi_v2_", x)), ymd(date_seq)) %>% as.data.frame() %>% gather(key=gauge, value=spi,-`ymd(date_seq)`))
-
-spei_d = lapply(agg_month, FUN = function(x)  cbind(get(paste0("spei_v2_", x)), ymd(date_seq)) %>% as.data.frame() %>% gather(key=gauge, value=spei,-`ymd(date_seq)`))
 
 
-for(i in 1:length(agg_month)){ #for every aggregation month 
-  for (g in 1:catch_n){ #for every catchment
-    
-    spi_d_catch = spi_d[[i]] %>% 
-        filter(gauge == g)
-   
-    spei_d_catch = spei_d[[i]] %>% 
-        filter(gauge == g)
-    
-    droughts_q_catch = droughts_q %>% #result per catchment
-      filter(gauge==g)
-    
-
-  int= pmatch(droughts_q_catch$yr_mt,spei_d_catch$`ymd(date_seq)`) #getting the value of spi or spei of every month with drought (discharge) 
-
-catch_res = droughts_q_catch %>%  
-    mutate(spi= spi_d_catch$spi[int], spei= spei_d_catch$spei[int], date_sci= spei_d_catch$`ymd(date_seq)`[int])
-  
-  result_part = rbind(result_part, catch_res)
-
-  
-  }
-  result[[i]] = result_part
-  result_part= matrix(nrow = 0, ncol=6)
-  cat(round(i/(length(agg_month)),2)*100,"%" ,"\n")
-
-  }
-return(result)
-}
-
-drought_sci = dr_corr(threshhold = -1)
-drought_sci_0 = dr_corr(threshhold = 0)
-
-
-#correlation of ssi-1 with spi-/spei-n in drought periods####
-
-cor_spi = matrix(nrow=catch_n, ncol=length(drought_sci))
-cor_spei = matrix(nrow=catch_n, ncol=length(drought_sci))
-
-for (a in 1:length(drought_sci)){
-for (g in 1:catch_n){
-temp= drought_sci[[a]] %>% 
-  filter(gauge== g)
-cor_spi[g, a] = cor(y= temp$ssi , x= temp$spi, use="c", method = "spearman") 
-cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
-}
-}
-
-#which aggregation month describes the catchment the best and what is its correlation (pearson)
-best_spi = c()
-  value_spi = c()
-best_spei = c()
-  value_spei = c()
-
-for(r in 1:catch_n){
- best_spi[r] = cor_spi[r,] %>% which.max() 
- value_spi[r] = cor_spi[r,] %>% max()}
-
-for(r in 1:catch_n){
- best_spei[r] = cor_spei[r,] %>% which.max() 
- value_spei[r] = cor_spei[r,] %>% max()}
-
-gauges$cor_spei_n_dr = best_spei
-gauges$cor_spi_n_dr  = best_spi
-gauges$cor_spi_dr    = value_spi
-gauges$cor_spei_dr   = value_spei
 
 which(gauges$cor_spi_dr > .5) 
 

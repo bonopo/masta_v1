@@ -7,10 +7,10 @@ load(file="./output/hydro_year.Rdata")
 load(file="./output/gauges.Rdata")
 load(file="./output/ms7.Rdata", verbose = T)
 load(file="./output/fs.Rdata", verbose = T)
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest", "gridExtra", "foreach",  "doSNOW", "snow", "itertools"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest", "gridExtra", "foreach",  "doSNOW", "snow", "itertools","ggthemes"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
 #install.packages("itertools")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI",  "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn", "gridExtra",  "foreach", "doSNOW", "snow"), require, character.only = T)
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI",  "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn", "gridExtra",  "foreach", "doSNOW", "snow","ggthemes"), require, character.only = T)
 #install.packages("climtrends", repos="http://R-Forge.R-project.org")
 
 
@@ -203,6 +203,8 @@ hydro_year = as.character(hydro_year) %>% as.integer()
 hydro_year_wi = c(rep(1970,4),rep(1971:2009, each=5))
 #save(list= c("hydro_year","hydro_year_wi"), file = "./output/hydro_year.Rdata")
 remove(year, begin_year, end_year, begin_date, end_date, breaks)
+
+#hydro year actually not used in further analysis rather the calender year
 
 #von Neumann homogenity test ####
 #Under the null hypothesis of constant mean, i.e., homogenous time series, the expected value of the von Neumann ratio is 2. However, it tends to be < 2 for the non-homogenous time series 

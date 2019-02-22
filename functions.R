@@ -264,6 +264,53 @@ sci_np <- function(sci_data="mt_sm_p_wide", agg_n=1, sci_name="spi"){
 
 # drought characteristics -------------------------------------------------
 
+#correlating discharge drought periods with climate indicators (SCI)####
+
+dr_corr = function(threshhold = -1,  agg_month = c(1,2,3,6,12,24)){
+  
+  result_part= matrix(nrow = 0, ncol=6)
+  result = list()
+  
+
+droughts_q =ssi_1_long %>% 
+  filter(ssi<=threshhold) %>% 
+  as.data.frame()
+
+spi_d = lapply(agg_month, FUN = function(x)  cbind(get(paste0("spi_v2_", x)), ymd(date_seq)) %>% as.data.frame() %>% gather(key=gauge, value=spi,-`ymd(date_seq)`))
+
+spei_d = lapply(agg_month, FUN = function(x)  cbind(get(paste0("spei_v2_", x)), ymd(date_seq)) %>% as.data.frame() %>% gather(key=gauge, value=spei,-`ymd(date_seq)`))
+
+
+for(i in 1:length(agg_month)){ #for every aggregation month 
+  for (g in 1:catch_n){ #for every catchment
+    
+    spi_d_catch = spi_d[[i]] %>% 
+        filter(gauge == g)
+   
+    spei_d_catch = spei_d[[i]] %>% 
+        filter(gauge == g)
+    
+    droughts_q_catch = droughts_q %>% #result per catchment
+      filter(gauge==g)
+    
+
+  int= pmatch(droughts_q_catch$yr_mt,spei_d_catch$`ymd(date_seq)`) #getting the value of spi or spei of every month with drought (discharge) 
+
+catch_res = droughts_q_catch %>%  
+    mutate(spi= spi_d_catch$spi[int], spei= spei_d_catch$spei[int], date_sci= spei_d_catch$`ymd(date_seq)`[int])
+  
+  result_part = rbind(result_part, catch_res)
+
+  
+  }
+  result[[i]] = result_part
+  result_part= matrix(nrow = 0, ncol=6)
+  cat(round(i/(length(agg_month)),2)*100,"%" ,"\n")
+
+  }
+return(result)
+}
+
 #computing of drought deficit and days of drought per month per catchment per year
 
 seasonal_80th = function(data= drought_q, year_ta= 1970:2009){
@@ -273,6 +320,7 @@ temp1 = data %>%
   filter(catchment == i)
     mat_def = matrix(nrow=length(year_ta), ncol=12,data=0)
     mat_days = matrix(nrow=length(year_ta), ncol=12,data=0)
+    mat_n = matrix(nrow=length(year_ta), ncol=12,data=0)
 
 for (e in 1:max(temp1$event_no)){
 #retrieving length of drought. since def.vol is in m³/day it has to be multiplied by the length of the drought (in days)
@@ -285,7 +333,7 @@ for (e in 1:max(temp1$event_no)){
      year_y = year(mt_yr) - (min(year_ta)-1) #to set row indice in matrix
   month_x = month(mt_yr) # to set column indice in matrix
 
-#writing to matrix
+#writing to matrix  deficit and days of drought
   if (length(month_x) == 1 ){#if drought starts and ends in the same month
     mat_def[cbind(year_y,month_x)] = sum(mat_def[cbind(year_y,month_x)],temp1$def_vol[e]*as.numeric(ymd(temp1$dr_end[e])-ymd(temp1$dr_start[e]))) #sum to include the information of the previous event, if for example there was a drought already at the beginning of the month
     #def.vol * number of days = total deficit of the drought event
@@ -304,11 +352,15 @@ for (e in 1:max(temp1$event_no)){
     mat_days[year_y[1],month_x[1]] = sum(mat_days[year_y[1],month_x[1]],(days_in_month(month_x[1])+1)-day(ymd(temp1$dr_start[e])))#retrieving the days of in the first month of drought, +1 because the first day of the drought count's as drought
     mat_days[year_y[length(year_y)],month_x[length(month_x)]] = sum(mat_days[year_y[length(year_y)],month_x[length(month_x)]],day(ymd(temp1$dr_end[e])))
   }#
-# }#
+
+  #writing to mat_n number of events
+  
+  mat_n[cbind(year_y, month_x)] = mat_n[cbind(year_y, month_x)] +1
+  
     }
    
   
-return(list(mat_days, mat_def))
+return(list(mat_days, mat_def, mat_n))
 }
 
 cl<-makeCluster(no_cores-1) # it is 4 times faster than the sequential loop!
@@ -350,11 +402,13 @@ for (p in 1:4){
 
 }
 
-#seasonal 80th data preperation for every month for trend analysis
+#seasonal 80th data preperation for seasonal trend analysis
 seasonal_80th_trend = function(month = 3, datax= p_days_of_drought_list){
-  res= lapply(datax, function(x) x[,month]) %>% do.call("cbind", .) %>% as.data.frame() %>% set_colnames(1:catch_n)
+  res= lapply(datax, function(x) apply(x[,month],1,sum)) %>% do.call("cbind", .) %>% as.data.frame() %>% set_colnames(1:catch_n)
   return(res)
 }
+
+
 
 #counting every month below threshhold
 dr_n <- function(severity = -1)  {
@@ -1248,5 +1302,18 @@ error.bar = function(data= "mar_mn_q"){
   upp_lim = sapply(1:catch_n, function(x) res[[x]]$interval$limits[2]) # upper limit
   # assign(x= paste0("error_",data), cbind.data.frame(low_lim, upp_lim  , sen_dat=  sen_dat$sen_slope), envir = .GlobalEnv)
   return(cbind.data.frame(low_lim, upp_lim  , sen_dat=  sen_dat$sen_slope))
+}
+
+#how many catchments have positve ore negative trends
+pos.neg = function(p=NULL, dat=mmky_yr_days_below_0,positive=T){
+  
+  if(is.null(p)) p = 10
+  if(positive == T) {
+    res = length(which(dat$sen_slope > 0 & dat$new_p < p ))/337 %>% round(.,2)*100
+    }else{
+   res= length(which(dat$sen_slope < 0 & dat$new_p < p ))/337 %>% round(.,2)*100
+    }
+  
+  return(cat(res, "%"))
 }
 

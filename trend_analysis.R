@@ -3,9 +3,11 @@
 
 #plotting sen slope ####
 #per catchment characteristic
-  p = catch_plot(p_value=.03, color="sr_new", x_data="saar", y_data= "mmky_q_days_of_drought_yr" , factor =T)
+  p = catch_plot(p_value=1, color="sr_new", x_data="bfi", y_data= "mmky_p_n_events_yr" , factor =T)
 p
-
+pos.neg(dat= mmky_summer_sm_def_q, p = .03, positive=T)
+# spring_dy_drought_q
+# spring_sm_def_p
 
 p= p+ylab("ms30 trend (slope) [m³/s/a]")+
   xlab("BFI")+
@@ -526,8 +528,20 @@ colors = colorRampPalette(c(2,"white",4))(99)[ii]
 RColorBrewer::brewer.pal(n=3, "RdBu")
   doughnut( rep(1,12) , labels=(month.abb), inner.radius=0.5, col=c(colors), clockwise = T ,  lty=3, density = NULL)
   
- 
- 
+ dat$count=rep(1,12)
+dat$fraction = dat$count / sum(dat$count)
+dat$ymax = cumsum(dat$fraction)
+dat$ymin = c(0, head(dat$ymax, n=-1))
+
+ggplot(dat, aes(fill=med, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +
+     geom_rect() +
+     coord_polar(theta="y") +
+     xlim(c(0, 4)) +
+     theme(panel.grid=element_blank()) +
+     theme(axis.text=element_blank()) +
+     theme(axis.ticks=element_blank()) +
+     annotate("text", x = 0, y = 0, label = "My Ring plot !") +
+     labs(title="")
 
 # Make the plot
 ggplot(dat, aes(fill=med, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +

@@ -139,8 +139,44 @@ gauges$lt_memoryeffect = lt_cor_spi[,1]
 
 
 #corellation SSI (during drought) with SPI/SPEI-n ####
- #-----> see drought attribution script
+drought_sci = dr_corr(threshhold = -1)
+drought_sci_0 = dr_corr(threshhold = 0)
 
+
+#correlation of ssi-1 with spi-/spei-n in drought periods####
+
+cor_spi = matrix(nrow=catch_n, ncol=length(drought_sci_0))
+cor_spei = matrix(nrow=catch_n, ncol=length(drought_sci_0))
+
+for (a in 1:length(drought_sci_0)){
+for (g in 1:catch_n){
+temp= drought_sci_0[[a]] %>% 
+  filter(gauge== g)
+cor_spi[g, a] = cor(y= temp$ssi , x= temp$spi, use="c", method = "spearman") 
+cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
+}
+}
+
+#which aggregation month describes the catchment the best and what is its correlation (pearson)
+best_spi = c()
+  value_spi = c()
+best_spei = c()
+  value_spei = c()
+
+for(r in 1:catch_n){
+ best_spi[r] = cor_spi[r,] %>% which.max() 
+ value_spi[r] = cor_spi[r,] %>% max()}
+
+for(r in 1:catch_n){
+ best_spei[r] = cor_spei[r,] %>% which.max() 
+ value_spei[r] = cor_spei[r,] %>% max()}
+
+gauges$cor_spei_n_dr = best_spei
+gauges$cor_spi_n_dr  = best_spi
+gauges$cor_spi_dr    = value_spi
+gauges$cor_spei_dr   = value_spei
+
+hist(gauges$cor_spi_n_dr)
 #which best spi-n aggregation month and correlation value ####
   #this calculates the best spi-n aggregation month for every catchment individually and the cor value itself too. The correlation is calculated between all ssi values (not only drought) and the spi-n value. In the next step the best one is selected and stored in the gauges attribution as a characteristic describing the catchment. All ssi (and not only the ssi values that are negative; indicating drought) are considered in this step because it is an attribute describing the catchment. Spearman correlation is used (because I am interested in the rank based corelation and the actual values)
 cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,3,6,12), cor_met="s", sci="spi_v2_", ssi="ssi_1")#correlation:  spi~ ssi
@@ -451,26 +487,26 @@ ggplot()+
  which(mmky_ms7_date$sen_slope >0 & mmky_ms7_date$new_p < 0.05) %>% length()
  
  
-# ggplot(data=gauges_df)+
-#   geom_point(aes(x=saar, y= best_spei, col= bfi))
-# 
-# ggplot(data=gauges_df)+
-#   geom_point(aes(x=saar, y= cor_spi, alpha= bfi))
-# ggsave("best_spi_cor_spi_saar.png")
-# 
-# ggplot(data=gauges_df)+
-#   geom_point(aes(x=saar, y= cor_spei, col= bfi))
-# ggsave("bfi_cor_spei_saar.png")
-# ggplot(data=gauges_df)+
-#   geom_point(aes(x=Enzgsg_, y= med_dr_sev, col= bfi))
-# 
-# ggplot(data=gauges_df)+
-#   geom_point(aes(x=max_dr_sev, y= n_events, col= bfi))
-# 
-# ggplot(data=gauges_df)+
-#   geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
-# ggsave("max_dr_dur_med_dr_int_bfi.png")
-# 
+ggplot(data=gauges_df)+
+  geom_point(aes(x=saar, y= best_spei, col= bfi))
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=saar, y= cor_spei, col= as.factor(sr_new)))
+ggsave("best_spi_cor_spi_saar.png")
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=saar, y= cor_spei, col= bfi))
+ggsave("bfi_cor_spei_saar.png")
+ggplot(data=gauges_df)+
+  geom_point(aes(x=Enzgsg_, y= med_dr_sev, col= bfi))
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=max_dr_sev, y= n_events, col= bfi))
+
+ggplot(data=gauges_df)+
+  geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
+ggsave("max_dr_dur_med_dr_int_bfi.png")
+
 
 gauges$ms7_date = mmky_ms7_date$sen_slope
 min(mmky_ms7_date$sen_slope)
@@ -517,3 +553,7 @@ dev.off()
 
 spplot(gauges, "cor_spi_n")
 gauges$cor_spi_n
+
+boxplot(gauges_df$bfi ~ gauges_df$cor_spi_n_dr, horizontal=T )
+
+plot(gauges$cor_spi_dr ~ gauges$saar)
