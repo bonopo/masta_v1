@@ -320,38 +320,51 @@ data_plot = cbind.data.frame(seq(1970,2009, 1), mn_dr_freq, sd_dr_freq) %>% set_
  ggsave("./plots/statistical/drought_freq.pdf")
  
  
-
+#seasonal drought freq#
+ mn_dr_freq = apply(summer_p_drought_freq,1,mean) #med_yr
+sd_dr_freq= apply(summer_p_drought_freq,1,quantile, probs=c(.25,.75)) %>% t
+data_plot = cbind.data.frame(seq(1970,2009, 1), mn_dr_freq, sd_dr_freq) %>% set_colnames(c("year","yr_mn","sd_neg","sd_pos"))#seq(1974,2009, 5)1970:2009
+ 
+ ggplot(data_plot)+
+ geom_line(aes(x=year, y=yr_mn, color = "mean n droughts  "), linetype = "solid", lwd=1.3)+ #linetype nur als beispiel geändert!!!
+    geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey50", alpha=.3)+ #alternativ kann man auch geom_polygone nutzen
+    geom_blank(aes(color = "IQR "))+ #bracht man für den legendentrick
+    labs(y = "mean number of drougths [n/a/catchment]",
+         x = element_blank())+
+   scale_color_manual(element_blank(), values = c("mean n droughts  " = "black",  "IQR " = "grey50"), guide = guide_legend(override.aes = list(size = c(3.5,1.3), linetype = c("solid", "solid"), alpha = c(.3,1)
+    )))+
+    nice
+ 
 
   #temp + precip + streamflow####
   
-  mn_t = rollapply(data= spei_v2_2, FUN= mean, na.rm=T, width=30, align="center",fill = NA, by.column = F)
-      mn_p = rollapply(data= spi_v2_2, FUN= mean, na.rm=T, width=30, align="center",fill = NA, by.column = F)
+  mn_t = rollapply(data= spei_v2_3, FUN= mean, na.rm=T, width=30, align="center",fill = NA, by.column = F)
+      mn_p = rollapply(data= spi_v2_3, FUN= mean, na.rm=T, width=30, align="center",fill = NA, by.column = F)
      mn_q= rollapply(data= ssi_1[,1:catch_n], FUN= mean, na.rm=T, width=30, align="center",fill = NA, by.column = F)
   
  
      
 ggplot()+
     theme_bw()+
-    geom_line(aes(x=date_seq, y=mn_t, color="SPEI-2"), lwd=1)+
-   geom_line(aes(x=date_seq, y=mn_p, color= "SPI-2"), lwd=1)+
-   geom_line(aes(x=date_seq, y=mn_q, color="SSI"), lwd=1)+
-  xlab("")+
-    labs(x=element_blank(),
-         y= "SCI")+
+    geom_line(aes(x=date_seq, y=mn_t, color="SPEI-3"), lwd=1, alpha=1)+
+   geom_line(aes(x=date_seq, y=mn_p, color= "SPI-3"), lwd=1, alpha=1)+
+   geom_line(aes(x=date_seq, y=mn_q, color="SSI"), lwd=1, alpha=.5)+
+      xlab("")+
+         ylab("SCI")+
       scale_color_discrete("")+
   theme(legend.position="bottom")+
+  geom_hline(yintercept = 0)
+
+#+
+   scale_color_manual(element_blank(), values = c(  "SPI-3" = "orange","SPEI-3" = "green", "SSI" = "blue"), guide = guide_legend(override.aes = list(size = c(1,1,1), linetype = c("solid", "solid","solid"), alpha = c(1,1,.8)
+    )))+
+    nice+
   geom_hline(yintercept = 0)
   
   ggsave("./plots/statistical/sci_2.pdf")
         
-   spi= ggplot()+
-    theme_bw()+
-    geom_line(aes(x=date_seq, y=mn_p))+
-    labs(x="",
-         y= "SPI-3")
- 
- grid.arrange(spi,spei, ncol=1)
-   
+
+   t.test(x = gauges$mn_deficit[gauges$hydrogeo_simple == "K"] ,y = gauges$mn_deficit[gauges$hydrogeo_simple == "P"])
   
   
   ggplot(data_plot)+

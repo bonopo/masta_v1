@@ -1193,17 +1193,19 @@ data$z_anom_end[data$gauge == g]
  return(res2)
  }
 
-agg.meteo = function(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=NULL){
+agg.meteo = function(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=NULL, cor=T){
   res = matrix(nrow=12, ncol=length(agg_t))
   n_obs = matrix(nrow=12, ncol=length(agg_t))
+  res_cor= matrix(nrow=catch_n, ncol=12)
   n=1
+  res_l= list()
 dat_x = dat %>%
   mutate(date = ymd(date_seq))
 if(is.numeric(subset)){
   dat_x = dat_x[,c(subset,catch_n+1)]
 }
   for (a in agg_t){
-    for ( m in 1:12){
+    for (m in 1:12){
           if(is.null(subset)){
         dat_y = get(paste0("mmky_",str_to_lower(month.abb[m]),cor_y) )
           }else{
@@ -1224,26 +1226,38 @@ if(is.numeric(subset)){
           mutate(date = ymd(date_seq)) %>%
           filter(month(date) == m)%>%  #filtering all the month of interest
           dplyr::select(-date) 
-        if(is.numeric(is.na(meteo[,1]))){
+        if(any(is.na(meteo[,1]))&cor == F){
           meteo = meteo[-which(is.na(meteo[,1])),] #removing the NA produced by rollapply
         }
       }
-      
+      if(cor == T){
+        
+         res_cor[,m] = cor(x= meteo, y=get(paste0(str_to_lower(month.abb[m]),cor_y) ), use="na.or.complete", method="s") %>% diag
+         
+      }else{
         res_1_mmky = t(sapply(c(meteo[,1:ncol(meteo)]), FUN =mmky_edit)) %>% 
           set_colnames(c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var","S")) %>% 
           as.data.frame %>% 
           dplyr::select("new_p", "sen_slope")
-        #print(warnings())
+        
     res[m,n]= cor(x= res_1_mmky$sen_slope[res_1_mmky$new_p < fs & dat_y$new_p < fs], y= dat_y$sen_slope[res_1_mmky$new_p < fs & dat_y$new_p < fs], use="na.or.complete")
     
    n_obs[m,n] = length(which(res_1_mmky$new_p < fs & dat_y$new_p < fs))
    
+      }
+    }
+   if(cor == T){
+      res_l[[n]] = res_cor
    }
     cat(round(n/length(agg_t),2)*100,"%","\n") 
     n=n+1
     
   }
-return(list(n_obs, res))
+if(cor==T){
+  return(res_l)
+}else{
+    return(list(n_obs, res))
+  }
 }
 
 

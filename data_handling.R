@@ -43,6 +43,10 @@ no_cores = detectCores() #for parallel computing
 my_catch = colnames(precip)
 agg_month =c(1, 2, 3, 6, 12, 24)
 
+nice <- theme_bw()+
+    theme(legend.position = "bottom",
+          text = element_text(size = 12))  ##ggplot theme
+
 # transforming data ----------------------------------------------------------------
 
 #precip####

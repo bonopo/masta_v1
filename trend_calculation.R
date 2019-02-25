@@ -40,7 +40,12 @@ mmky_par( c("yr_days_below_0", "wi_days_below_0"))
 mmky_par(c("sp_mn_t", "sp_sm_p"))
 mmky_par(c("su_mn_q","wi_mn_q"))
 mmky_par(c("wi_med_q", "su_med_q"))
-mmky_par("q_drought_freq")
+
+mmky_par(c("summer_q_drought_freq", "summer_p_drought_freq"))
+mmky_par(c("summer_dy_drought_p", "summer_dy_drought_q"))
+mmky_par(c("summer_sm_def_p", "summer_sm_def_q"))
+
+
 mmky(wi_days_below_0$`1`)
 mmky_par(c("su_p_pet", "yearly_30_min", "yearly_7_min", "yearly_7_date","mw7_min", "mw7_date"))
 class(wi_days_below_0)

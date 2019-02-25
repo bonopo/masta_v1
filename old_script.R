@@ -18,6 +18,46 @@ colnames(mnq30_date) <- c("year", "gauge", "date_mnq30")
 
 #measure of distance to june to overcome problem 12 - 1####
  
+# drought frequency  (80th method)------------------------------------------------------
+# q_drought_freq = drought_q %>% 
+#   dplyr::select(catchment, dr_start, dr_end, event_no) %>% 
+#   as.tbl() %>% 
+#    mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
+#   mutate(mid_year = year(dr_start+floor((dr_end-dr_start)/2))) %>%  #attributing the drought to the mid year of every event
+#   group_by(catchment,mid_year) %>% 
+#   summarise(events=n()) %>% 
+#   spread(value=events, key=catchment) %>% 
+#   dplyr::select(-mid_year) %>% 
+#   set_colnames(1:catch_n) %>% 
+#   as.data.frame()
+# 
+# q_drought_freq[is.na(q_drought_freq)] = 0 #NA are produced in those years where there are no droughts therefore the value has to be set to 0 
+
+#drought frequency (ssi method)####
+#severity per year
+mat_dsi= matrix(0, nrow=40, ncol=catch_n)
+for (i in 1:catch_n){
+int = pmatch(c(dsi_1_yearly[[i]][,1])$year,c(1970:2009 ) )
+  mat_dsi[int,i] = c(dsi_1_yearly[[i]][,2])$sum_dsi
+}
+#number of events per year
+mat_n= matrix(0, nrow=40, ncol=catch_n)
+for (i in 1:catch_n){
+int = pmatch(c(dsi_1_yearly[[i]][,1])$year,c(1970:2009 ) )
+  mat_n[int,i] = c(dsi_1_yearly[[i]][,5])$n
+}
+
+
+mat_dsi[,23] %>% plot(t="l")
+
+#per 5 year
+
+dr_freq_5yr = rollapply(mat_n, width=5, by= 5, FUN=sum, by.column=TRUE)
+dr_dsi_5yr = rollapply(mat_dsi, width=5, by= 5, FUN=sum, by.column=TRUE)
+#per decade
+dr_freq_10yr = rollapply(mat_n, width=10, by= 10, FUN=sum, by.column=TRUE)
+dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
+
 
 # old SCI calculation -----------------------------------------------------
 # SSI calculation ---------------------------------------------------------

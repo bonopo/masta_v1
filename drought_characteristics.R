@@ -50,30 +50,6 @@ dsi_0_yearly[[i]] = dsi_0[[i]] %>%
 # len <- lapply(dsi_0, function(x) x[1])
 # severity = do.call( "cbind",len)
 
-#drought frequency####
-#severity per year
-mat_dsi= matrix(0, nrow=40, ncol=catch_n)
-for (i in 1:catch_n){
-int = pmatch(c(dsi_1_yearly[[i]][,1])$year,c(1970:2009 ) )
-  mat_dsi[int,i] = c(dsi_1_yearly[[i]][,2])$sum_dsi
-}
-#number of events per year
-mat_n= matrix(0, nrow=40, ncol=catch_n)
-for (i in 1:catch_n){
-int = pmatch(c(dsi_1_yearly[[i]][,1])$year,c(1970:2009 ) )
-  mat_n[int,i] = c(dsi_1_yearly[[i]][,5])$n
-}
-
-
-mat_dsi[,23] %>% plot(t="l")
-
-#per 5 year
-
-dr_freq_5yr = rollapply(mat_n, width=5, by= 5, FUN=sum, by.column=TRUE)
-dr_dsi_5yr = rollapply(mat_dsi, width=5, by= 5, FUN=sum, by.column=TRUE)
-#per decade
-dr_freq_10yr = rollapply(mat_n, width=10, by= 10, FUN=sum, by.column=TRUE)
-dr_dsi_10yr = rollapply(mat_dsi, width=10, by= 10, FUN=sum, by.column=TRUE)
 #visual plot checking ####
 # for (i in sample(338, size=10)){
 # plot(yearly_q10[,i]~summer_q10[,i], main=i)
@@ -222,23 +198,10 @@ drought_q= output
 load("./output/drought_p.Rdata", verbose = TRUE)
   drought_p = output
 remove(output)
-hydro_year
-#drought frequency as events per year ####
-q_drought_freq =  drought_q %>% 
-  filter(catchment <= catch_n) %>% #because drought_q was calculated with the original number of observations of 338 catchments
-  
-  dplyr::select(catchment, dr_start, dr_end, event_no) %>% 
-  as.tbl() %>% 
-   mutate(dr_start = ymd(dr_start), dr_end = ymd(dr_end)) %>% 
-  mutate(mid_year = year(dr_start+floor((dr_end-dr_start)/2))) %>%  #attributing the drought to the mid year of every event
-  group_by(catchment,mid_year) %>% 
-  summarise(events=n()) %>% 
-  spread(value=events, key=catchment) %>% 
-  dplyr::select(-mid_year) %>% 
-  set_colnames(1:catch_n) %>% 
-  as.data.frame()
 
-q_drought_freq[is.na(q_drought_freq)] = 0 #NA are produced in those years where there are no droughts therefore the value has to be set to 0 
+
+
+
 
 
 # calculating result through summary (per year and month) 
@@ -300,6 +263,8 @@ q_days_of_drought_list <- lapply(q_seas, function(x) x[[1]])
 p_sum_def_list = lapply(p_seas, function(x) x[[2]]) 
 q_sum_def_list <- lapply(q_seas, function(x) x[[2]]) 
 
+p_drought_freq_list <- lapply(p_seas, function(x) x[[3]])
+q_drought_freq_list <- lapply(q_seas, function(x) x[[3]])
 
 seasonal_dec_80_ana(data= q_days_of_drought_list) 
 seasonal_dec_80_ana(data= p_days_of_drought_list)
@@ -314,6 +279,8 @@ march_dy_drought_q = seasonal_80th_trend(month = 3, datax= q_days_of_drought_lis
 march_sm_def_p = seasonal_80th_trend(month = 3, datax= p_sum_def_list) 
 march_sm_def_q = seasonal_80th_trend(month = 3, datax= q_sum_def_list) 
 
+summer_p_drought_freq = seasonal_80th_trend(month = 5:11, datax= p_drought_freq_list)
+summer_q_drought_freq = seasonal_80th_trend(month = 5:11, datax= q_drought_freq_list)
 
 summer_dy_drought_p = seasonal_80th_trend(month = 5:11, datax= p_days_of_drought_list)
 summer_dy_drought_q = seasonal_80th_trend(month = 5:11, datax= q_days_of_drought_list)

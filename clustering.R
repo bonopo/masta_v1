@@ -157,6 +157,9 @@ cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
 }
 }
 
+
+
+
 #which aggregation month describes the catchment the best and what is its correlation (pearson)
 best_spi = c()
   value_spi = c()
@@ -177,6 +180,13 @@ gauges$cor_spi_dr    = value_spi
 gauges$cor_spei_dr   = value_spei
 
 hist(gauges$cor_spi_n_dr)
+boxplot(cor_spi)
+boxplot(cor_spei)
+
+drought_sci_0[[3]] 
+  
+
+
 #which best spi-n aggregation month and correlation value ####
   #this calculates the best spi-n aggregation month for every catchment individually and the cor value itself too. The correlation is calculated between all ssi values (not only drought) and the spi-n value. In the next step the best one is selected and stored in the gauges attribution as a characteristic describing the catchment. All ssi (and not only the ssi values that are negative; indicating drought) are considered in this step because it is an attribute describing the catchment. Spearman correlation is used (because I am interested in the rank based corelation and the actual values)
 cor_spi_ssi_v2 = cor_sci_ssi(sci_n= c(1,3,6,12), cor_met="s", sci="spi_v2_", ssi="ssi_1")#correlation:  spi~ ssi
@@ -491,11 +501,11 @@ ggplot(data=gauges_df)+
   geom_point(aes(x=saar, y= best_spei, col= bfi))
 
 ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= cor_spei, col= as.factor(sr_new)))
+  geom_point(aes(x=saar, y= cor_spi, col= as.factor(sr_new)))
 ggsave("best_spi_cor_spi_saar.png")
 
 ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= cor_spei, col= bfi))
+  geom_point(aes(x=saar, y= cor_spi, col= bfi))
 ggsave("bfi_cor_spei_saar.png")
 ggplot(data=gauges_df)+
   geom_point(aes(x=Enzgsg_, y= med_dr_sev, col= bfi))
@@ -507,6 +517,12 @@ ggplot(data=gauges_df)+
   geom_point(aes(x=n_events, y= max_dr_dur, col = bfi))
 ggsave("max_dr_dur_med_dr_int_bfi.png")
 
+lm(gauges$cor_spi_dr ~ log10((gauges$saar*-1)^2)) %>% summary
+hist((gauges$saar*-1)^2 %>% log10)
+hist(gauges$cor_spi_dr )
+
+plot(y=gauges$cor_spi_dr ,x= (gauges$saar*-1)^2)
+lines(fm)
 
 gauges$ms7_date = mmky_ms7_date$sen_slope
 min(mmky_ms7_date$sen_slope)

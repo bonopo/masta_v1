@@ -526,12 +526,170 @@ ggplot(data_plot)+
 #meteo aggregated (similar to spi-n)
 
 
-precip_agg = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
-precip_agg_w = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
+precip_agg = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=NULL, cor=F)
+precip_agg_cor = agg.meteo(dat=mt_sm_p_wide, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=NULL, cor=T)
+p_pet_agg = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=NULL, cor=F)
+p_pet_agg_cor = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=NULL, cor=T)
+# p_pet_temp = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
 
-p_pet_agg = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
-p_pet_agg_w = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
+save(file="./output/agg_meteo.Rdata", list=c("precip_agg","p_pet_agg","precip_agg_cor","p_pet_agg_cor"))
 
-p_pet_temp = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
-p_pet_temp_w = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==2))
-save(file="./output/agg_meteo.Rdata", list=c("precip_agg", "precip_agg_w","p_pet_agg","p_pet_agg_w","p_pet_temp","p_pet_temp_w"))
+load("./output/agg_meteo.Rdata", verbose=T)
+
+#analsis of correlation of meteorologic trends with flow trends on monthly basis
+
+
+plot(x=1:12, y=precip_agg[[2]][,2], type="l")
+
+data_plot_spi = precip_agg[[2]] %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(month = 1:12) %>% 
+  gather(., key= agg_month, value=cor,-month)
+
+data_plot_spei = p_pet_agg[[2]] %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(month = 1:12) %>% 
+  gather(., key= agg_month, value=cor,-month)
+
+ggplot(data_plot_spei)+
+  geom_smooth(aes(x=month, y=cor, col=as.factor(agg_month)), se=F)
+
+ggplot(data_plot_spei)+
+  geom_line(aes(x=month, y=cor, col=as.factor(agg_month)), se=F)
+
+#correlation of actual flow and metreologic variables on monthly basis
+
+mn_cor_precip = sapply(1:6, function(x) apply(precip_agg_cor[[x]],2,mean))
+#sd_cor_precip = lapply(1:6, function(x) apply(precip_agg_cor[[x]],2,quantile, probs=c(.25,.75)))  
+mn_cor_p_pet = sapply(1:6, function(x) apply(p_pet_agg_cor[[x]],2,mean))
+
+data_plot = mn_cor_precip %>% 
+  as.data.frame() %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  mutate(month= 1:12) %>% 
+  gather(.,key=agg_month, value=cor, -month ) %>% 
+  as.tbl()
+
+ggplot(data_plot)+
+  geom_line(aes(x=month, y=cor, col=(agg_month)))
+
+ggplot(data_plot)+
+  geom_smooth(aes(x=month, y=cor, col=(agg_month)), span=.2, se=F)
+
+data_plot2 = mn_cor_p_pet %>% 
+  as.data.frame() %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  mutate(month= 1:12) %>% 
+  gather(.,key=agg_month, value=cor, -month ) %>% 
+  as.tbl()
+
+ggplot(data_plot2)+
+  geom_line(aes(x=month, y=cor, col=(agg_month)))
+
+#one united plot of precipi and p-pet
+
+data_plot3 = mn_cor_p_pet %>% 
+  as.data.frame() %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  dplyr::select("02","03","06") %>% 
+  set_colnames(c("spi01","spi03","spi06")) %>% 
+  mutate(month= 1:12) %>% 
+  cbind(mn_cor_p_pet[,2:4] %>% set_colnames(c("spei01","spei03","spei06")),.) %>% 
+  gather(.,key=agg_month, value=cor, -month ) %>% 
+  as.tbl()
+
+ggplot(data_plot3)+
+  geom_line(aes(x=month, y=cor, col=(agg_month)))
+
+
+# drought ssi spi/spie correlation heatmaps -------------------------------
+
+drought_sci_0 = dr_corr(threshhold = 0)
+
+cor_spi = matrix(nrow=catch_n, ncol=length(drought_sci_0))
+cor_spei = matrix(nrow=catch_n, ncol=length(drought_sci_0))
+
+for (a in 1:length(drought_sci_0)){
+for (g in 1:catch_n){
+temp= drought_sci_0[[a]] %>% 
+  filter(gauge== g)
+cor_spi[g, a] = cor(y= temp$ssi , x= temp$spi, use="c", method = "spearman") 
+cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
+}
+}
+
+
+plotly::plot_ly(x= 1:6, y=1:337, z=cor_spei[bfi_id,], type="heatmap")
+plotly::plot_ly(x= 1:6, y=1:337, z=cor_spei[bfi_id,], type="heatmap")
+
+
+data_plot_spi = cor_spi %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(bfi_class = gauges$bfi_class, sr= gauges$sr_new, geo= gauges$hydrogeo_simple ) %>% 
+  gather(., key= agg_month, value=cor,-bfi_class, -sr,-geo)
+
+data_plot_spei = cor_spei %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(bfi_class = gauges$bfi_class, sr= gauges$sr_new, geo= gauges$hydrogeo_simple ) %>% 
+  gather(., key= agg_month, value=cor,-bfi_class, -sr,-geo)
+
+
+ggplot(data_plot_spei)+
+  geom_boxplot(aes(x= agg_month, y= cor, col=as.factor(sr)))+
+  labs(x="Aggregation Period",
+       y= "spearman correlation spei-n ~ ssi-1")+
+  scale_color_discrete("BFI class")
+ggsave("./plots/drought_attribution/cor_spi_ssi.pdf")
+
+ggplot(data_plot_spi)+
+  geom_boxplot(aes(x= agg_month, y= cor, col=as.factor(bfi_class)))+
+  labs(x="Aggregation Period",
+       y= "spearman correlation spi-n ~ ssi-1")+
+  scale_color_discrete("BFI class")+
+  theme_bw()
+ggsave("./plots/drought_attribution/cor_spi_ssi.pdf")
+
+# drought correlation per year####
+#during drought years, what was the major influence SPI or SPEI and which aggregation month
+
+cor_spi_yr = matrix(nrow=40, ncol=length(drought_sci_0))
+cor_spei_yr = matrix(nrow=40, ncol=length(drought_sci_0))
+
+for(a in 1:6){
+  for(y in 1970:2009){
+temp= drought_sci_0[[a]] %>% 
+  filter(y == year(yr_mt))
+    
+cor_spi_yr[y-1969, a] = cor(y= temp$ssi , x= temp$spi, use="pairwise.complete.obs", method = "spearman") 
+cor_spei_yr[y-1969, a] = cor(y= temp$ssi , x= temp$spei, use="pairwise.complete.obs", method = "spearman")
+  }
+}
+
+data_plot=cor_spi_yr %>% 
+  as.data.frame() %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  mutate(year = 1970:2009) %>% 
+  as.data.frame() %>% 
+    gather(., key= agg_month, value=cor,-year)
+
+data_plot_spei=cor_spei_yr %>% 
+  as.data.frame() %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  mutate(year = 1970:2009) %>% 
+  as.data.frame() %>% 
+    gather(., key= agg_month, value=cor,-year)
+
+
+spi = ggplot(data= data_plot)+
+  geom_line(aes(x=year, y=cor, col=agg_month), lwd=1.1, show.legend = T)
+#,lwd=1.2, se=F, method = "loess", span=.2)
+
+spei= ggplot(data= data_plot_spei)+
+  geom_line(aes(x=year, y=cor, col=agg_month), lwd=1.1, show.legend = F)
+
+grid.arrange(spi,spei,ncol=2)
+

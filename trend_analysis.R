@@ -3,9 +3,9 @@
 
 #plotting sen slope ####
 #per catchment characteristic
-  p = catch_plot(p_value=1, color="sr_new", x_data="bfi", y_data= "mmky_p_n_events_yr" , factor =T)
+  p = catch_plot(p_value=1, color="sr_new", x_data="bfi", y_data= "mmky_summer_p_drought_freq" , factor =T)
 p
-pos.neg(dat= mmky_summer_sm_def_q, p = .03, positive=T)
+pos.neg(dat= mmky_summer_q_drought_freq, p = 10, positive=T)
 # spring_dy_drought_q
 # spring_sm_def_p
 
