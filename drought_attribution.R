@@ -532,11 +532,15 @@ p_pet_agg = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = 
 p_pet_agg_cor = agg.meteo(dat=year_p_pet, fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=NULL, cor=T)
 # p_pet_temp = agg.meteo(dat=mt_mn_temp %>% spread(.,key=gauge, value=temp_m) %>% dplyr::select(-yr_mt), fs=0.02967359, agg_t = agg_month, cor_y = "_mn_q", subset=which(gauges$sr_new ==0))
 
+
+
 save(file="./output/agg_meteo.Rdata", list=c("precip_agg","p_pet_agg","precip_agg_cor","p_pet_agg_cor"))
 
 load("./output/agg_meteo.Rdata", verbose=T)
 
 #analsis of correlation of meteorologic trends with flow trends on monthly basis
+
+
 
 
 plot(x=1:12, y=precip_agg[[2]][,2], type="l")
@@ -575,8 +579,12 @@ data_plot = mn_cor_precip %>%
 ggplot(data_plot)+
   geom_line(aes(x=month, y=cor, col=(agg_month)))
 
-ggplot(data_plot)+
-  geom_smooth(aes(x=month, y=cor, col=(agg_month)), span=.2, se=F)
+spi = ggplot(data_plot %>% filter(.,agg_month != "24"))+
+  geom_smooth(aes(x=month, y=cor, col=(agg_month)), span=.2, se=F)+
+  scale_color_discrete("Aggregation month")+
+  scale_x_continuous("", breaks=seq(2,12,2), labels = month.abb[seq(2,12,2)])+
+  labs(y="pearson correlation")+
+  nice
 
 data_plot2 = mn_cor_p_pet %>% 
   as.data.frame() %>% 
@@ -587,6 +595,16 @@ data_plot2 = mn_cor_p_pet %>%
 
 ggplot(data_plot2)+
   geom_line(aes(x=month, y=cor, col=(agg_month)))
+
+spei = ggplot(data_plot2 %>% filter(.,agg_month != "24"))+
+  geom_smooth(aes(x=month, y=cor, col=(agg_month)), span=.2, se=F)+
+  scale_color_discrete("Aggregation month")+
+  scale_x_continuous("", breaks=seq(2,12,2), labels = month.abb[seq(2,12,2)])+
+  labs(y="")+
+  nice
+
+p= grid.arrange(spi, spei,ncol=2)
+ggsave(plot = p, "./plots/drought_attribution/monthly_sci.pdf")
 
 #one united plot of precipi and p-pet
 
@@ -652,6 +670,7 @@ ggplot(data_plot_spi)+
   scale_color_discrete("BFI class")+
   theme_bw()
 ggsave("./plots/drought_attribution/cor_spi_ssi.pdf")
+lm(mn_deficit ~ bfi, data=gauges) %>% summary
 
 # drought correlation per year####
 #during drought years, what was the major influence SPI or SPEI and which aggregation month

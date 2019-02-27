@@ -3,9 +3,9 @@
 
 #plotting sen slope ####
 #per catchment characteristic
-  p = catch_plot(p_value=1, color="sr_new", x_data="bfi", y_data= "mmky_summer_p_drought_freq" , factor =T)
+  p = catch_plot(p_value=10, color="sr_new", x_data="bfi", y_data= "mmky_ms30_min" , factor =T)
 p
-pos.neg(dat= mmky_summer_q_drought_freq, p = 10, positive=T)
+pos.neg(dat= mmky_ms7_date, p = 10, positive=F)
 # spring_dy_drought_q
 # spring_sm_def_p
 
@@ -16,15 +16,38 @@ p
 ggsave(plot = p, "./plots/trend_analysis/su_mn_t_hochwert.png")
 
 #trend vs trend
-p=sig_plot(x_data = "mmky_wi_sm_p", y_data = "mmky_wi_med_q", output = "sr_new", p_value =1) 
+p=sig_plot(x_data = "mmky_su_mn_t", y_data = "mmky_wi_mn_t", output = "hochwert", p_value =fs_su_mn_t) 
 p
+
 p+
-#geom_abline(slope=1, intercept=0)+
+geom_abline(slope=1, intercept=0)+
+  geom_point(aes(x=mmky_su_mn_t$sen_slope[gauges$alpine == 1], y= mmky_wi_mn_t$sen_slope[gauges$alpine == 1]),col="red")+
+  xlab("summer mean temperature trend (slope) [m³/s/a]")+
+    ylab("winter mean temperature trend (slope) [m³/s/a]")+
+  scale_color_continuous("Norting")
+  ggsave("./plots/trend_analysis/winter_summer_temp.pdf")
+  
+  
+  ggplot()+
+geom_point(aes(x=mmky_su_q10$sen_slope, y=mmky_wi_q10$sen_slope, color=as.factor(gauges$sr_new)))+
+  scale_color_discrete("Seasonality", labels =c("Summer","Winter"))+
+  xlab("summer 10% quantile flow trend (slope) [m³/s/a]")+
+    ylab("winter 10% quantile flow trend (slope) [m³/s/a]")
+
+ggsave("./plots/trend_analysis/quantile_trend.pdf")
+
   xlab("winter sum precipitation trend (slope) [mm/a]")+
   ylab("winter median q trend (slope) [m³/s/a]")
   ggsave( "./plots/trend_analysis/wi_p_med_q_sr.png")
 scale_color_discrete("Seasonality" , labels =c("Summer","Winter"))
 
+
+ggplot()+
+  geom_point(aes(x=gauges$bfi, y=mmky_ms30_min$sen_slope, col=as.factor(gauges$sr_new)))+
+  scale_color_discrete("Seasonality", labels =c("Summer","Winter"))+
+  ylab("ms30 trend (slope) [m³/s/a]")+
+  xlab("BFI")
+ggsave("./plots/trend_analysis/bfi_ms30.pdf")
 # trends in drought charachteristics --------------------------------------
 
 #looking only at the catchments that have a negative trend in q10 values:

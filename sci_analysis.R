@@ -127,7 +127,7 @@ ggsave("./plots/5_choice/memoryeffect_24.png")
 
 
 #monthly correlation ####
-
+feb_sci_cor = monthly_sci(month=2, threshold = 0) 
 mar_sci_cor = monthly_sci(month=3, threshold = 0) 
 apr_sci_cor = monthly_sci(month=4, threshold = 0) 
 mai_sci_cor = monthly_sci(month=5, threshold = 0)
@@ -138,6 +138,15 @@ sep_sci_cor = monthly_sci(month=9, threshold = 0)
 png("./plots/5_choice/cor_ssi_spi_winter_spring.png", width=800, height=500)
 monthly_cor_sci_spring(sr_x=2,sci_typex="spi")
 dev.off()
+feb_sci_cor
+
+monthly
+ggplot()+
+  geom_boxplot(data=feb_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("March")+
+  ylab("spearman correlation ssi-1 ~ x")+
+  scale_x_discrete(labels=c(agg_month))
 
 
 

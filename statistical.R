@@ -225,6 +225,7 @@ wilcox.test(x = mmky_yearly_mn_t$sen_slope[mmky_yearly_mn_t$new_p < fs_yr_mn_t &
 
 wilcox.test(x = mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_yr_mn_t & gauges$sr_new == 2], y= mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_yr_mn_t & gauges$sr_new == 0])
 wilcox.test.modified(x_m = "mmky_wi_mn_t")
+wilcox.test.modified(x_m = "mmky_ms7_min",fs_x =  fs_ms7 )
 wilcox.test.modified(x_m = "mmky_su_mn_t")#just significant
 wilcox.test.modified(x_m = "mmky_wi_sm_p")#just significant
 boxplot( mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_wi_mn_t] ~ factor(gauges$sr_new))

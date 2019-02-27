@@ -176,8 +176,6 @@ return(mat_cor_long)
 }
 
 
-
-
 #regression ####
 
 spi_spei_reg <- function(sci="spi_", sci_n = c(1,2,3,6,12,24)){
@@ -510,7 +508,7 @@ sr = ggplot()+
 hochwert = ggplot()+
   geom_point( aes(y=get(y_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], x=get(x_data)$sen_slope[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)], col=gauges$Hochwrt[which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value)]))+
     annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(get(y_data)$new_p<p_value & get(x_data)$new_p < p_value))))+
-  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", p_value))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label=paste("p = ", round(p_value,2)))+
   xlab(paste(x_data, "sen's slope"))+
   ylab(paste(y_data, "sen's slope"))+
   scale_color_continuous("Hochwert")
@@ -606,7 +604,7 @@ return(output)
 
 
 give.n <- function(x){
-  return(c(y= -0.25, label = length(x))) #y = median(x)+.0275
+  return(c(y= -0.015, label = length(x))) #y = median(x)+.0275
 }
 give.n.summer <- function(x){
   return(c(y= -.25, label = round(length(x)/n_summer,2)*100)) #y = median(x)+.0275
@@ -1328,6 +1326,6 @@ pos.neg = function(p=NULL, dat=mmky_yr_days_below_0,positive=T){
    res= length(which(dat$sen_slope < 0 & dat$new_p < p ))/337 %>% round(.,2)*100
     }
   
-  return(cat(res, "%"))
+  return(round(res,0))
 }
 

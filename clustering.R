@@ -235,7 +235,7 @@ for (i in 1:catch_n){
 }
 
 hist(log(mean_deficit))
-
+plot(gauges$n_events80~gauges$bfi)
 
 #gauges$mean_deficit_overall = log(mean_deficit_per_gauge)
 gauges$mn_deficit = log(mean_deficit)
@@ -428,15 +428,25 @@ ggplot()+
   scale_color_discrete("BFI",labels = c("<0.4", "0.4-0.6", "0.6-0.8", ">0.8"))
 
 ggsave("./plots/clustering/hydrogeo_ms30_bfi.pdf")
-
-
+fs_ms7_date
+mmky_su
 give.n <- function(x){
   return(c(y = median(x)+2.5, label = length(x)))
   # experiment with the multiplier to find the perfect position
 }
-temp_df = cbind.data.frame(as.numeric(mmky_ms7_date$sen_slope[mmky_ms7_date$new_p < 0.05]), gauges$hydrogeo_simple[mmky_ms7_date$new_p < 0.05],gauges$bfi_class[mmky_ms7_date$new_p < 0.05],gauges$sr_new[mmky_ms7_date$new_p < 0.05])
+temp_df = cbind.data.frame(as.numeric(mmky_ms7_date$sen_slope[mmky_ms7_date$new_p < fs_ms7_date]), gauges$hydrogeo_simple[mmky_ms7_date$new_p < fs_ms7_date],gauges$bfi_class[mmky_ms7_date$new_p < fs_ms7_date],gauges$sr_new[mmky_ms7_date$new_p < fs_ms7_date])
 colnames(temp_df) = c("date","hydrogeo","bfi", "sr")
 
+ggplot(temp_df, aes(x= factor(hydrogeo),y= date))+
+  geom_boxplot() +
+     stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+                  position = position_dodge(width = 0.75))+
+  xlab("Hydrogeology")+
+  ylab("ms7 timing trend (slope) [d/y]")+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms7_date$new_p < fs_ms7_date))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.03")
+  
+ggsave("./plots/clustering/hydrogeo_ms7_timing.pdf")
 
 ggplot(temp_df, aes(x= factor(hydrogeo),y= date, color=factor(sr)))+
   geom_boxplot() +
@@ -449,7 +459,7 @@ ggplot(temp_df, aes(x= factor(hydrogeo),y= date, color=factor(sr)))+
   
 ggsave("./plots/clustering/hydrogeo_ms7_timing2.pdf")
 
-temp_df = cbind.data.frame(sr =gauges_df$sr_new[mmky_ms30_min$new_p < 0.05], ms30= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05])
+temp_df = cbind.data.frame(sr =gauges_df$sr_new[mmky_ms30_min$new_p < fs_ms30], ms30= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < fs_ms30])
 
 
 ggplot(data = temp_df, aes(x= factor(sr),y= ms30))+
@@ -459,8 +469,8 @@ ggplot(data = temp_df, aes(x= factor(sr),y= ms30))+
   xlab("Seasonality")+
   scale_x_discrete(labels=c("Summer","Winter"))+
   ylab("ms30 trend (slope) [m³/s/y]")+
-  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms30_min$new_p < 0.05))))+
-  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.05")
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms30_min$new_p < fs_ms30))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.07")
   
 ggsave("./plots/clustering/sr.pdf")
 
@@ -468,7 +478,7 @@ ggsave("./plots/clustering/sr.pdf")
 #ssi method: discharge below ssi > -1 is equal to drought. intensity, severity and drought length rely on deviation of the SSI value of that month. Leading to droughts that always last at least one month
 #80th method: 30 day moving average deviation of the 20th quantile = drought
 
-plot(gauges$n_events ~ n_events)
+plot(gauges$n_events ~ gauges$bfi)
 
 
 #clustered plots #### 
@@ -476,7 +486,7 @@ plot(gauges$n_events ~ n_events)
 
  gauges_df = as.data.frame(gauges)
 
-gauges$n_events
+
 
 ggplot(data = gauges_df)+
   geom_point(aes(x=lt_memoryeffect, y= bfi))
