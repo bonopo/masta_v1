@@ -583,7 +583,7 @@ spi = ggplot(data_plot %>% filter(.,agg_month != "24"))+
   geom_smooth(aes(x=month, y=cor, col=(agg_month)), span=.2, se=F)+
   scale_color_discrete("Aggregation month")+
   scale_x_continuous("", breaks=seq(2,12,2), labels = month.abb[seq(2,12,2)])+
-  labs(y="pearson correlation")+
+  labs(y="spearman correlation")+
   nice
 
 data_plot2 = mn_cor_p_pet %>% 
@@ -597,14 +597,14 @@ ggplot(data_plot2)+
   geom_line(aes(x=month, y=cor, col=(agg_month)))
 
 spei = ggplot(data_plot2 %>% filter(.,agg_month != "24"))+
-  geom_smooth(aes(x=month, y=cor, col=(agg_month)), span=.2, se=F)+
+  geom_smooth(aes(x=month, y=cor, col=(agg_month)), span=.2, se=F, show.legend = T)+
   scale_color_discrete("Aggregation month")+
   scale_x_continuous("", breaks=seq(2,12,2), labels = month.abb[seq(2,12,2)])+
   labs(y="")+
   nice
 
 p= grid.arrange(spi, spei,ncol=2)
-ggsave(plot = p, "./plots/drought_attribution/monthly_sci.pdf")
+ggsave(plot = p, "./plots/drought_attribution/monthly_sci.png")
 
 #one united plot of precipi and p-pet
 
@@ -709,6 +709,13 @@ spi = ggplot(data= data_plot)+
 
 spei= ggplot(data= data_plot_spei)+
   geom_line(aes(x=year, y=cor, col=agg_month), lwd=1.1, show.legend = F)
+
+spi = ggplot(data= data_plot)+
+  geom_smooth(aes(x=year, y=cor, col=agg_month), lwd=1.1, show.legend = T, se=F, span=.2)
+#,lwd=1.2, se=F, method = "loess", span=.2)
+
+spei= ggplot(data= data_plot_spei)+
+  geom_smooth(aes(x=year, y=cor, col=agg_month), lwd=1.1, show.legend = F, se=F, span=.2)
 
 grid.arrange(spi,spei,ncol=2)
 

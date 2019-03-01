@@ -51,6 +51,7 @@ which.min(mmky_su_sm_p$sen_slope)
 
 #field significance ####
 #see renard 2008 and Burn et al 2002
+fs_su_sm_p= field.significance(loc_sig = 0.05, data_x= su_sm_p, global_sig=0.05, nsim=600)
 fs_wi_sm_p = field.significance(loc_sig = 0.05, data_x= wi_sm_p, global_sig=0.05, nsim=600)
 fs_q10 = field.significance(loc_sig = 0.05, data_x= wi_q10, global_sig=0.05, nsim=600)
 fw_su_p_pet = field.significance(loc_sig = 0.05, data_x= su_p_pet, global_sig=0.05, nsim=600)
@@ -72,8 +73,13 @@ fs_sp_mn_t = field.significance(loc_sig = 0.05, data_x= sp_mn_t, global_sig=0.05
 fs_spd_0 = field.significance(loc_sig = 0.05, data_x= sp_days_below_0, global_sig=0.05, nsim=600)
 fs_yr_sm_p = field.significance(loc_sig = 0.05, data_x= yearly_sm_p, global_sig=0.05, nsim=600)
 fs_yr_sm_p_no70= field.significance(loc_sig = 0.05, data_x= yr_sm_p_no70, global_sig=0.05, nsim=600)
-
+fs_dd_p= field.significance(loc_sig = 0.05, data_x= p_days_of_drought_yr, global_sig=0.05, nsim=600)
+fs_dd_q = field.significance(loc_sig = 0.05, data_x= q_days_of_drought_yr, global_sig=0.05, nsim=600)
 fs_wi_mn_q= field.significance(loc_sig = 0.05, data_x= wi_mn_q, global_sig=0.05, nsim=600)
+fs_df_p= field.significance(loc_sig = 0.05, data_x= p_n_events_yr, global_sig=0.05, nsim=600)
+fs_df_q= field.significance(loc_sig = 0.05, data_x= q_n_events_yr, global_sig=0.05, nsim=600)
+fs_ds_p = field.significance(loc_sig = 0.05, data_x= p_sum_def_yr, global_sig=0.05, nsim=600)
+fs_ds_q = field.significance(loc_sig = 0.05, data_x= q_sum_def_yr, global_sig=0.05, nsim=600)
 
 fs_mt_p_pet= c()
 for ( i in 1:12) {
@@ -103,7 +109,7 @@ for ( i in 1:12) {
 fs_mn_t[i] = field.significance(loc_sig = 0.05, data_x= get(paste0(str_to_lower(month.abb[i]),"_mn_t")), global_sig=0.05, nsim=600)
 }
 
-save(list=c("fs_ms30","fs_ms7_date","fs_ms7","fs_wd_0","fs_yrd_0" ,  "fs_yr_mn_t","fs_su_mn_t", "fs_wi_mn_t","fs_jun_mn_q","fs_mar_mn_q","fs_sp_mn_t","fs_min_t","fs_max_t","fs_spd_0","fs_wi_sm_p", "fs_mt_p_pet","fs_mt_q","fs_yr_sm_p","fs_yr_sm_p_no70","fs_wi_mn_q","fs_q10","fs_mt_pet","fs_sm_p","fs_mn_t","fs_mt_med_q"), file="./output/fs.Rdata")
+save(list=c("fs_ms30","fs_ms7_date","fs_ms7","fs_wd_0","fs_yrd_0" ,  "fs_yr_mn_t","fs_su_mn_t", "fs_wi_mn_t","fs_jun_mn_q","fs_mar_mn_q","fs_sp_mn_t","fs_min_t","fs_max_t","fs_spd_0","fs_wi_sm_p", "fs_mt_p_pet","fs_mt_q","fs_yr_sm_p","fs_yr_sm_p_no70","fs_wi_mn_q","fs_q10","fs_mt_pet","fs_sm_p","fs_mn_t","fs_mt_med_q", "fs_su_sm_p","fs_dd_p","fs_dd_q","fs_df_p","fs_df_q","fs_ds_p","fs_ds_q"), file="./output/fs.Rdata")
 # linear regression -------------------------------------------------------
 
 #ms30 ~ long term memory effect
@@ -149,12 +155,15 @@ wilcox.test(x= mmky_su_mn_t$sen_slope[gauges$sr_new ==2], mmky_su_mn_t$sen_slope
 
 fm = lm(mmky_wi_mn_t$sen_slope ~ gauges$mn_t) %>% summary() #significant
 fm2 = lm(mmky_wi_mn_t$sen_slope[gauges$sr_new ==0] ~ gauges$Hochwrt[gauges$sr_new ==0]) %>% summary()
+fm3 = lm(mmky_wi_mn_t$sen_slope ~ gauges$Hochwrt) %>% summary()
 #significant
-hist(residuals(fm))
+hist(residuals(fm2))
 hist(mmky_wi_mn_t$sen_slope)
+hist(gauges$Hochwrt[gauges$sr_new ==0])
 gauges$mn_t %>% hist()
 
-data_plot = cbind.data.frame(y= mmky_wi_mn_t$sen_slope, x1=gauges$mn_t, x2= gauges$Hochwrt)
+data_plot = cbind.data.frame(y= mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_wi_mn_t], x1=gauges$mn_t[mmky_wi_mn_t$new_p < fs_wi_mn_t], x2= gauges$Hochwrt[mmky_wi_mn_t$new_p < fs_wi_mn_t])
+
 
 ggplot(data= data_plot, aes(y=y, x=x1, col=x2))+
   geom_point()+
@@ -162,11 +171,21 @@ ggplot(data= data_plot, aes(y=y, x=x1, col=x2))+
   annotate( geom="text", -Inf, Inf,  hjust = -0.2, vjust = 2.5, label=paste("n = ", length(data_plot$y)))+
   annotate(geom="text", -Inf, Inf,  hjust = -0.2, vjust = 1, label=paste("p = 0.05"))+
   annotate(geom="text", -Inf, Inf,  hjust =-0.2, vjust = 4, label=paste("r²=",round(fm$adj.r.squared,2)))+
-  xlab("mean t [°C]")+
-  ylab("winter mean t trend (slope) [°C/a]")+
+  xlab("")+
+  ylab("wi. temp. trend (slope) [°C/a]")+
   scale_color_continuous("Hochwert")
+ggsave("./plots/statistical/winter_mn_t2.pdf")
 
-ggsave("./plots/statistical/winter_mn_t.pdf")
+ggplot(data= data_plot, aes(y=y, x=x2))+
+  geom_point()+
+  geom_smooth(method="lm", se = TRUE, show.legend = F)+
+  annotate( geom="text", -Inf, Inf,  hjust = -0.2, vjust = 2.5, label=paste("n = ", length(data_plot$y)))+
+  annotate(geom="text", -Inf, Inf,  hjust = -0.2, vjust = 1, label=paste("p =",round(fs_wi_mn_t,2)))+
+  annotate(geom="text", -Inf, Inf,  hjust =-0.2, vjust = 4, label=paste("r²=",round(fm2$adj.r.squared,2)))+
+  xlab("Latitude")+
+  ylab("wi. temp. trend (slope) [°C/a]")
+
+ggsave("./plots/statistical/winter_mn_t2.pdf")
 
 aov(mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < fs_ms30] ~ gauges$sr_new[mmky_ms30_min$new_p < fs_ms30]) %>% summary()
 hist(gauges$hydrogeo_simple[mmky_ms7_date$new_p < 0.05])
@@ -242,7 +261,15 @@ data_plot = yearly_sm_p %>%
   gather(., key=gauge, value=sm_p,-year) %>% 
   mutate(sr=rep(gauges$sr_new, times = 40)) %>% 
   as.tbl
- mn_yr = rollapply(data= yearly_sm_p, FUN= mean,  width=1, align="center",fill = NA, by.column = F)
+
+ggplot()+
+  geom_boxplot(data = data_plot,aes(x=as.factor(year), y=sm_p))+
+  scale_x_discrete(labels=seq(1970,2010,by=5), breaks=seq(1970,2010,by=5))+
+  xlab("")+
+  ylab("precipitation sum [mm/year]")
+   ggsave("./plots/statistical/box_yr_sm_p.pdf")
+
+    mn_yr = rollapply(data= yearly_sm_p, FUN= mean,  width=1, align="center",fill = NA, by.column = F)
   sd=  rollapply(data= yearly_sm_p, FUN= quantile,probs = c(0.25, .75),  width=1, align="center",fill = NA, by.column = F)
  data_plot = cbind.data.frame(1970:2009, mn_yr, sd) %>% set_colnames(c("year","yr_mn","sd_neg","sd_pos"))
 mean(data_plot$yr_mn)
@@ -255,6 +282,7 @@ geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = 
   xlab("")+
   theme_bw()
  
+ ggsave("./plots/statistical/yearly_mm.pdf")
 
  
 # ggplot(data_plot %>% filter(gauge==1)  )+
@@ -265,12 +293,7 @@ geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = 
 #   ggsave("./plots/statistical/yr_sm_p_loess.png")
 
 
-ggplot()+
-  geom_boxplot(data = data_plot,aes(x=as.factor(year), y=sm_p))+
-  scale_x_discrete(labels=seq(1970,2010,by=5), breaks=seq(1970,2010,by=5))+
-  xlab("")+
-  ylab("precipitation sum [mm/year]")
-   ggsave("./plots/statistical/box_yr_sm_p.pdf")
+#major drought events (according to precipitation deficit)
 years= 1970:2009
 res=NULL
 for(i in 1:catch_n){
@@ -292,6 +315,36 @@ geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = 
   xlab("")+
   theme_bw()
 ggsave("./plots/statistical/yr_temp_smooth.png")
+
+#temp monthly
+#april(as it has very high trend)
+med_yr = rollapply(data= apr_mn_t, FUN= mean,  width=3, align="center",fill = NA, by.column = F)
+  sd=  rollapply(data= apr_mn_t, FUN= quantile,probs = c(0.25, .75),  width=3, align="center",fill = NA, by.column = F)
+ data_plot = cbind.data.frame(1970:2009, med_yr, sd) %>% set_colnames(c("year","yr_med","sd_neg","sd_pos"))
+ 
+
+ggplot(data_plot)+
+  geom_line(aes(x=year, y=yr_med), col=1)+
+geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey", alpha=.4)+
+  ylab("April mean temperature [°C]")+
+  xlab("")+
+  theme_bw()
+ggsave("./plots/statistical/april_temp.pdf")
+
+
+#may
+med_yr = rollapply(data= may_mn_t, FUN= mean,  width=3, align="center",fill = NA, by.column = F)
+  sd=  rollapply(data= may_mn_t, FUN= quantile,probs = c(0.25, .75),  width=3, align="center",fill = NA, by.column = F)
+ data_plot = cbind.data.frame(1970:2009, med_yr, sd) %>% set_colnames(c("year","yr_med","sd_neg","sd_pos"))
+ 
+
+ggplot(data_plot)+
+  geom_line(aes(x=year, y=yr_med), col=1)+
+geom_ribbon(data = data_plot, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey", alpha=.4)+
+  ylab("May mean temperature [°C]")+
+  xlab("")+
+  theme_bw()
+ggsave("./plots/statistical/may_temp.pdf")
 
 # ggplot(data_plot)+
 #          geom_smooth(aes(x=year, y=yr_med), method = "loess", span=0.3)+

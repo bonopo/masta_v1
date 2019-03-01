@@ -7,16 +7,31 @@
 #source("./R/masta_v1/climate_characteristics.R") # has to run before if not objects will be missing!
 
 #SAAR ####
-#standart climate period 1971 bis 2000 (see DWD)
+#standart climate period 1971 bis 2000 (see DWD) or just the whole period as the climate normal period 1991 - 202 & 1961 bis 1990.
 # standart period averae annual rainfall
 saar <- precip_long %>% 
-  filter(year(date) >1970 & year(date) < 2001) %>% 
+ # filter(year(date) >1970 & year(date) < 2001) %>% 
   group_by(gauge) %>% 
   summarise(sum_mm_yr = sum(sum_mm)/30)
 
 gauges$saar <- saar$sum_mm_yr
 remove(saar)
+plot(saar$sum_mm_yr ~ gauges$saar)
+su_sm_p = summer_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin =5, end=11)
 
+gauges$su_sm_p = colMeans(su_sm_p[])
+
+wi_sm_p = mt_sm_p %>% 
+  filter(yr_mt < "2009-11-15") %>% #last december can not be used since one month is too short to base mean for whole winter on this month
+  filter(month(yr_mt) <= 4 | month(yr_mt) >= 12) %>% 
+    mutate(hydro_year = rep(hydro_year_wi, catch_n)) %>%
+  group_by(gauge,hydro_year) %>% 
+  summarise(sum_mm = sum(month_sum)) %>% 
+  spread(key=gauge, value=sum_mm) %>% 
+  dplyr::select(-hydro_year) %>% 
+  as.data.frame()
+
+gauges$wi_sm_p = colMeans(wi_sm_p)
 
 #mean t####
 mean_t = mt_mn_temp %>% 
@@ -561,18 +576,33 @@ spplot(gauges, "mnq30_month",
        scales = list(draw = TRUE))
 dev.off()
 
-gauges$ms30 = mmky_ms30_min$sen_slope
+gauges$ms30 = ((mmky_ms30_min$sen_slope*40)/gauges$mn_q)*100
 gauges$ms30[mmky_ms30_min$new_p < fs_ms30] = 5
 gauges$ms30 = cut(gauges$ms30, breaks = c(-3,-0.001,0.001,3,5)) 
 tofy2 = c("#de2d26","#9ecae1","#3182bd","#bdbdbd")
 
-pdf(file= "./plots/clustering/ms30_trends.pdf")
+pdf(file= "./plots/clustering/ms30_trends_non_sig.pdf")
 spplot(gauges, "ms30", 
       col.regions = tofy2,
        
        legendEntries = c("negative", "~0",  "positive","not significant"),
        sp.layout = germany,
      #  colorkey=T#,
+      scales = list(draw = TRUE)
+      )
+dev.off()
+
+#all incl non significant
+tofy2 = c("#de2d26","#bdbdbd","#3182bd")
+gauges$ms30 = ((mmky_ms30_min$sen_slope*40)/gauges$mn_q)*100
+range(gauges$ms30)
+gauges$ms30 = cut(gauges$ms30, breaks = c(-50,-1,1,50)) 
+pdf(file= "./plots/clustering/ms30_trends.pdf")
+spplot(gauges, "ms30", 
+      col.regions = tofy2,
+      legendEntries = c("negative", "~0",  "positive"),
+      sp.layout = germany,
+      #colorkey=T#,
       scales = list(draw = TRUE)
       )
 dev.off()

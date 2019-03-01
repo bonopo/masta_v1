@@ -1329,3 +1329,15 @@ pos.neg = function(p=NULL, dat=mmky_yr_days_below_0,positive=T){
   return(round(res,0))
 }
 
+magnitude = function(dat = mmky_su_mn_t , p=NULL, reference = NULL){
+  if(is.null(p)) p = 10
+  if(is.null(reference)){
+    res = dat$sen_slope[dat$new_p < p] %>% range %>% round(.,2)
+  }else{
+     res = range((dat$sen_slope*40)/reference)*100 %>% round(.,2)
+  }
+  return(res)
+}
+
+reference =ms30_min %>% colMeans()
+gauges$mn_q

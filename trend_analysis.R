@@ -3,11 +3,11 @@
 
 #plotting sen slope ####
 #per catchment characteristic
-  p = catch_plot(p_value=10, color="sr_new", x_data="bfi", y_data= "mmky_ms30_min" , factor =T)
+  p = catch_plot(p_value=10, color="sr_new", x_data="Hochwrt", y_data= "mmky_d" , factor =T)
 p
-pos.neg(dat= mmky_ms7_date, p = 10, positive=F)
-# spring_dy_drought_q
-# spring_sm_def_p
+pos.neg(dat= mmky_wi_days_below_0, p = NULL, positive=T)
+mmky_wi_days_below_0
+lm(mmky_su_mn_t$sen_slope[gauges$sr_new == 0] ~ gauges$Hochwrt[gauges$sr_new == 0]) %>% summary
 
 p= p+ylab("ms30 trend (slope) [m³/s/a]")+
   xlab("BFI")+
@@ -22,8 +22,8 @@ p
 p+
 geom_abline(slope=1, intercept=0)+
   geom_point(aes(x=mmky_su_mn_t$sen_slope[gauges$alpine == 1], y= mmky_wi_mn_t$sen_slope[gauges$alpine == 1]),col="red")+
-  xlab("summer mean temperature trend (slope) [m³/s/a]")+
-    ylab("winter mean temperature trend (slope) [m³/s/a]")+
+  xlab("summer mean temperature trend (slope) [°C/a]")+
+    ylab("winter mean temperature trend (slope) [°C/a]")+
   scale_color_continuous("Norting")
   ggsave("./plots/trend_analysis/winter_summer_temp.pdf")
   
@@ -237,8 +237,40 @@ ggplot()+
 ggsave("./30_year_moving_window2.png")
 
 
+yearly_p_pet = year_p_pet %>% 
+  mutate(date=date_seq) %>% 
+  gather(., value=p_pet,key=catchment,-date ) %>% 
+  as.tbl() %>% 
+  mutate(catchment = as.integer(catchment)) %>% 
+  group_by(year(date), catchment) %>% 
+  summarise(yearly_sum = sum(p_pet)) %>% 
+  mutate(year = `year(date)` %>% as.integer()) %>% 
+  group_by(year) %>% 
+  summarise(year_med = median(yearly_sum))
+
 ms7_min_med = apply(ms7_min, 1, median)
-yearly_max_t_mean = apply(yearly_max_t, 1, mean)
+yearly_max_t_mean = apply(yearly_max_t, 1, median)#
+rects <- data.frame(xstart = seq(1969.5,2008.5,1), 
+                    xend = seq(1970.5,2009.5,1), 
+                col = yearly_p_pet$year_med)
+ggplot() + geom_point(aes(x=1970:2009, y=ms7_min_med)) +
+           geom_rect(data=rects, aes(ymin=0, ymax=.5, 
+                                     xmin=xstart,
+                      xmax=xend, fill=col), alpha =0.5)+
+ scale_fill_continuous("p-pet [mm/a]", low="red", high = "blue", labels =c("0","250","500"), breaks=c(0,250,500))+
+  xlab("")+
+  ylab("ms7 [m³/s]")+nice
+  
+ggsave("./plots/trend_analysis/p_pet_med_ms7.pdf")
+
+yearly_p = mt_sm_p_wide%>% 
+  mutate(date=date_seq) %>% 
+  gather(., value=p,key=catchment,-date ) %>% 
+  group_by(year(date)) %>% 
+  summarise(year_med = median(p))
+
+ms7_min_med = apply(ms7_min, 1, median)
+yearly_max_t_mean = apply(yearly_max_t, 1, median)#
 rects <- data.frame(xstart = seq(1969.5,2008.5,1), 
                     xend = seq(1970.5,2009.5,1), 
                 col = yearly_max_t_mean)
@@ -246,12 +278,13 @@ ggplot() + geom_point(aes(x=1970:2009, y=ms7_min_med)) +
            geom_rect(data=rects, aes(ymin=0, ymax=.5, 
                                      xmin=xstart,
                       xmax=xend, fill=col), alpha =0.5)+
- scale_fill_continuous("mean yearly max T [°C]", low="blue", high = "red")+
+ scale_fill_continuous("max temperature [°C]", low="blue", high = "red")+
   xlab("")+
-  ylab("median ms7 [m³/s]")
+  ylab("ms7 [m³/s]")+nice
   
-ggsave("./plots/5_choice/max_temp_med_ms7.png")
+ggsave("./plots/trend_analysis/temp_med_ms7.pdf")
 
+plotmar_mn_t
 
 #monthly boxplots ####
 #monthly precip trends
@@ -535,7 +568,7 @@ ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) +
   #                position = position_dodge(width = 1), size=3)+
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
-  ylab("monthly mean t trend (slope) [°C/a]")+
+  ylab("mean temp. trend (slope) [°C/a]")+
   scale_color_discrete("Seasonality", labels=c("summer","winter"))
   ggsave("./plots/trend_analysis/monthly_t_sr.pdf")
 
