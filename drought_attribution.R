@@ -208,8 +208,8 @@ hist(gauges$sr_new) # normal
 hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==0]) #not normal
 hist(mmky_mar_mn_q$sen_slope[which(mmky_jun_mn_q$new_p<.05 & mmky_mar_mn_q$new_p<.05)][gauges$sr_new==2]) # not normal
 
-y= mmky_jun_mn_q # mmky_jun_mn_q
-x1= mmky_mar_mn_q # mmky_mar_mn_q 
+y= mmky_jun_med_q # mmky_jun_mn_q
+x1= mmky_mar_med_q # mmky_mar_mn_q 
 x2= gauges$sr_new #or gauges$sr
 
 lm_y = y$sen_slope[which(x1$new_p<fs_jun_mn_q & y$new_p< fs_mar_mn_q)]
@@ -232,54 +232,52 @@ lm_x1_norm =  abs(min(lm_x1)-0.0000001)+lm_x1 # adding the minima +0.0000001 to 
 #lm_x1_w_norm[which(lm_x1_w_norm == 0)] = 0.01
 hist(log(lm_x1_s_norm)) #normal
 hist(log(lm_x1_w_norm))#normal
-hist(exp(lm_y_norm)) #normal
+hist((lm_y_norm)^5) #normal
 
 lm_y_norm %>% .^5 %>% hist
 data_lm = cbind.data.frame(lm_y_norm,lm_x1_norm, lm_x2)
-#head(data_df)
-#problem one variable is normal the other is positivly skewed
-fm = lm((lm_y_norm)^5 ~ log(lm_x1_norm)*lm_x2, data=data_lm)
-fm2= lm((lm_y_norm)^5 ~ log(lm_x1_norm)*lm_x2, data=data_lm[-c(49,59,154, 174),]) #[-c(42,50,52,143,172,181),]) #without points with high leverage
-summary(fm)
-#what are the catchments with hich leverage
-data_lm[c(49,59,154, 174),]
-#can not be thrown out, are not "measuring" errors
 
-plot(fm2)
+
+fm = lm((lm_y_norm)^5 ~ log(lm_x1_norm)*lm_x2, data=data_lm)
+summary(fm)
 hist(residuals(fm))
 
+#removing influencial points
+cook_d = influence.measures(fm) #with threshold 4/n (dorman)
+table= cooks.distance(fm)
+threshold = 4/length(data_lm$lm_y_norm)
+high_leverage = which(table >threshold) %>% as.numeric()
 
-#problem residuals are not normal distributed, low variance for high fitted values and vice versa 
-#now throught normalisation ok
-# and high leverage through few points
-cook_d = influence.measures(fm) %>% as.data.frame()#with threshhold =1
- range(cooks.distance(fm))
- 
- table= cooks.distance(fm)
- which.max(table)
-lm_x2[ which(table > .04)]
- table[c(41,42,52,192, 172)]
+#new linear regression without the points with high leverage
+fm2= lm((lm_y_norm)^5 ~ log(lm_x1_norm)*lm_x2, data=data_lm[-high_leverage,]) 
+summary(fm2)
+plot(fm2)
+##after visual check adding row 154
+fm3= lm((lm_y_norm)^5 ~ log(lm_x1_norm)*lm_x2, data=data_lm[-c(high_leverage,154),]) 
+summary(fm3)
+plot(fm3)
 
-#without the following data points re run a linear modell 41,42,52,192
- #or without 42 50 52 143 172 181
+data_plot = data_plot[-c(threshold,154),]
+length(data_plot$lm_y)
+#error bars for june
 error_jun_mn_q = error.bar("jun_mn_q")
  
 ggplot(data= data_plot, aes(y=lm_y, x=lm_x1, col=as.factor(lm_x2)))+
   geom_point()+
   geom_smooth(method="lm", se = TRUE, show.legend = F)+
  geom_point(data=  data_plot[data_plot$alp==0 & lm_x2 == 2,] , aes(x=lm_y, y=lm_x1), col="blue", show.legend = F)+
-  annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -2.5, label=paste("n = ", length(lm_y)))+
+  annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -2.5, label=paste("n = ", length(data_plot$lm_y)))+
   annotate(geom="text", -Inf, -Inf,  hjust = -0.2, vjust = -1, label=paste(paste("p =", round(fs_mar_mn_q,3))))+
-  annotate(geom="text", -Inf, -Inf,  hjust =-0.2, vjust = -4, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))+
-  ylab(paste("June mean q trend (slope) [m³/s/a]"))+
-  xlab(paste("March mean q trend (slope) [m³/s/a]"))+
- geom_linerange(alpha= .4,aes( ymin=low_lim, ymax = upp_lim ), data = error_jun_mn_q[sig_points,])+
-  scale_color_discrete("Seasonality", label=c("Summer", "Winter"))
+  annotate(geom="text", -Inf, -Inf,  hjust =-0.2, vjust = -4, label=paste("r²=",round(summary(fm2)$adj.r.squared,2)))+
+  ylab(paste("June median q trend (slope) [m³/s/a]"))+
+  xlab(paste("March median q trend (slope) [m³/s/a]"))+
+ geom_linerange(alpha= .4,aes( ymin=low_lim, ymax = upp_lim ), data = error_jun_mn_q[sig_points,], lwd=.8)+
+  scale_color_discrete("Regime", label=c("pluvial", "nival"))+
+  theme(legend.direction = "horizontal", legend.position = "bottom")+
+  theme_bw()
 
 
-#this is linear model with normal distribution not with selm and skewed normal distr
-
-ggsave("./plots/trend_analysis/jun_march_v3.pdf")
+ggsave("./plots/drought_attribution/jun_march_v3.pdf")
 
 hist(mmky_su_q10$sen_slope) #normal
 hist(mmky_wi_q10$sen_slope) #normal
@@ -557,10 +555,18 @@ data_plot_spei = p_pet_agg[[2]] %>%
   mutate(month = 1:12) %>% 
   gather(., key= agg_month, value=cor,-month)
 
-ggplot(data_plot_spei)+
-  geom_smooth(aes(x=month, y=cor, col=as.factor(agg_month)), se=F)
+ggplot(data_plot_spi)+
+  geom_smooth(aes(x=month, y=cor, col=as.factor(agg_month)), se=F)+
+  ylab("spearman correlation p  ~ q ")+
+  scale_x_continuous("", breaks = c(1:12),labels=month.abb)+
+  scale_color_discrete("aggregation \nperiod")+
+  ylim(c(-0.3,.8))+
+  theme_bw()
 
-ggplot(data_plot_spei)+
+ggsave("./plots/drought_attribution/p_q.pdf")
+
+
+ggplot(data_plot_spi)+
   geom_line(aes(x=month, y=cor, col=as.factor(agg_month)), se=F)
 
 #correlation of actual flow and metreologic variables on monthly basis
@@ -656,7 +662,7 @@ data_plot_spei = cor_spei %>%
   gather(., key= agg_month, value=cor,-bfi_class, -sr,-geo)
 
 
-ggplot(data_plot_spei)+
+ggplot(data_plot_spi)+
   geom_boxplot(aes(x= agg_month, y= cor, col=as.factor(sr)))+
   labs(x="Aggregation Period",
        y= "spearman correlation spei-n ~ ssi-1")+

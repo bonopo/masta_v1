@@ -172,8 +172,58 @@ cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
 }
 }
 
+#change over time
 
+cor_spi_time = matrix(nrow=40, ncol=length(drought_sci_0))
+cor_spei_time = matrix(nrow=40, ncol=length(drought_sci_0))
 
+for (a in 1:length(drought_sci_0)){
+for (y in 1970:2009){
+temp= drought_sci_0[[a]] %>% 
+  filter(year(yr_mt)== y)
+cor_spi_time[(y-1969), a] = cor(y= temp$ssi , x= temp$spi, method = "spearman",use="na.or.complete") 
+cor_spei_time[(y-1969), a] = cor(y= temp$ssi , x= temp$spei, method = "spearman", use="na.or.complete")
+}
+}
+
+#plot
+data_plot_spi = cor_spi_time %>% 
+  as.data.frame() %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  mutate(year = 1970:2009) %>% 
+  gather(key=agg, value=cor, -year)
+
+ggplot(data_plot_spi)+
+  geom_line(aes(x=year, y=cor, col=agg))
+
+data_plot_spei = cor_spei_time %>% 
+  as.data.frame() %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  mutate(year = 1970:2009) %>% 
+  gather(key=agg, value=cor, -year)
+
+ggplot(data_plot_spei)+
+  geom_line(aes(x=year, y=cor, col=agg))
+
+#trend
+#spi
+p_value = c()
+tau =  c()
+for( i in 1:5){
+res_t = mk.test(cor_spi_time[,i])
+tau[i] = res_t$estimates[3]
+p_value[i]  = res_t$p.value
+}
+
+#trend spei
+
+p_value_spei = c()
+tau_spei =  c()
+for( i in 1:5){
+res_t = mk.test(cor_spei_time[,i])
+tau_spei[i] = res_t$estimates[3]
+p_value_spei[i]  = res_t$p.value
+}
 
 #which aggregation month describes the catchment the best and what is its correlation (pearson)
 best_spi = c()
@@ -193,6 +243,32 @@ gauges$cor_spei_n_dr = best_spei
 gauges$cor_spi_n_dr  = best_spi
 gauges$cor_spi_dr    = value_spi
 gauges$cor_spei_dr   = value_spei
+
+
+ sd_x= apply(cor_spi, 2,sd)
+ mean_x= apply(cor_spi, 2,mean)
+ 
+mat_spi= data.frame(agg=agg_month, sd_neg = mean_x-sd_x, sd_pos = mean_x+sd_x, sci=1, mean=mean_x)
+
+ sd_x= apply(cor_spei, 2,sd)
+ mean_x= apply(cor_spei, 2,mean)
+ 
+mat_spei= data.frame(agg=agg_month, sd_neg = mean_x-sd_x, sd_pos = mean_x+sd_x, sci=2, mean=mean_x)
+
+mat_final = rbind(mat_spi, mat_spei)
+
+ggplot(mat_final)+
+  #geom_point(aes(x=factor(agg), y= cor, col=factor(sci)))+
+  xlab("aggregation period")+
+  scale_color_discrete("SCI", labels=c("spi", "spei"))+
+  #scale_x_continuous(breaks=c(1,2,3,6,12,24), labels=c("1","2","3","6","12","24"))+
+  theme_bw()+
+  ylab("spearman correlation of SCI ~ SSI-1")+
+  geom_pointrange(aes(x=factor(agg), ymin = sd_neg, ymax=sd_pos,y=mean, col=factor(sci)), position = position_dodge(width=.3))
+
+ggsave("./plots/clustering/drought_propagation_agg.pdf")
+
+
 
 hist(gauges$cor_spi_n_dr)
 boxplot(cor_spi)
@@ -266,21 +342,40 @@ save(gauges, file="./output/gauges.Rdata")
 # End of clustering -------------------------------------------------------
 
 #clustering analysis####
-clust_ana3 = cbind( gauges$alpine, gauges$sr_new, as.factor(gauges$hydrogeo_simple), as.factor(gauges$landuse), gauges$mn_q, gauges$saar, gauges$bfi, gauges$Enzgsg_, gauges$mn_t, gauges$lt_memoryeffect,gauges$mn_deficit, gauges$mn_intensity, gauges$mn_length, gauges$cor_spei, gauges$cor_spi, gauges$cor_spei_n, gauges$cor_spi_n, gauges$Hochwrt ) %>% as.data.frame()
+clust_ana3 = cbind( gauges$alpine, gauges$sr_new, as.factor(gauges$hydrogeo_simple), as.factor(gauges$landuse), gauges$mn_q, gauges$saar, gauges$bfi, gauges$Enzgsg_, gauges$mn_t, gauges$lt_memoryeffect,  gauges$Hochwrt,gauges$cor_spei_n_dr, gauges$cor_spi_dr, gauges$cor_spi_n_dr, gauges$cor_spei_dr ) %>% as.data.frame()
 
-colnames(clust_ana3) =c("alpine",  "seasonality","hydro_geo","landuse","q_mean","saar","BFI","catchment_km", "mn_t", "memory_effect", "mn_deficit","mn_intensity","mn_length","cor_spei","cor_spi","cor_spei_n","cor_spi_n", "hochwert")
-#library(scales)
-# pdf("./plots/clustering/varclus.pdf")
-# plot(Hmisc::varclus(~., data=clust_ana3), las=1, cex.lab=1.5)
-# abline(h=.5, lty=2)
-# dev.off()
-cor_mat = round(cor(x= ms7_date_trend , y= clust_ana5, use="na.or.complete", method="s"),2)
 
+colnames(clust_ana3) =c("alpine",  "seasonality","hydrogeology","landuse","mean_q","saar","BFI","catchment_size", "mean_t", "memory_effect", "latitute", "cor_spei_n","cor_spi","cor_spi_n","cor_spei")
+library(scales)
+pdf("./plots/clustering/varclus.pdf")
+plot(Hmisc::varclus(~., data=clust_ana3), las=1, cex.lab=1.5)
+abline(h=.5, lty=2)
+dev.off()
+cor_mat = round(cor(x= clust_ana3, use="na.or.complete", method="p"),2)
+xtable::xtable(cor_mat)
+
+dat_plot = cbind.data.frame(BFI = gauges$bfi, len = gauges$mn_length, saar= gauges$saar, sr=gauges$sr_new, int = gauges$mn_intensity)
+ggplot(dat_plot)+
+  geom_point(aes(x=BFI, y=len))+
+  ylab("mean drought length [d]")
+
+ggplot(dat_plot[dat_plot$BFI<.6,])+
+  geom_point(aes(x=saar, y=len))+
+  ylab("mean drought length [d]")+
+  xlab("SAAR[mm]")
+
+cor(x=dat_plot[dat_plot$BFI<.6,]$saar, y= dat_plot[dat_plot$BFI<.6,]$len)
+
+t.test(x= gauges$mn_length[gauges$sr_new ==2],y= gauges$mn_length[gauges$sr_new ==0])
+
+  ggsave("./plots/clustering/mn_saar_bfi.pdf")
+gauges$bfi[gauges$sr_new==2]
 
 plot(gauges$mn_t ~ gauges$Hochwrt)
-plot(gauges$saar ~ gauges$Hochwrt)
-plot(gauges$bfi~ gauges$mn_length)
-plot(gauges$bfi~ gauges$mn_length)
+plot(x= gauges$saar ,y= gauges$mn_length)
+plot(gauges$saar~ gauges$mn_intensity
+     )
+cor(x= gauges$saar[gauges$sr_new==2],y= gauges$mn_intensity[gauges$sr_new==2])
 #latitude has high cor with saar and mn_t
 #alpine and sr_ew 
 #mn_intensity is highly cor. with mean discharge
@@ -457,11 +552,17 @@ ggplot(temp_df, aes(x= factor(hydrogeo),y= date))+
      stat_summary(fun.data = give.n, geom = "text", fun.y = median,
                   position = position_dodge(width = 0.75))+
   xlab("Hydrogeology")+
+  scale_x_discrete(labels=c("fractured","other","porous"))+
   ylab("ms7 timing trend (slope) [d/y]")+
   annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms7_date$new_p < fs_ms7_date))))+
-  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.03")
+  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.07")+
+  theme_bw()
   
 ggsave("./plots/clustering/hydrogeo_ms7_timing.pdf")
+
+png("./plots/clustering/ms7_timing_swarm.png")
+beeswarm(date ~ factor(hydrogeo), data=temp_df, col=2:4, pch=16,labels=c("fractured","other","porous") , xlab="hydrogeology",ylab="ms7 timing trend (slope) [d/a]", method="center")
+dev.off()
 
 ggplot(temp_df, aes(x= factor(hydrogeo),y= date, color=factor(sr)))+
   geom_boxplot() +
@@ -474,8 +575,17 @@ ggplot(temp_df, aes(x= factor(hydrogeo),y= date, color=factor(sr)))+
   
 ggsave("./plots/clustering/hydrogeo_ms7_timing2.pdf")
 
-temp_df = cbind.data.frame(sr =gauges_df$sr_new[mmky_ms30_min$new_p < fs_ms30], ms30= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < fs_ms30])
+temp_df = cbind.data.frame(sr =gauges$sr_new[mmky_ms30_min$new_p < fs_ms30], ms30= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < fs_ms30])
 
+ggplot( aes(x= factor(gauges_df$hydrogeo_simple),y= gauges_df$bfi))+
+  geom_boxplot()
+
+#ms30 ~ sr
+#beeswarm plot
+  png("./plots/clustering/clustering_swarm_sr.png")
+beeswarm(ms30 ~ sr, data=temp_df, pch = 16,col = c(2,4), corral="wrap", cex=1,labels = c("non-snow","snow-acc"), xlab="", ylab="ms30 trend (slope) [m³/s/a]", method="center")
+dev.off()
+#boxplot
 
 ggplot(data = temp_df, aes(x= factor(sr),y= ms30))+
   geom_boxplot() +
@@ -494,14 +604,14 @@ ggsave("./plots/clustering/sr.pdf")
 #80th method: 30 day moving average deviation of the 20th quantile = drought
 
 plot(gauges$n_events ~ gauges$bfi)
-
+boxplot(gauges$bfi ~ factor(gauges$hydrogeo_simple))
 
 #clustered plots #### 
 #see barker et al
 
  gauges_df = as.data.frame(gauges)
 
-
+plot(gauges$bfi ~ gauges$hydrogeo_simple)
 
 ggplot(data = gauges_df)+
   geom_point(aes(x=lt_memoryeffect, y= bfi))
@@ -515,6 +625,9 @@ ggsave("./plots/clustering/bfi_memoryeffect.pdf")
    scale_color_continuous("Aquifer \nmemory")
 ggsave("./plots/clustering/mn_length_bfi_lt.png")
 
+length(which(gauges$Hochwrt > 5600000))
+range(gauges$Hochwrt)
+thornthwaite
 ggplot()+
   geom_boxplot(aes(x=factor(gauges$sr_new[mmky_ms30_min$new_p < 0.05]), y= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05]))
 
@@ -522,8 +635,20 @@ ggplot()+
  which(mmky_ms7_date$sen_slope >0 & mmky_ms7_date$new_p < 0.05) %>% length()
  
  
+ gauges_df= gauges %>% as.data.frame()
+ 
+ fm=lm(gauges$mn_length ~ (gauges$bfi)^2)
+summary(fm)
+plot((gauges$mn_length) ~ (gauges$bfi))
+ 
 ggplot(data=gauges_df)+
-  geom_point(aes(x=saar, y= best_spei, col= bfi))
+  geom_point(aes(x=bfi, y= mn_length))+
+  ylab("mean drought length [d]")+
+ geom_smooth(method="lm", aes(x=bfi, y=mn_length))+
+  theme_bw()+
+  annotate(geom="text", -Inf, +Inf,  hjust =-0.5, vjust = 4, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))+
+  xlan("BFI")
+  ggsave("./plots/clustering/mean_length_bfi.pdf")
 
 ggplot(data=gauges_df)+
   geom_point(aes(x=saar, y= cor_spi, col= as.factor(sr_new)))
@@ -552,17 +677,37 @@ lines(fm)
 gauges$ms7_date = mmky_ms7_date$sen_slope
 min(mmky_ms7_date$sen_slope)
 rtb = c('#ca0020','#f4a582','#bababa','#92c5de','#0571b0') # colors for spplot
+# spplot####
+#describing the catchments
+
+gauges$hydro_num=NA
+gauges$hydro_num[which(gauges$hydrogeo_simple == "other")] = 3
+gauges$hydro_num[which(gauges$hydrogeo_simple == "K")] = 1
+gauges$hydro_num[which(gauges$hydrogeo_simple == "P")] = 2
+
+
+as.numeric(as.character(gauges$hydrogeo_simple))[gauges$hydrogeo_simple]
+class(gauges)
+pdf("./plots/clustering/gauges_hydrogeo.pdf")
+spplot(gauges, "hydro_num",
+       col.regions = rtb,
+       cuts = c(0,1,2,3),
+       legendEntries = c("fractured", "porous", "other"),
+       sp.layout = germany,
+       colorkey=F,
+       scales = list(draw = TRUE))
+dev.off()
 
 
 png("./plots/5_choice/gauges_msdate.png", width=800, height=1000)
 #pdf("./plots/5_choice/gauges_msdate.pdf")
 spplot(gauges, "ms7_date", 
-       col.regions = rtb,
-       cuts = c(-2.5,-1.5,-.5,.5,1.5,2.5),
-       legendEntries = c("<-1.5", "<-0.5", "near no trend", ">0.5",">1.5"),
+       #col.regions = rtb,
+       #cuts = c(-2.5,-1.5,-.5,.5,1.5,2.5),
+       #legendEntries = c("<-1.5", "<-0.5", "near no trend", ">0.5",">1.5"),
        sp.layout = germany,
-       colorkey=T,
-       scales = list(draw = TRUE))
+       #colorkey=T,
+       #scales = list(draw = TRUE))
 dev.off()
 
 tofy = c("#9ecae1","#fdae61","#d7191c","#9ecae1")
@@ -592,9 +737,22 @@ spplot(gauges, "ms30",
       )
 dev.off()
 
+pdf(file= "./plots/clustering/ms30_trends_non_sig.pdf")
+spplot(gauges, "mn_length", 
+      #col.regions = tofy2,
+       
+      # legendEntries = c("negative", "~0",  "positive","not significant"),
+       sp.layout = germany,
+     #  colorkey=T#,
+      scales = list(draw = TRUE)
+      )
+dev.off()
+
 #all incl non significant
 tofy2 = c("#de2d26","#bdbdbd","#3182bd")
 gauges$ms30 = ((mmky_ms30_min$sen_slope*40)/gauges$mn_q)*100
+# which(mmky_ms30_min$sen_slope*40 < apply(ms30_min,2,sd)*.1)
+sd(gauges$ms30)
 range(gauges$ms30)
 gauges$ms30 = cut(gauges$ms30, breaks = c(-50,-1,1,50)) 
 pdf(file= "./plots/clustering/ms30_trends.pdf")

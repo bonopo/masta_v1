@@ -40,6 +40,12 @@ mmky_par( c("yr_days_below_0", "wi_days_below_0"))
 mmky_par(c("sp_mn_t", "sp_sm_p"))
 mmky_par(c("su_mn_q","wi_mn_q"))
 mmky_par(c("wi_med_q", "su_med_q"))
+mmky_par(c("q_wide_flood"))
+
+data = cor_spi_time[,1:5]
+mmky_par(c("data"))#,"cor_spei_time"))
+
+mmky_par(c("su_dwr","wi_dwr","yearly_dwr","su_ext_p", "wi_ext_p","yearly_ext_p", "su_ds", "yearly_ds"))
 
 mmky_par(c("summer_q_drought_freq", "summer_p_drought_freq"))
 mmky_par(c("summer_dy_drought_p", "summer_dy_drought_q"))
@@ -48,6 +54,8 @@ mmky_par(c("summer_sm_def_p", "summer_sm_def_q"))
 
 mmky(wi_days_below_0$`1`)
 mmky_par(c("su_p_pet", "yearly_30_min", "yearly_7_min", "yearly_7_date","mw7_min", "mw7_date"))
+
+mmky_par("mw7_date")
 class(wi_days_below_0)
 any(is.infinite(wi_days_below_0))
 
@@ -60,7 +68,17 @@ mmky_par(raw_data = c("march_dy_drought_q", "march_dy_drought_p","march_sm_def_p
 
 
 mmky_par(raw_data = c( "def_vol_q","def_vol_p","days_dr_q","days_dr_p"))
+monthly_q10=c()
+for ( i in 1:12) monthly_q10[i] =paste0(str_to_lower(month.abb[i]),"_q10")
+mmky_par(raw_data = monthly_q10)
 
+monthly_q35=c()
+for ( i in 1:12) monthly_q35[i] =paste0(str_to_lower(month.abb[i]),"_q35")
+mmky_par(raw_data = monthly_q35)
+
+monthly_q80 = c()
+for ( i in 1:12) monthly_q80[i] =paste0(str_to_lower(month.abb[i]),"_q80")
+mmky_par(raw_data = monthly_q80)
 
 monthly_dy_drought=c()
 for ( i in 1:12) monthly_dy_drought[i] =paste0(str_to_lower(month.abb[i]),"_dy_drought_q")

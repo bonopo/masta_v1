@@ -248,7 +248,18 @@ q_days_of_drought_yr = apply(q_days_of_drought_df,1, sum )%>% cbind(days_dr=., y
 
 p_sum_def_yr = apply(p_sum_def_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 
+dat =p_sum_def_yr*gauges$Enzgsg_ 
+mean_def = apply(dat,1,mean, na.rm=T) 
+
 q_sum_def_yr = apply(q_sum_def_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
+
+dat_q =q_sum_def_yr
+mean_def = apply(dat,1,mean, na.rm=T) 
+
+
+
+
+apply(p_sum_def_yr,2,sum)*gauges$Enzgsg_ %>% mean()
 
 p_n_events_yr = apply(p_n_df,1, sum ) %>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 

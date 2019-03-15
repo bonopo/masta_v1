@@ -106,10 +106,19 @@ mw7_date = mw7_min %>%
   spread(key=gauge, value=mw7_date) %>% 
   dplyr::select(-year)
 
+#to calculate trend data needs to be adjusted so that december has lower values thatn january (an not higher)
+mw7_date[which((mw7_date) <= yday("2008-04-30"), arr.ind = T)] = mw7_date[
+    which((mw7_date) <= yday("2008-04-30"), arr.ind = T)] +31 #since 1.december is 0
+
+ mw7_date[which(mw7_date > yday("2008-06-30"), arr.ind = T)] = mw7_date[which((mw7_date) > yday("2008-06-30"), arr.ind = T)] -as.numeric(yday("2008-12-01"))
+ #setting "01-12" as zero and counting upwards from that day, choosin 06-30 because i just added 31 to the other dates before, calculating now with not real dates but just surrogates
+  
+
+
 mw7_min %<>%  dplyr::select(gauge, mw7_min, year) %>% 
   spread(key=gauge, value=mw7_min) %>% 
   dplyr::select(-year) 
-
+break_y
 
 remove(mw7_df, q_wide_winter)
 
@@ -327,7 +336,63 @@ monthly_med_q = q_long %>%
  }
 remove(res, int, monthly_med_q, df)
 
+#low flwo quantile q10
+monthly_q10 = q_long %>% 
+  mutate(yr_mt = ymd(paste0(year(date),"-",month(date),"-15"))) %>% 
+  group_by(gauge, yr_mt) %>% 
+  summarise(monthly_q10 = quantile(q,.1)) %>% 
+  mutate(month= month(yr_mt))
 
+ res =  plyr::dlply(monthly_q10, c("gauge", "month"))  #produce data frames by gauge and month (so 377 * 12 data frames)
+ int = seq(1,length(res),12) # producing a sequence to select all january of every catchment 
+ for(i in 1:12){ #starting with january
+ df=  Reduce(rbind,res[int]) %>% spread(key=gauge,value= monthly_q10) %>% dplyr::select(-yr_mt, -month)
+ assign(paste0(str_to_lower(month.abb[i]),"_q10"),df)
+ int = int+1 # through int+1 the next month will be selected (feb,march....)
+ }
+remove(res, int, monthly_q10, df)
+
+#low flwo quantile q35
+monthly_q35 = q_long %>% 
+  mutate(yr_mt = ymd(paste0(year(date),"-",month(date),"-15"))) %>% 
+  group_by(gauge, yr_mt) %>% 
+  summarise(monthly_q35 = quantile(q,.35)) %>% 
+  mutate(month= month(yr_mt))
+
+ res =  plyr::dlply(monthly_q35, c("gauge", "month"))  #produce data frames by gauge and month (so 377 * 12 data frames)
+ int = seq(1,length(res),12) # producing a sequence to select all january of every catchment 
+ for(i in 1:12){ #starting with january
+ df=  Reduce(rbind,res[int]) %>% spread(key=gauge,value= monthly_q35) %>% dplyr::select(-yr_mt, -month)
+ assign(paste0(str_to_lower(month.abb[i]),"_q35"),df)
+ int = int+1 # through int+1 the next month will be selected (feb,march....)
+ }
+remove(res, int, monthly_q35, df)
+
+#high flow quantile q80####
+monthly_q80 = q_long %>% 
+  mutate(yr_mt = ymd(paste0(year(date),"-",month(date),"-15"))) %>% 
+  group_by(gauge, yr_mt) %>% 
+  summarise(monthly_q80 = quantile(q,.8)) %>% 
+  mutate(month= month(yr_mt))
+
+ res =  plyr::dlply(monthly_q80, c("gauge", "month"))  #produce data frames by gauge and month (so 377 * 12 data frames)
+ int = seq(1,length(res),12) # producing a sequence to select all january of every catchment 
+ for(i in 1:12){ #starting with january
+ df=  Reduce(rbind,res[int]) %>% spread(key=gauge,value= monthly_q80) %>% dplyr::select(-yr_mt, -month)
+ assign(paste0(str_to_lower(month.abb[i]),"_q80"),df)
+ int = int+1 # through int+1 the next month will be selected (feb,march....)
+ }
+remove(res, int, monthly_q80, df)
+
+
+#flood analysis####
+q_wide_flood = q_long %>% 
+    group_by(gauge, year(date)) %>% 
+  summarise(high_flow = quantile(q,.9)) %>% 
+  spread(key=gauge, value=high_flow) %>% 
+  as.tbl() %>% 
+  dplyr::select( -`year(date)`) %>% 
+  set_colnames(1:catch_n)
 
 #temp monthly####
 #mean
@@ -464,6 +529,103 @@ remove(d30_mn_t)
 
 
 # precipitation seasonal ####
+#dry spells
+ su_ds_t = precip_long %>% 
+  filter(month(date) >= 5 & month(date) <= 11) %>% 
+  mutate(rain = 0) 
+su_ds_t$rain[which(su_ds_t$sum_mm > 0.5)] = 1
+su_ds = su_ds_t%>% 
+  group_by(gauge, year(date)) %>% 
+  mutate(cum_precip = cumsum(rain)) %>% 
+  summarise(dry_spell = getmode(cum_precip) ) %>% 
+  spread(key=gauge, value = dry_spell) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+
+# wi_dwr = precip_long %>% 
+#   filter(month(date) < 5 | month(date) > 11) %>% 
+#   group_by(gauge, year(date)) %>% 
+#   summarise(days_no_rain= length(which(sum_mm < 0.5))) %>% 
+#   spread(value=days_no_rain, key=gauge) %>% 
+#   dplyr::select(-`year(date)`) %>% 
+#   set_colnames(1:catch_n)
+# 
+yearly_ds_t = precip_long %>% 
+  mutate(rain = 0) 
+yearly_ds_t$rain[which(yearly_ds_t$sum_mm > 0.5)] = 1
+yearly_ds = yearly_ds_t%>% 
+  group_by(gauge, year(date)) %>% 
+  mutate(cum_precip = cumsum(rain)) %>% 
+  summarise(dry_spell = getmode(cum_precip) ) %>% 
+  spread(key=gauge, value = dry_spell) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+#days without rain ####
+su_dwr = precip_long %>% 
+  filter(month(date) >= 5 & month(date) <= 11) %>% 
+  group_by(gauge, year(date)) %>% 
+  summarise(days_no_rain= length(which(sum_mm < 0.5))) %>% 
+  spread(value=days_no_rain, key=gauge) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+wi_dwr = precip_long %>% 
+  filter(month(date) < 5 | month(date) > 11) %>% 
+  group_by(gauge, year(date)) %>% 
+  summarise(days_no_rain= length(which(sum_mm < 0.5))) %>% 
+  spread(value=days_no_rain, key=gauge) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+yearly_dwr = precip_long %>% 
+  group_by(gauge, month(date)) %>% 
+  summarise(days_no_rain= length(which(sum_mm < 0.5))) %>% 
+  spread(value=days_no_rain, key=gauge) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+
+
+mt_dwr = precip_long %>% 
+  mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>%
+  group_by(gauge, yr_mt) %>% 
+  summarise(days_no_rain= length(which(sum_mm < 0.5))) %>% ungroup()
+
+#severe precipitation events
+
+su_ext_p = precip_long %>% 
+  filter(month(date) >= 5 & month(date) <= 11) %>% 
+  group_by(gauge, year(date)) %>% 
+  summarise(severe_events= max(rollapply(data = sum_mm, FUN= sum, width = 3, align="right"))) %>% 
+  spread(value=severe_events, key=gauge) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+wi_ext_p = precip_long %>% 
+  filter(month(date) < 5 | month(date) > 11) %>% 
+  group_by(gauge, year(date)) %>% 
+  summarise(severe_events= max(rollapply(data = sum_mm, FUN= sum, width = 3, align="right"))) %>% 
+  spread(value=severe_events, key=gauge) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+yearly_ext_p = precip_long %>% 
+  group_by(gauge, year(date)) %>% 
+  summarise(severe_events= max(rollapply(data = sum_mm, FUN= sum, width = 3, align="right"))) %>% 
+  spread(value=severe_events, key=gauge) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+mt_ext_p = precip_long %>% 
+  mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>%
+  group_by(gauge, yr_mt) %>% 
+  summarise(severe_events= max(rollapply(data = sum_mm, FUN= sum, width = 3, align="right"))) %>% 
+  ungroup()
+
+
+
 
 sp_sm_p = summer_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin =3, end=5)
 su_sm_p = summer_cl(data_source = "mt_sm_p", method = "sum", value = "month_sum", begin =5, end=11)
@@ -567,3 +729,20 @@ monthly_pet = spei_data %>%
  }
 remove(res, int, monthly_pet, df)
 
+#north atlantic oscillation 
+#comparing mean of summer (june-aug) with mean q of summer
+
+nao_su = nao %>% 
+  filter(between(month,6,8 )) %>% 
+  group_by(year) %>% 
+  summarise(mean_nao = mean(nao))
+
+jun_aug_mn_q = ssi_1_long %>% 
+  mutate(month = month(yr_mt)) %>% 
+  filter(between(month, 6, 8)) %>% 
+  group_by(year(yr_mt)) %>% 
+  summarise(mean_ssi = mean(ssi))
+
+plot(nao_su$mean_nao, jun_aug_mn_q$mean_ssi)
+
+#no relationship

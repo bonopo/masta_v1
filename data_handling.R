@@ -7,10 +7,10 @@ load(file="./output/hydro_year.Rdata")
 load(file="./output/gauges.Rdata")
 load(file="./output/ms7.Rdata", verbose = T)
 load(file="./output/fs.Rdata", verbose = T)
-#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest", "gridExtra", "foreach",  "doSNOW", "snow", "itertools","ggthemes"))
+#install.packages(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI", "tweedie", "SPEI", "eha","reliaR", "PearsonDS","FAdist","trend", "Kendall","mgcv", "modiscloud", "Hmisc", "scales", "sn", "randomForest", "gridExtra", "foreach",  "doSNOW", "snow", "itertools","beeswarm"))
 # install.packages("drought", repos="http://R-Forge.R-project.org")
-#install.packages("itertools")
-sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI",  "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn", "gridExtra",  "foreach", "doSNOW", "snow","ggthemes"), require, character.only = T)
+#install.packages("beeswarm")
+sapply(c("raster", "rgdal", "tidyverse", "magrittr", "reshape2", "SCI",  "lubridate", "SPEI", "lmomco",  "evd", "reliaR", "PearsonDS", "FAdist","trend","Kendall", "mgcv", "lmtest","lfstat", "modifiedmk", "climtrends", "boot", "parallel","modiscloud", "Hmisc","car", "scales", "sn", "gridExtra",  "foreach", "doSNOW", "snow","beeswarm"), require, character.only = T)
 #install.packages("climtrends", repos="http://R-Forge.R-project.org")
 
 
@@ -34,6 +34,8 @@ landuse_v1 <- read.csv("./data/geo_landuse/LaNu_per_EZG.csv")
 hydrogeo <- read.csv("./data/geo_landuse/hydrogeo.csv")
 # germany shapefile
 germany = raster::getData("GADM",country="Germany",level=0)
+#North atlantic oscillation 
+nao_raw=read.table("./data/catchments/nao_monthly.txt")
 # User defined constants --------------------------------------------------
 
 date_seq <- seq.Date(from= ymd("1970-01-15"), to = ymd("2009-12-15"), by="month")  
@@ -139,7 +141,9 @@ gauges= gauges[c(1:catch_n),]
 remove(hydrogeo)
 
 #possibly extending of time series? ####
-sum(ymd(hydrogeo$Ztrhnbg.C.80)<ymd("1960-1-2")) #if time series would be extended to 1.1.1960 there would be 201 catchments
+sum(ymd(gauges$Ztrhnbg)<ymd("1960-1-2")) #if time series would be extended to 1.1.1960 there would be 201 catchments
+table( year(ymd(gauges$Ztrhnbg)))
+
 
 
 # PET calculation with thornwaite -----------------------------------------
@@ -189,7 +193,17 @@ year_p_pet = spei_data_mat
 remove(pet_th, latitude,pet_th_vec)
 remove(data, i, res_ts, xy_gk, xy_wgs84)
 
-#defining hydrological year beginning on 1.april because then there are no droughts (see plot below)
+
+#nao ####
+
+nao= nao_raw %>% 
+  as.tbl() %>% 
+  set_colnames(c("year", "month","nao")) %>% 
+  filter(year >= 1970 & year <= 2009)
+
+
+ 
+ #defining hydrological year beginning on 1.april because then there are no droughts (see plot below)
 gauges$mnq30_month %>% plot()
 
 year <- as.numeric(format(date_seq_long, "%Y"))
@@ -210,12 +224,3 @@ remove(year, begin_year, end_year, begin_date, end_date, breaks)
 
 #hydro year actually not used in further analysis rather the calender year
 
-#von Neumann homogenity test ####
-#Under the null hypothesis of constant mean, i.e., homogenous time series, the expected value of the von Neumann ratio is 2. However, it tends to be < 2 for the non-homogenous time series 
-# n72 = mt_mn_q_wide[,72]
-# ts72 = as.ts(n72, deltat= 1/12, start=c(1970,1))
-# 
-# (sum((n72[1:(length(n72)-1)]-n72[2:length(n72)])^2))/(sum((n72-mean(n72))^2))
-# 
-# VonNeumannRatio(ts72)
-#  

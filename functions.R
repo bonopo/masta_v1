@@ -604,8 +604,9 @@ return(output)
 
 
 give.n <- function(x){
-  return(c(y= -0.015, label = length(x))) #y = median(x)+.0275
+  return(c(y= -2.4, label = length(x))) #y = median(x)+.0275
 }
+
 give.n.summer <- function(x){
   return(c(y= -.25, label = round(length(x)/n_summer,2)*100)) #y = median(x)+.0275
 }
@@ -1321,9 +1322,9 @@ pos.neg = function(p=NULL, dat=mmky_yr_days_below_0,positive=T){
   
   if(is.null(p)) p = 10
   if(positive == T) {
-    res = length(which(dat$sen_slope > 0 & dat$new_p < p ))/337 %>% round(.,2)*100
+    res = length(which(dat$sen_slope > 0 & dat$new_p < p ))/NROW(dat) %>% round(.,2)*100
     }else{
-   res= length(which(dat$sen_slope < 0 & dat$new_p < p ))/337 %>% round(.,2)*100
+   res= length(which(dat$sen_slope < 0 & dat$new_p < p ))/NROW(dat) %>% round(.,2)*100
     }
   
   return(round(res,0))
@@ -1339,5 +1340,68 @@ magnitude = function(dat = mmky_su_mn_t , p=NULL, reference = NULL){
   return(res)
 }
 
-reference =ms30_min %>% colMeans()
-gauges$mn_q
+#mode
+
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+
+#hydroclimatic functions
+#jun-aug, sept-nov, dez - feb, march - mai
+winter = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+
+
+seasonal_trends = function(lb_season=1, ub_season=12, dat = mt_sm_p, value="month_sum", xtable = T, px=0.03,funx = "max" ,ref = T){
+  
+  
+  if(lb_season > ub_season){
+    hydro_year = c(1970,1970, rep(1971:2009, each=3),2010)
+    res = dat %>% 
+    filter(month(yr_mt) <=ub_season|month(yr_mt) >=lb_season) %>% 
+      mutate(hy_year = rep(hydro_year, times=catch_n)) %>% 
+    group_by(hy_year, gauge) %>% 
+  summarise(mean = get(funx, mode="function")(get(value))) %>% 
+  spread(key=gauge, value=mean) %>% 
+      as.data.frame() 
+  }else{
+   res = dat %>% 
+    filter(between(month(yr_mt),lb_season,ub_season)) %>%     group_by(year(yr_mt), gauge) %>% 
+  summarise(mean = get(funx, mode="function")(get(value))) %>% 
+  spread(key=gauge, value=mean) %>% 
+      as.data.frame() 
+  }  
+  ts_data = res[,2:(catch_n+1)]
+ 
+ 
+  
+   res_mmky = t(sapply(c(ts_data[,1:ncol(ts_data)]), FUN =mmky_edit)) 
+   colnames(res_mmky) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var","S")
+   
+   res_2 = as.data.frame(res_mmky)
+     
+   if(xtable == T){
+     
+      if(ref ==T){
+    reference_t = apply(ts_data,2,mean) 
+  }else{
+    reference_t = NULL
+  }
+     
+     mat = matrix(nrow=1, ncol=6, data=c(
+   pos.neg(dat = res_2, p=NULL, positive = T),
+   pos.neg(dat = res_2, p=px, positive = T),
+   pos.neg(dat = res_2, p=NULL, positive = F),
+   pos.neg(dat = res_2, p=px, positive = F),
+   magnitude(dat= res_2, p=NULL, reference = reference_t )
+   )
+   ,byrow=T)
+     return(mat)
+       }else{
+    
+     return(res_2)
+   }
+   
+   
+}

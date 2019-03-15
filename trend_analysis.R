@@ -3,11 +3,14 @@
 
 #plotting sen slope ####
 #per catchment characteristic
-  p = catch_plot(p_value=10, color="sr_new", x_data="Hochwrt", y_data= "mmky_d" , factor =T)
+  p = catch_plot(p_value=0.03, color="sr_new", x_data="bfi", y_data= "mmky_yearly_ds", factor =T)
 p
-pos.neg(dat= mmky_wi_days_below_0, p = NULL, positive=T)
-mmky_wi_days_below_0
-lm(mmky_su_mn_t$sen_slope[gauges$sr_new == 0] ~ gauges$Hochwrt[gauges$sr_new == 0]) %>% summary
+
+
+pos.neg(dat= mmky_wi_ext_p, p = NULL, positive=F) 
+magnitude(dat = mmky_wi_ext_p)*40
+
+mmky_sp_mn_t[gauges$sr_new==0,]$sen_slope %>% mean
 
 p= p+ylab("ms30 trend (slope) [m³/s/a]")+
   xlab("BFI")+
@@ -16,31 +19,44 @@ p
 ggsave(plot = p, "./plots/trend_analysis/su_mn_t_hochwert.png")
 
 #trend vs trend
-p=sig_plot(x_data = "mmky_su_mn_t", y_data = "mmky_wi_mn_t", output = "hochwert", p_value =fs_su_mn_t) 
+winter = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+spring = seasonal_trends(lb_season=3, ub_season=5, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+
+summer = seasonal_trends(lb_season=6, ub_season=8, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+autumn = seasonal_trends(lb_season=9, ub_season=11, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+
+
+p=sig_plot(x_data = "summer", y_data = "winter", output = "hochwert", p_value =fs_su_mn_t) 
 p
 
+
 p+
-geom_abline(slope=1, intercept=0)+
+#geom_abline(slope=1, intercept=0)+
   geom_point(aes(x=mmky_su_mn_t$sen_slope[gauges$alpine == 1], y= mmky_wi_mn_t$sen_slope[gauges$alpine == 1]),col="red")+
   xlab("summer mean temperature trend (slope) [°C/a]")+
     ylab("winter mean temperature trend (slope) [°C/a]")+
-  scale_color_continuous("Norting")
+  scale_color_continuous("Latitude")+
+  theme_bw()
   ggsave("./plots/trend_analysis/winter_summer_temp.pdf")
   
   
   ggplot()+
 geom_point(aes(x=mmky_su_q10$sen_slope, y=mmky_wi_q10$sen_slope, color=as.factor(gauges$sr_new)))+
-  scale_color_discrete("Seasonality", labels =c("Summer","Winter"))+
+  scale_color_discrete("Regime", labels =c("pluvial","nival"))+
   xlab("summer 10% quantile flow trend (slope) [m³/s/a]")+
-    ylab("winter 10% quantile flow trend (slope) [m³/s/a]")
+    ylab("winter 10% quantile flow trend (slope) [m³/s/a]")+
+    theme_bw()
 
 ggsave("./plots/trend_analysis/quantile_trend.pdf")
 
-  xlab("winter sum precipitation trend (slope) [mm/a]")+
-  ylab("winter median q trend (slope) [m³/s/a]")
-  ggsave( "./plots/trend_analysis/wi_p_med_q_sr.png")
-scale_color_discrete("Seasonality" , labels =c("Summer","Winter"))
 
+ggplot()+
+geom_point(aes(x=mmky_wi_med_q$sen_slope, y=mmky_wi_sm_p$sen_slope, color=as.factor((mmky_wi_med_q$new_p < fs_wi_mn_q) & mmky_wi_sm_p$new_p < fs_wi_sm_p)))+
+  scale_color_discrete("Significant", labels =c("False","True"))+
+  xlab("winter sum precipitation trend (slope) [mm/a]")+
+  ylab("winter median q trend (slope) [m³/s/a]")+
+  theme_bw()
+  ggsave( "./plots/trend_analysis/wi_p_med_q_sr.png")
 
 ggplot()+
   geom_point(aes(x=gauges$bfi, y=mmky_ms30_min$sen_slope, col=as.factor(gauges$sr_new)))+
@@ -119,6 +135,11 @@ spplot(gauges, c("mmkh_q10"), col.regions = rainbow(100, start = 4/6, end = 1),
 
 #other plots####
 
+data_plot = cbind.data.frame(sr=gauges$sr_new, precip_wi  = mmky_wi_sm_p$sen_slope*40/gauges$wi_sm_p)
+
+ggplot(data_plot)+
+  geom_boxplot(aes(x=as.factor(sr), y=precip_wi))
+
 p_value=.05; color="saar"; x_data="cor_spi_n"; y_data= "mmky_q10" 
 z_value = dplyr::select(gauges_df, color)[,1]
 ggplot()+
@@ -170,6 +191,22 @@ which(mmky_yearly_7_min$sen_slope[mmky_yearly_7_min$new_p<.05] >0 & gauges$sr_ne
 #trend linear regression ####
 #----> see script drought_attribution
 
+#ms7timing plot
+
+data_plot = cbind.data.frame(ms7 = mmky_ms7_date$sen_slope, sr=gauges$sr_new) 
+which()
+
+
+ggplot(data_plot,aes(x=as.factor(sr), y=ms7))+
+  geom_boxplot()+
+  stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+                  position = position_dodge(width = 0.75))+
+  labs(x="seasonality", 
+       y="ms7 timing [d/a]")+
+  scale_x_discrete(labels=c("summer","winter"))+
+  theme_bw()
+ggsave("./plots/trend_analysis/sr_ms7_timing.pdf")
+
 #trend moving window  #### 
 yr_sm_p_sbst = mmky_sbst(raw_data = yearly_sm_p, width=30)
 ms7_sbst = mmky_sbst(raw_data = ms7_min, width=10)
@@ -200,15 +237,16 @@ ms7_sbst30_long = ms7_sbst30 %>%
   gather(key=year, value=mmky, -gauge)
 
 data_plot = ms7_sbst30_long %>% 
-  filter(gauge %in% neg_ms7) %>% 
+ # filter(gauge %in% neg_ms7) %>% 
   group_by(gauge = as.integer(gauge)) %>% 
   summarise(lb=min(mmky), ub=max(mmky)) %>% 
-  mutate(mmky_true = mmky_ms7_min[neg_ms7,]$sen_slope) %>% 
+  mutate(mmky_true = mmky_ms7_min$sen_slope)# %>% 
   mutate(gauge = 1:length(neg_ms7))
 
 data_plot2 =ms7_sbst30_long %>% 
-    filter(gauge %in% neg_ms7) %>% 
-   mutate(gauge= rep(1:length(neg_ms7), times=10))
+    #filter(gauge %in% neg_ms7) %>% 
+   mutate(gauge= rep(1:catch_n, times=10))
+
 
 ggplot(data_plot, aes(x=gauge, fill=as.numeric(year), y=mmky))+
   #geom_point(aes(y= mmky_ms7_min$sen_slope, x=gauges$saar))
@@ -216,12 +254,33 @@ ggplot(data_plot, aes(x=gauge, fill=as.numeric(year), y=mmky))+
   scale_color_continuous("Starting year")
 
 ggplot(data= data_plot)+
-  geom_pointrange(aes(x=gauge,y=mmky_true, ymin=lb, ymax=ub))+
-  ylab("mmky")
-ggsave("./30_year_moving_window.png")
+  geom_pointrange(aes(x=gauge,y=mmky_true, ymin=lb, ymax=ub), size=.2, linetype = 1, pch=3)+
+  ylab("ms7 trend (slope) [m³/s/a]")
+ggsave("./plots/trend_analysis/30_year_moving_window.pdf")
 
-
+up_mean = data_plot$ub - data_plot$mmky_true %>% as.vector 
+up_mean %>% mean
   
+late_mean = ms7_sbst30_long %>% 
+  filter(year == 1979) %>% 
+  mutate(mean = mmky - mmky_ms7_min$sen_slope)
+
+early_mean = ms7_sbst30_long %>% 
+  filter(year == 1970) %>% 
+  mutate(mean = mmky - mmky_ms7_min$sen_slope)
+
+hist(late_mean$mmky)
+t.test(x= late_mean$mmky, y = early_mean$mmky)
+t.test(x= ms7_sbst30_long %>% 
+  filter(year == 1979) %>% 
+    dplyr::select(mmky) ,
+  y= ms7_sbst30_long %>% 
+  filter(year == 1970) %>% 
+    dplyr::select(mmky))
+
+lp_mean = data_plot$mmky_true - data_plot$lb %>% as.vector 
+lp_mean %>% mean
+
 min=  apply(yr_sm_p_sbst,1,min)
 max=  apply(yr_sm_p_sbst,1,max)
 p = catch_plot(p_value=10, color="sr_new", x_data="saar", y_data= "mmky_yearly_sm_p" , factor =T)
@@ -253,15 +312,15 @@ yearly_max_t_mean = apply(yearly_max_t, 1, median)#
 rects <- data.frame(xstart = seq(1969.5,2008.5,1), 
                     xend = seq(1970.5,2009.5,1), 
                 col = yearly_p_pet$year_med)
-ggplot() + geom_point(aes(x=1970:2009, y=ms7_min_med)) +
+pet_plot = ggplot() + geom_point(aes(x=1970:2009, y=ms7_min_med)) +
            geom_rect(data=rects, aes(ymin=0, ymax=.5, 
                                      xmin=xstart,
                       xmax=xend, fill=col), alpha =0.5)+
- scale_fill_continuous("p-pet [mm/a]", low="red", high = "blue", labels =c("0","250","500"), breaks=c(0,250,500))+
+ scale_fill_continuous("p-pet [mm/a] ", low="red", high = "blue", labels =c("0","250","500"), breaks=c(0,250,500))+
   xlab("")+
   ylab("ms7 [m³/s]")+nice
   
-ggsave("./plots/trend_analysis/p_pet_med_ms7.pdf")
+#ggsave("./plots/trend_analysis/p_pet_med_ms7.pdf")
 
 yearly_p = mt_sm_p_wide%>% 
   mutate(date=date_seq) %>% 
@@ -274,46 +333,102 @@ yearly_max_t_mean = apply(yearly_max_t, 1, median)#
 rects <- data.frame(xstart = seq(1969.5,2008.5,1), 
                     xend = seq(1970.5,2009.5,1), 
                 col = yearly_max_t_mean)
-ggplot() + geom_point(aes(x=1970:2009, y=ms7_min_med)) +
+temp=ggplot() + geom_point(aes(x=1970:2009, y=ms7_min_med)) +
            geom_rect(data=rects, aes(ymin=0, ymax=.5, 
                                      xmin=xstart,
                       xmax=xend, fill=col), alpha =0.5)+
- scale_fill_continuous("max temperature [°C]", low="blue", high = "red")+
+ scale_fill_continuous("max temp. [°C]", low="blue", high = "red")+
   xlab("")+
-  ylab("ms7 [m³/s]")+nice
+  ylab("")+nice
   
-ggsave("./plots/trend_analysis/temp_med_ms7.pdf")
 
-plotmar_mn_t
+p= grid.arrange(pet_plot,temp,  ncol=2)
+ggsave(plot=p,"./plots/trend_analysis/barcode_plot.pdf")
+
+
 
 #monthly boxplots ####
-#monthly precip trends
-mmky_monthly_p = c()
+#monthly q10 plot
+mmky_monthly_q10= c()
 data_plot=list()
 sr_new_l=list()
 check = list()
 for(i in 1:12) {
-  mmky_monthly_p[i] = paste0("mmky_",str_to_lower(month.abb[i]),"_sm_p")
-data_plot[[i]]  = get(mmky_monthly_p[i])$sen_slope[get(mmky_monthly_p[i])$new_p < fs_sm_p[i]]
-sr_new_l[[i]] = gauges$sr_new[get(mmky_monthly_p[i])$new_p < fs_sm_p[i]]
-check[[i]]= which(get(mmky_monthly_p[i])$new_p < fs_sm_p[i])
+  mmky_monthly_q10[i] = paste0("mmky_",str_to_lower(month.abb[i]),"_q10")
+data_plot[[i]]  = (get(mmky_monthly_q10[i])$sen_slope*40)/gauges$mn_q
+sr_new_l[[i]] = gauges$sr_new
 }
 
 
 d <- data.frame(x = unlist(data_plot), 
                 grp = rep(1:12,times = sapply(data_plot,length)),
-                col = unlist(sr_new_l),
-                check= unlist(check)
+                col = unlist(sr_new_l)
+                            )
+ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) + 
+  geom_boxplot()+
+  # stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+  #                position = position_dodge(width = 1), size =3)+
+  scale_x_discrete(labels= c(month.abb))+
+  xlab("")+
+  ylab("monthly q10trend (slope) [m³/s/a]")+
+  scale_color_discrete("Seasonality", labels=c("summer","winter"))
+  ggsave("./plots/trend_analysis/monthly_q10.png")
+  
+
+
+#monthly q35 plot
+mmky_monthly_q35 = c()
+data_plot=list()
+sr_new_l=list()
+check = list()
+for(i in 1:12) {
+  mmky_monthly_q35[i] = paste0("mmky_",str_to_lower(month.abb[i]),"_q35")
+data_plot[[i]]  = (get(mmky_monthly_q35[i])$sen_slope*40)/gauges$mn_q
+sr_new_l[[i]] = gauges$sr_new
+}
+
+
+d <- data.frame(x = unlist(data_plot), 
+                grp = rep(1:12,times = sapply(data_plot,length)),
+                col = unlist(sr_new_l)
+                            )
+ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) + 
+  geom_boxplot()+
+  # stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+  #                position = position_dodge(width = 1), size =3)+
+  scale_x_discrete(labels= c(month.abb))+
+  xlab("")+
+  ylab("monthly q35 trend (slope) [m³/s/a]")+
+  scale_color_discrete("Seasonality", labels=c("summer","winter"))
+  ggsave("./plots/trend_analysis/monthly_q35.png")
+  
+
+#monthly precip trends
+mmky_monthly_p = c()
+data_plot=list()
+sr_new_l=list()
+#check = list()
+for(i in 1:12) {
+  mmky_monthly_p[i] = paste0("mmky_",str_to_lower(month.abb[i]),"_sm_p")
+data_plot[[i]]  = get(mmky_monthly_p[i])$sen_slope[get(mmky_monthly_p[i])$new_p < 0.03] 
+sr_new_l[[i]] = gauges$sr_new[get(mmky_monthly_p[i])$new_p < 0.03] 
+#check[[i]]= which(get(mmky_monthly_p[i])$new_p < fs_sm_p[i])
+}
+
+
+d <- data.frame(x = unlist(data_plot), 
+                grp = rep(1:12,times = sapply(data_plot,length)),
+                col = unlist(sr_new_l)
                 )
 ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) + 
   geom_boxplot()+
-  stat_summary(fun.data = give.n, geom = "text", fun.y = median,
-                 position = position_dodge(width = 1), size =3)+
+ stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+                position = position_dodge(width = 1), size =3)+
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
   ylab("monthly precipitation trend (slope) [mm/a]")+
-  scale_color_discrete("Seasonality", labels=c("summer","winter"))+
-  ggsave("./plots/trend_analysis/monthly_p_sr.png")
+  scale_color_discrete("Seasonality", labels=c("no-snow","snow-acc"))
+  ggsave("./plots/trend_analysis/monthly_p_sr_sig.pdf")
   
 #non significant  
 mmky_monthly_p = c()
@@ -337,9 +452,9 @@ ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) +
   #                position = position_dodge(width = 1), size =3)+
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
-  ylab("monthly precipitation trend (slope) [mm/a]")+
-  scale_color_discrete("Seasonality", labels=c("summer","winter"))+
-  ggsave("./plots/trend_analysis/monthly_p_sr_non_sig.png")
+  ylab("precip. trend (slope) [mm/a]")+
+  scale_color_discrete("Regime", labels=c("pluvial","nival"))+theme_bw()
+  ggsave("./plots/trend_analysis/monthly_p_sr_non_sig.pdf")
   
 
 #monthly pet trends
@@ -463,9 +578,10 @@ ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) +
                #   position = position_dodge(width = 0.75))+
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
-  ylab("monthly sum p[mm] - PET[mm] trend (slope) [mm/a]")+
-  scale_color_discrete("Seasonality", labels=c("summer","winter"))+  
-  ggsave("./plots/trend_analysis/monthly_p_pet_sr_non_sig.png")
+  ylab("precip. - PET trend (slope) [mm/a]")+
+  scale_color_discrete("Regime", labels=c("pluvial","nival"))+
+  theme_bw()
+  ggsave("./plots/trend_analysis/monthly_p_pet_sr_non_sig.pdf")
 
 remove(mmky_monthly_p_pet, check, sr_new_l, d, data_plot)
 
@@ -525,12 +641,13 @@ d <- data.frame(x = unlist(data_plot),
                 )
 ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) + 
   geom_boxplot()+
-  stat_summary( fun.data = give.n, geom = "text", fun.y = median,
-                  position = position_dodge(width = .75), size=3)+
+ # stat_summary( fun.data = give.n, geom = "text", fun.y = median,
+  #                position = position_dodge(width = .75), size=3)+
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
   ylab("monthly median q trend (slope) [m³/s/a]")+
- scale_color_discrete("Seasonality", labels=c("summer","winter"))+
+ scale_color_discrete("Seasonality", labels=c("no-snow","snow-acc"))+
+  theme_bw()
   ggsave("./plots/trend_analysis/monthly_med_q_sr.pdf")
 
 
@@ -546,11 +663,108 @@ ggplot(d,aes(x = as.factor(grp), y = x)) +
 
 remove(mmky_monthly_p_pet, check, sr_new_l, d, data_plot)
 
+#median non significant
+mmky_monthly_q = c()
+data_plot=list()
+sr_new_l=list()
+for(i in 1:12) {
+  mmky_monthly_q = paste0("mmky_",str_to_lower(month.abb[i]),"_med_q")
+data_plot[[i]]  = get(mmky_monthly_q)$sen_slope
+sr_new_l[[i]] = gauges$sr_new
+}
+
+
+d <- data.frame(x = unlist(data_plot), 
+                grp = rep(1:12,times = sapply(data_plot,length)),
+                col = unlist(sr_new_l)
+                )
+ggplot(d,aes(x = as.factor(grp), y = x, col=as.factor(col))) + 
+  geom_boxplot()+
+  scale_x_discrete(labels= c(month.abb))+
+  xlab("")+
+  ylab("monthly median q trend (slope) [m³/s/a]")+
+ scale_color_discrete("Regime", labels=c("pluvial","nival"))+
+  theme_bw()
+  ggsave("./plots/trend_analysis/monthly_med_q_sr_perc.pdf", width=21, height=15, unit="cm")
+
+  
+# q quantile plot line
+  data_plot=list()
+sr_new_l=list()
+  for(i in 1:12) {
+  mmky_monthly_q = paste0("mmky_",str_to_lower(month.abb[i]),"_med_q")
+data_plot[[i]]  = get(mmky_monthly_q)$sen_slope
+sr_new_l[[i]] = gauges$sr_new
+}
+  d_med <- data.frame(x = unlist(data_plot), 
+                grp = rep(1:12,times = sapply(data_plot,length)),
+                col = unlist(sr_new_l)
+                ) %>% 
+    group_by(grp) %>% 
+    summarise(med_med =median(x))
+  
+  #q10
+  for(i in 1:12) {
+  mmky_monthly_q10[i] = paste0("mmky_",str_to_lower(month.abb[i]),"_q10")
+data_plot[[i]]  = get(mmky_monthly_q10[i])$sen_slope
+sr_new_l[[i]] = gauges$sr_new
+}
+
+
+d_q10 <- data.frame(x = unlist(data_plot), 
+                grp = rep(1:12,times = sapply(data_plot,length)),
+                col = unlist(sr_new_l)
+                            )%>% 
+    group_by(grp) %>% 
+    summarise(med_q10 =median(x))
+
+ for(i in 1:12) {
+  mmky_monthly_q35[i] = paste0("mmky_",str_to_lower(month.abb[i]),"_q35")
+data_plot[[i]]  = get(mmky_monthly_q35[i])$sen_slope
+sr_new_l[[i]] = gauges$sr_new
+}
+
+
+d_q35 <- data.frame(x = unlist(data_plot), 
+                grp = rep(1:12,times = sapply(data_plot,length)),
+                col = unlist(sr_new_l)
+                            )%>% 
+    group_by(grp) %>% 
+    summarise(med_q35 =median(x))
+
+#q80
+mmky_monthly_q80  = c()
+
+for(i in 1:12) {
+  mmky_monthly_q80[i] = paste0("mmky_",str_to_lower(month.abb[i]),"_q80")
+data_plot[[i]]  = get(mmky_monthly_q80[i])$sen_slope
+sr_new_l[[i]] = gauges$sr_new
+}
+
+
+d_q80 <- data.frame(x = unlist(data_plot), 
+                grp = rep(1:12,times = sapply(data_plot,length)),
+                col = unlist(sr_new_l)
+                            )%>% 
+   group_by(grp) %>% 
+    summarise(med_q80 =median(x))
+
+data_plot = cbind.data.frame(q50 = d_med$med_med, q10 = d_q10$med_q10, q35= d_q35$med_q35, q80 = d_q80$med_q80) %>% 
+  mutate(month=1:12) %>% 
+  gather(key=Quantile, value= median,-month)
+  
+ggplot(data_plot)+
+    geom_line(aes(x=month, y=median, col=Quantile))+
+  scale_x_continuous("",breaks=c(1:12),labels=c(month.abb[1:12]))+
+  ylab("monthly quantile q trend (slope) [m³/s/a]")+
+  theme_bw()
+ggsave("./plots/trend_analysis/quantile_q.pdf")
 #mean t monthly trends
 mmky_monthly_t = c()
 data_plot=list()
 sr_new_l=list()
 fs = 10
+
 for(i in 1:12) {
   mmky_monthly_t = paste0("mmky_",str_to_lower(month.abb[i]),"_mn_t")
 data_plot[[i]]  = get(mmky_monthly_t)$sen_slope[get(mmky_monthly_t)$new_p < fs]
@@ -732,9 +946,9 @@ ggplot(data_plot,aes(x = as.factor(`month(yr_mt)`), y = `mean(p_pet)`,col=as.fac
   geom_boxplot()+
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
-  ylab("mean p-PET [mm/month]")#+
- # scale_color_discrete("Seasonality", labels=c("summer","winter"))+
-  ggsave("./plots/trend_analysis/monthly_p-pet_sr.png")
+  ylab("mean p-PET [mm/month]")+
+  scale_color_discrete("Seasonality", labels=c("summer","winter"))
+  ggsave("./plots/trend_analysis/monthly_p-pet_sr.pdf")
 
 #mean pet values (not trend)
 data_plot = spei_data %>% 
@@ -748,7 +962,7 @@ ggplot(data_plot,aes(x = as.factor(`month(yr_mt)`), y = `mean(pet_th)`,col=as.fa
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
   ylab("mean PET [mm/month]")+
-  scale_color_discrete("Seasonality", labels=c("summer","winter"))+
+  scale_color_discrete("Seasonality", labels=c("summer","winter"))
   ggsave("./plots/trend_analysis/monthly_pet_sr.png")
 
 #monthly precip
@@ -764,8 +978,8 @@ ggplot(data_plot,aes(x = as.factor(x), y = y, col=as.factor(sr)))+
   scale_x_discrete(labels= c(month.abb))+
   xlab("")+
   ylab("monthly mean precipitation sum [mm/month]")+
-  scale_color_discrete("Seasonality", labels=c("summer","winter"))+
-  ggsave("./plots/trend_analysis/monthly_mn_sm_p.png")
+  scale_color_discrete("Seasonality", labels=c("summer","winter"))
+  ggsave("./plots/trend_analysis/monthly_mn_sm_p.pdf")
 
 
 data_plot2 = data_plot %>%
@@ -793,15 +1007,16 @@ ggplot(data_plot,aes(x = as.factor(x), y = y, col=as.factor(sr)))+
   ggsave("./plots/trend_analysis/monthly_mn_t_sr.png")
 
 
-#winter sum p
-  p = catch_plot(p_value=fs_wi_sm_p, color="sr_new", x_data="saar", y_data= "mmky_wi_sm_p" , factor =T)
-sig_points = which(mmky_wi_sm_p$new_p < fs_wi_sm_p  )
+#winter and summer sum p
+p= ggplot()+
+    geom_point(aes(x= gauges$saar, y = mmky_wi_sm_p$sen_slope*40/gauges$wi_sm_p*100, col=as.factor(gauges$sr_new)))
+
 error_x = error.bar("wi_sm_p")
-p+ geom_linerange(alpha= .3,aes( ymin=low_lim, ymax = upp_lim ,x=gauges$saar[sig_points]), data = error_x[sig_points,], position = position_dodge(width = .3))+
+p+ geom_linerange(alpha= .3,aes( ymin=low_lim*40/gauges$wi_sm_p*100, ymax = upp_lim*40/gauges$wi_sm_p*100 ,x=gauges$saar), data = error_x)+
   theme_bw()+
   scale_color_discrete("Seasonality", labels=c("summer","winter"))+
   xlab("SAAR [mm/a]")+
-  ylab("winter precipitation sum trend (slope) [mm/a]")
+  ylab("winer precipitation sum trend (slope) [%/40a]")
 ggsave("./plots/trend_analysis/wi_sm_p_conf.pdf")
 
 #winter sum p with IQR and median
@@ -933,3 +1148,94 @@ error_x = error.bar("yearly_sm_p")
   p = catch_plot(p_value=fs_yr_sm_p, color="sr_new", x_data="saar", y_data= "mmky_yearly_sm_p" , factor =T)
 p+ geom_linerange(alpha= .4,aes( ymin=low_lim, ymax = upp_lim ,x=gauges$saar[sig_points]), data = error_x[sig_points,])
 ggsave("./plots/trend_analysis/yr_sm_p_error.png")
+
+#comparing time span  ####
+ #for streamflow
+int = which(ymd(gauges$Ztrhnbg)<ymd("1950-1-2"))
+#data not available.....
+
+#for temperature
+load("./data/catchments/eobs_temp_part.Rdata", verbose = T)
+tempera = tempera[,c(1:catch_n)]
+colnames(tempera) <- 1:catch_n
+temp_long <- load_file(file=tempera, value_name = "temp", origin = "1950-01-01")
+
+#measuring seasonal temperature increase
+summer = temp_long %>% 
+  filter(between(month(date),6,8)) %>% 
+  group_by(year(date), gauge) %>% 
+  summarise(mean_t = mean(temp)) %>% 
+  spread(key=gauge, value=mean_t ) %>% 
+  as.data.frame() 
+summer$`year(date)` #time series goes from 1950 - 2015
+summer = summer[,2:(catch_n+1)]
+
+autumn = temp_long %>% 
+  filter(between(month(date),9,11)) %>% 
+  group_by(year(date), gauge) %>% 
+  summarise(mean_t = mean(temp)) %>% 
+  spread(key=gauge, value=mean_t ) %>% 
+  as.data.frame() 
+autumn = autumn[,2:(catch_n+1)]
+
+winter = temp_long %>% 
+  filter(between(month(date),9,11)) %>% 
+  group_by(year(date), gauge) %>% 
+  summarise(mean_t = mean(temp)) %>% 
+  spread(key=gauge, value=mean_t ) %>% 
+  as.data.frame() 
+winter = winter[,2:(catch_n+1)]
+
+spring = temp_long %>% 
+  filter(between(month(date),9,11)) %>% 
+  group_by(year(date), gauge) %>% 
+  summarise(mean_t = mean(temp)) %>% 
+  spread(key=gauge, value=mean_t ) %>% 
+  as.data.frame() 
+spring = spring[,2:(catch_n+1)]
+
+mmky_par(c("summer", "spring", "winter", "autumn"))
+
+#now from the shortened period
+
+summer_short = temp_long %>% 
+  filter(between(year(date),1970,2009)) %>% 
+  filter(between(month(date),6,8)) %>% 
+  group_by(year(date), gauge) %>% 
+  summarise(mean_t = mean(temp)) %>% 
+  spread(key=gauge, value=mean_t ) %>% 
+  as.data.frame() 
+summer_short$`year(date)` #time series goes from 1950 - 2015
+summer_short = summer_short[,2:(catch_n+1)]
+
+autumn_short = temp_long %>% 
+  filter(between(year(date),1970,2009)) %>% 
+  filter(between(month(date),9,11)) %>% 
+  group_by(year(date), gauge) %>% 
+  summarise(mean_t = mean(temp)) %>% 
+  spread(key=gauge, value=mean_t ) %>% 
+  as.data.frame() 
+autumn_short = autumn_short[,2:(catch_n+1)]
+
+winter_short = temp_long %>% 
+  filter(between(year(date),1970,2009)) %>% 
+  filter(between(month(date),9,11)) %>% 
+  group_by(year(date), gauge) %>% 
+  summarise(mean_t = mean(temp)) %>% 
+  spread(key=gauge, value=mean_t ) %>% 
+  as.data.frame() 
+winter_short = winter_short[,2:(catch_n+1)]
+
+spring_short = temp_long %>% 
+  filter(between(year(date),1970,2009)) %>% 
+  filter(between(month(date),9,11)) %>% 
+  group_by(year(date), gauge) %>% 
+  summarise(mean_t = mean(temp)) %>% 
+  spread(key=gauge, value=mean_t ) %>% 
+  as.data.frame() 
+spring_short = spring_short[,2:(catch_n+1)]
+
+mmky_par(c("summer_short", "spring_short", "winter_short", "autumn_short"))
+
+
+

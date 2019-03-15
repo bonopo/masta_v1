@@ -8,16 +8,106 @@
 # cross correlation -------------------------------------------------------
 sapply(1:catch_n, function(x) ccf(x= spi_v2_1[,x], y=ssi_1[,x], na.action=na.pass, plot=F)$acf)
 
-ccf(x= spi_v2_1, y=ssi_1, na.action=na.pass, plot=F)[1]
+for(i in agg_month){
+  int = which(ssi_1[,x] < 0)
+  if (int[1] == 1) {
+    int= int[2:length(int)]
+  }
+  res= sapply(1:catch_n, function(x) cor(x= get(paste0("spei_v2_",i))[(int-2),x], y=ssi_1[int,x],method = "s" ,use = "na.or.complete"))
+  assign(paste0("spei_",i,"_predict2"),res)
+  
+}
+pdf(file="./plots/sci_analysis/spi_during_dr.pdf")
+boxplot(gauges$cor_spi_dr~ gauges$cor_spi_n_dr, horizontal  = T, names= agg_month, ylab="SPI-n", xlab="spearman correlation") 
+dev.off()
 
-ccf_spi <- sci_ccf(sci= c(1,2,3,6,12,24),sci_namex = "spi_", sci_namey="ssi_1")
-ccf_spei <- sci_ccf(sci= c(1,2,3,6,12,24), sci_namex="spei_", sci_namey="ssi_1")
+#cor during drought over mutlitple aggreagteion periods
+mat = matrix(nrow=2*length(agg_month), ncol=2)
+n=1
+
+ for (i in agg_month){
+   mat[n,1] = get(paste0("spi_",i)) %>% mean
+   mat[n,2] = get(paste0("spi_",i)) %>% sd
+   n=n+1
+ }
+
+n=7
+
+ for (i in agg_month){
+   mat[n,1] = get(paste0("spei_",i)) %>% mean
+   mat[n,2] = get(paste0("spei_",i)) %>% sd
+   n=n+1
+ }
+mat %<>% as.data.frame()
+mat$sci = c(rep("spi",6),rep("spei",6))
+mat$agg  = rep(agg_month,2)
+colnames(mat) = c("mean","sd","sci","agg")
+
+mat_final = mat %>% 
+  mutate(sd_pos = mean+sd, sd_neg = mean-sd)
+
+ggplot(mat_final)+
+  #geom_point(aes(x=factor(agg), y= cor, col=factor(sci)))+
+  xlab("aggregation period")+
+  scale_color_discrete("SCI", labels=c("spi", "spei"))+
+  #scale_x_continuous(breaks=c(1,2,3,6,12,24), labels=c("1","2","3","6","12","24"))+
+  theme_bw()+
+  ylab("spearman correlation of SCI ~ SSI-1")+
+  geom_pointrange(aes(x=factor(agg), ymin = sd_neg, ymax=sd_pos,y=mean, col=factor(sci)), position = position_dodge(width=.3))
+
+ggsave("./plots/sci_analysis/drought_propergation2.pdf")
+
+
+#not the predictablitly
+
+mat = matrix(nrow=2*length(agg_month), ncol=2)
+n=1
+
+ for (i in agg_month){
+   mat[n,1] = get(paste0("spi_",i,"_predict1")) %>% mean
+   mat[n,2] = get(paste0("spi_",i,"_predict1")) %>% sd
+   n=n+1
+ }
+
+n=7
+
+ for (i in agg_month){
+   mat[n,1] = get(paste0("spei_",i,"_predict1")) %>% mean
+   mat[n,2] = get(paste0("spei_",i,"_predict1")) %>% sd
+   n=n+1
+ }
+mat %<>% as.data.frame()
+mat$sci = c(rep("spi",6),rep("spei",6))
+mat$agg  = rep(agg_month,2)
+colnames(mat) = c("mean","sd","sci","agg")
+
+mat_final = mat %>% 
+  mutate(sd_pos = mean+sd, sd_neg = mean-sd)
+
+ggplot(mat_final)+
+  #geom_point(aes(x=factor(agg), y= cor, col=factor(sci)))+
+  xlab("aggregation period")+
+  scale_color_discrete("SCI", labels=c("spi", "spei"))+
+  #scale_x_continuous(breaks=c(1,2,3,6,12,24), labels=c("1","2","3","6","12","24"))+
+  theme_bw()+
+  ylab("spearman correlation of SCI[-1] ~ SSI-1")+
+  geom_pointrange(aes(x=factor(agg), ymin = sd_neg, ymax=sd_pos,y=mean, col=factor(sci)), position = position_dodge(width=.3))
+
+ggsave("./plots/sci_analysis/drought_predict1.pdf")
+
+
+###
+ccf_spi <- sci_ccf(sci= c(1,2,3,6,12,24),sci_namex = "spi_v2_", sci_namey="ssi_1")
+
+
+ccf_spi[1]
+ccf_spei <- sci_ccf(sci= c(1,2,3,6,12,24), sci_namex="spei_v2_", sci_namey="ssi_1")
 
 #one can see that advancing the spei value leads to considerly less correlation after the spei_n lag (positive) the correlation drops dramatically. retropespective the correlation decreases slower. Meaning that spei leads ssi. 
 # 
 
 png("")
-plot(x=1:catch_n, y=ccf_spi_v2[[1]][,2])
+plot(x=1:catch_n, y=ccf_spi[[1]][,2])
 points(x=1:catch_n, y=ccf_spi[[1]][,2], col=2)
 
 
@@ -127,20 +217,20 @@ ggsave("./plots/5_choice/memoryeffect_24.png")
 
 
 #monthly correlation ####
-feb_sci_cor = monthly_sci(month=2, threshold = 0) 
+feb_sci_cor = monthly_sci(month=2, threshold = -1.5) 
 mar_sci_cor = monthly_sci(month=3, threshold = 0) 
 apr_sci_cor = monthly_sci(month=4, threshold = 0) 
 mai_sci_cor = monthly_sci(month=5, threshold = 0)
 jun_sci_cor = monthly_sci(month=6, threshold = 0) 
-aug_sci_cor = monthly_sci(month=8,threshold = 0) 
-sep_sci_cor = monthly_sci(month=9, threshold = 0) 
+aug_sci_cor = monthly_sci(month=8,threshold = -1.5) 
+sep_sci_cor = monthly_sci(month=9, threshold = -1.5) 
 
-png("./plots/5_choice/cor_ssi_spi_winter_spring.png", width=800, height=500)
-monthly_cor_sci_spring(sr_x=2,sci_typex="spi")
+png("./plots/5_choice/cor_ssi_spi_summer_spring.png", width=800, height=500)
+monthly_cor_sci_spring(sr_x=0,sci_typex="spi")
 dev.off()
-feb_sci_cor
 
-monthly
+
+zyp::confint.zyp()
 ggplot()+
   geom_boxplot(data=feb_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
   ylim(c(0,.9))+

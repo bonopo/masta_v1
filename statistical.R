@@ -4,15 +4,52 @@
 cor(x= yearly_30_min[,gauges$sr_new == 0], y=ms30_min[,gauges$sr_new == 0]) %>% diag() %>% range
 mmky_yearly_30_min$sen_slope[mmky_yearly_30_min$new_p< 0.05] %>% range
 mmky_ms30_min$sen_slope[mmky_ms30_min$new_p< fs_ms30] %>% range
+mmky_jan_med_q$s
 #significant correlation####
-n = length(spi_v2_1$`1`)
-cor = cor_sci_ssi(sci="spi_v2_")
-t = cor*sqrt((n-2)/(1-(cor^2)))
-df=n-2
-qt(0.05/2, df=df, lower.tail = T)
+cor_fun<- function(x,y){
+  for(i in 1:12){
+  x= get(paste0("mmky_",month.abb[i] %>% str_to_lower(),x_dat))[gauges$sr_new==2,]$sen_slope
+  val <- tryCatch(cor(x, y), error = function(e) e, warning = function(w) w)
+  if (any(class(val) %in% c("simpleWarning", "warning"))) {
+    return(mean(x))
+  } else {
+    return(val)
+  }
+}
 
+catchment_cor = function(x_dat="_pet", y_dat="_med_q"){
+  res_wi=c()
+  res_su=c()
+for(i in 1:12){
+  # res_wi[i] = cor(x= get(paste0("mmky_",month.abb[i] %>% str_to_lower(),x_dat))[gauges$sr_new==2,]$sen_slope,y=get(paste0("mmky_",month.abb[i] %>% str_to_lower(),y_dat))[gauges$sr_new==2,]$sen_slope, method = "s",use = "na.or.complete")
+  
+   res_su[i] = cor(x= get(paste0("mmky_",month.abb[i] %>% str_to_lower(),x_dat))[gauges$sr_new==0,]$sen_slope,y=get(paste0("mmky_",month.abb[i] %>% str_to_lower(),y_dat))[gauges$sr_new==0,]$sen_slope,method = "s", use = "na.or.complete")
+}
+  return(list(res_wi,res_su))
+}
 
-z_score= 
+pet_q = catchment_cor()
+p_pet_q = catchment_cor(x_dat="_p_pet", y_dat="_med_q")
+plot(p_pet_q[[2]], type="l")
+cor(x = mmky_wi_sm_p[gauges$sr_new == 2,]$sen_slope, y = mmky_su_med_q[gauges$sr_new == 2,]$sen_slope)
+march_cor =c()
+march_cor[5] = cor(x = mmky_mar_med_q[gauges$sr_new == 2,]$sen_slope, y = mmky_sep_med_q[gauges$sr_new == 2,]$sen_slope)
+
+april_cor =c()
+april_cor[5] = cor(x = mmky_apr_med_q[gauges$sr_new == 2,]$sen_slope, y = mmky_sep_med_q[gauges$sr_new == 2,]$sen_slope)
+
+data_plot= cbind.data.frame(march_cor, april_cor) %>% 
+  mutate(month = 1:5) %>% 
+  gather(key=snowmelt, value=decrease,-month)
+
+ggplot(data_plot)+
+  geom_point(aes(x=month, y=decrease, col=snowmelt))+
+  scale_x_continuous(breaks=c(1:5), labels=c(month.abb[5:9]))+
+  labs(x="",
+      y = "pearson correlation")+
+  scale_color_discrete("Discharge", labels= c("April","March"))
+ggsave("./plots/statistical/cor_snowmelt.pdf")
+
 #if t statistic is above or below the critical t vlaues than the correlation is significant
 
 
@@ -51,6 +88,8 @@ which.min(mmky_su_sm_p$sen_slope)
 
 #field significance ####
 #see renard 2008 and Burn et al 2002
+
+fs_dwr= field.significance(loc_sig = 0.05, data_x= days_without_rain, global_sig=0.05, nsim=600)
 fs_su_sm_p= field.significance(loc_sig = 0.05, data_x= su_sm_p, global_sig=0.05, nsim=600)
 fs_wi_sm_p = field.significance(loc_sig = 0.05, data_x= wi_sm_p, global_sig=0.05, nsim=600)
 fs_q10 = field.significance(loc_sig = 0.05, data_x= wi_q10, global_sig=0.05, nsim=600)
@@ -109,7 +148,8 @@ for ( i in 1:12) {
 fs_mn_t[i] = field.significance(loc_sig = 0.05, data_x= get(paste0(str_to_lower(month.abb[i]),"_mn_t")), global_sig=0.05, nsim=600)
 }
 
-save(list=c("fs_ms30","fs_ms7_date","fs_ms7","fs_wd_0","fs_yrd_0" ,  "fs_yr_mn_t","fs_su_mn_t", "fs_wi_mn_t","fs_jun_mn_q","fs_mar_mn_q","fs_sp_mn_t","fs_min_t","fs_max_t","fs_spd_0","fs_wi_sm_p", "fs_mt_p_pet","fs_mt_q","fs_yr_sm_p","fs_yr_sm_p_no70","fs_wi_mn_q","fs_q10","fs_mt_pet","fs_sm_p","fs_mn_t","fs_mt_med_q", "fs_su_sm_p","fs_dd_p","fs_dd_q","fs_df_p","fs_df_q","fs_ds_p","fs_ds_q"), file="./output/fs.Rdata")
+fs_ext_precip=field.significance(loc_sig = 0.05, data_x= yearly_ext_p, global_sig=0.05, nsim=600)
+save(list=c("fs_ms30","fs_ms7_date","fs_ms7","fs_wd_0","fs_yrd_0" ,  "fs_yr_mn_t","fs_su_mn_t", "fs_wi_mn_t","fs_jun_mn_q","fs_mar_mn_q","fs_sp_mn_t","fs_min_t","fs_max_t","fs_spd_0","fs_wi_sm_p", "fs_mt_p_pet","fs_mt_q","fs_yr_sm_p","fs_yr_sm_p_no70","fs_wi_mn_q","fs_q10","fs_mt_pet","fs_sm_p","fs_mn_t","fs_mt_med_q", "fs_su_sm_p","fs_dd_p","fs_dd_q","fs_df_p","fs_df_q","fs_ds_p","fs_ds_q","fs_dwr","fs_ext_precip"), file="./output/fs.Rdata")
 # linear regression -------------------------------------------------------
 
 #ms30 ~ long term memory effect
@@ -152,8 +192,9 @@ wilcox.test(x= mmky_su_mn_t$sen_slope[gauges$sr_new ==2], mmky_su_mn_t$sen_slope
 
 
 # significant? looking at graph: NO!!!!
+summer = seasonal_trends(lb_season=6, ub_season=8, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
 
-fm = lm(mmky_wi_mn_t$sen_slope ~ gauges$mn_t) %>% summary() #significant
+fm = lm(summer$sen_slope ~ gauges$Hochwrt) %>% summary() #significant
 fm2 = lm(mmky_wi_mn_t$sen_slope[gauges$sr_new ==0] ~ gauges$Hochwrt[gauges$sr_new ==0]) %>% summary()
 fm3 = lm(mmky_wi_mn_t$sen_slope ~ gauges$Hochwrt) %>% summary()
 #significant
@@ -162,18 +203,20 @@ hist(mmky_wi_mn_t$sen_slope)
 hist(gauges$Hochwrt[gauges$sr_new ==0])
 gauges$mn_t %>% hist()
 
-data_plot = cbind.data.frame(y= mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_wi_mn_t], x1=gauges$mn_t[mmky_wi_mn_t$new_p < fs_wi_mn_t], x2= gauges$Hochwrt[mmky_wi_mn_t$new_p < fs_wi_mn_t])
+data_plot = cbind.data.frame(y= summer$sen_slope[summer$new_p < fs_wi_mn_t], x1=gauges$mn_t[summer$new_p < fs_wi_mn_t], x2= gauges$Hochwrt[summer$new_p < fs_wi_mn_t])
 
 
-ggplot(data= data_plot, aes(y=y, x=x1, col=x2))+
+ggplot(data= data_plot, aes(y=y, x=x2))+
   geom_point()+
   geom_smooth(method="lm", se = TRUE, show.legend = F)+
   annotate( geom="text", -Inf, Inf,  hjust = -0.2, vjust = 2.5, label=paste("n = ", length(data_plot$y)))+
   annotate(geom="text", -Inf, Inf,  hjust = -0.2, vjust = 1, label=paste("p = 0.05"))+
   annotate(geom="text", -Inf, Inf,  hjust =-0.2, vjust = 4, label=paste("r²=",round(fm$adj.r.squared,2)))+
   xlab("")+
-  ylab("wi. temp. trend (slope) [°C/a]")+
-  scale_color_continuous("Hochwert")
+  ylab("winter temp. trend (slope) [°C/a]")+
+  scale_color_continuous("Hochwert")+
+  theme_bw()+
+  xlab("latitude")
 ggsave("./plots/statistical/winter_mn_t2.pdf")
 
 ggplot(data= data_plot, aes(y=y, x=x2))+
@@ -228,9 +271,45 @@ str(res)
 #sen's slope conf intervals####
 error.bar(data = "mar_mn_q")
 error.bar("jun_mn_q")
+library(EnvStats)
+EnvStats::kendallTrendTest
+#t.test & wilcox test #####
+winter = seasonal_trends(lb_season=12, ub_season=2, dat = mt_sm_p, value="month_sum", xtable = F, px=0.03,funx="sum", ref=F)
+spring = seasonal_trends(lb_season=3, ub_season=5, dat = mt_sm_p, value="month_sum", xtable = F, px=0.03,funx="sum", ref=F)
+summer = seasonal_trends(lb_season=6, ub_season=8, dat = mt_sm_p, value="month_sum", xtable = F, px=0.03,funx="sum", ref=F)
+autumn = seasonal_trends(lb_season=9, ub_season=11, dat = mt_sm_p, value="month_sum", xtable = F, px=0.03,funx="sum", ref=F)
+annual = seasonal_trends(lb_season=1, ub_season=12, dat = mt_sm_p, value="month_sum", xtable = F, px=0.03,funx="sum", ref=F)
 
-#t.test####
+winter = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+spring = seasonal_trends(lb_season=3, ub_season=5, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+summer = seasonal_trends(lb_season=6, ub_season=8, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+autumn = seasonal_trends(lb_season=9, ub_season=11, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+annual = seasonal_trends(lb_season=1, ub_season=12, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
+wilcox.test.modified(x_m= "summer", fs_x=0.03)
+#signi
+
+t.test(x= )
+stats::t.test(x= annual$sen_slope[gauges$sr_new == 2], y= annual$sen_slope[gauges$sr_new == 0])
+#nival is higher in spring , slightly negative in summmer +winter
+#pluvial is higher in summer and positve in winter/summer
+t.test(x= mmky_wi_sm_p$sen_slope[gauges$sr_new == 2], y= mmky_wi_sm_p$sen_slope[gauges$sr_new ==0])
+
+
+boxplot(winter$sen_slope ~ gauges$sr_new)
+
+wilcox.test.modified(x_m="mmky_wi_sm_p")
+
+wilcox.test(x=gauges$mn_intensity[gauges$sr_new == 2] ,y= gauges$mn_intensity[gauges$sr_new == 0])
+
+boxplot(gauges$cor_spi_dr ~ gauges$bfi_class)
+
+plot(x= gauges$saar[which(gauges$bfi<.5)], y= gauges$cor_spi_dr[which(gauges$bfi<.5)])
+
+
 t.test(x = mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05 & gauges$sr_new == 2], y= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05 & gauges$sr_new == 0])
+
+
+t.test(x = mmky_wi_days_below_0$sen_slope[mmky_wi_days_below_0$new_p < 0.05 & gauges$sr_new == 2], y= mmky_wi_days_below_0$sen_slope[mmky_wi_days_below_0$new_p < 0.05 & gauges$sr_new == 0])
 
 hist(mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < 0.05 & gauges$sr_new == 2] %>% exp())
 
@@ -245,16 +324,87 @@ wilcox.test(x = mmky_yearly_mn_t$sen_slope[mmky_yearly_mn_t$new_p < fs_yr_mn_t &
 wilcox.test(x = mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_yr_mn_t & gauges$sr_new == 2], y= mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_yr_mn_t & gauges$sr_new == 0])
 wilcox.test.modified(x_m = "mmky_wi_mn_t")
 wilcox.test.modified(x_m = "mmky_ms7_min",fs_x =  fs_ms7 )
-wilcox.test.modified(x_m = "mmky_su_mn_t")#just significant
-wilcox.test.modified(x_m = "mmky_wi_sm_p")#just significant
+wilcox.test.modified(x_m = "mmky_su_mn_t")#not significant
+wilcox.test.modified(x_m = "mmky_wi_sm_p")# significant
+wilcox.test.modified(x_m = "mmky_sp_mn_t")
 boxplot( mmky_wi_mn_t$sen_slope[mmky_wi_mn_t$new_p < fs_wi_mn_t] ~ factor(gauges$sr_new))
 length(which(mmky_su_mn_t$sen_slope < fs_su_mn_t))
+wilcox.test.modified
+t.test(x= gauges$cor_spi_dr[gauges$sr_new == 2],y = gauges$cor_spi_dr[gauges$sr_new == 0])
+wilcox.test(x= gauges$cor_spi_dr[gauges$sr_new == 2],y = gauges$cor_spi_dr[gauges$sr_new == 0])
 
-t.test(x= gauges$cor_spi[gauges$sr_new == 2],y = gauges$cor_spi[gauges$sr_new == 0])
+t.test(x=gauges$cor_spi_dr[gauges$saar<700],y=gauges$cor_spi_dr[gauges$saar>700])
 
 t.test(x = mmky_wi_sm_p$sen_slope[mmky_wi_sm_p$new_p < fs_wi_sm_p & gauges$sr_new == 2], y= mmky_wi_sm_p$sen_slope[mmky_wi_sm_p$new_p < fs_wi_sm_p & gauges$sr_new == 0])
 
+#quantile analysis
+quantile(q_wide)
+
+q_wide_summer = q_long %>% 
+    filter(month(date) >= 5 & month(date)<= 11) %>% 
+    group_by(gauge, year(date)) %>% 
+  ungroup() %>% 
+  spread(key=gauge, value=q) %>% 
+  as.tbl() %>% 
+  dplyr::select( -`year(date)`,-date) %>% 
+  apply(.,2,quantile,.17)
+
+plot(q_wide_summer ~ apply(ms30_min,2,mean))
+abline(b=1,a=0)
+
+q_long %>% filter(month(date) >= 5 & month(date)<= 11&gauge == 1 ) %>% dplyr::select(q)
+hist(q_long %>% filter(month(date) >= 5 & month(date)<= 11&gauge == 1&year(date)==1971 ) %>% dplyr::select(q) )
+
+hist(q_long %>% filter(month(date) >= 5 & month(date)<= 11&gauge == 1&year(date)==2003 ) %>% dplyr::select(q) )
+
 #time series plots ####
+#7min timing####
+#summer catchments
+    mn_yr_su = rollapply(data= ms7_date[gauges$sr_new == 0], FUN= mean,  width=1, align="center",fill = NA, by.column = F)
+  sd_su=  rollapply(data= ms7_date[gauges$sr_new == 0], FUN= quantile, probs=c(0.25,0.75), width=1, align="center",fill = NA, by.column = F)
+ data_plot_su = cbind.data.frame(1970:2009, mn_yr_su,sd_su) %>% set_colnames(c("year","yr_mn","sd_neg","sd_pos"))
+
+ #winter catchemnts(during summer )
+   mn_yr_su = rollapply(data= ms7_date[gauges$sr_new == 2], FUN= mean,  width=1, align="center",fill = NA, by.column = F)
+  sd_su=  rollapply(data= ms7_date[gauges$sr_new == 2], FUN= quantile, probs=c(0.25,0.75), width=1, align="center",fill = NA, by.column = F)
+ data_plot_wi = cbind.data.frame(1970:2009, mn_yr_su,sd_su) %>% set_colnames(c("year","yr_mn","sd_neg","sd_pos"))
+ 
+#winter (during winter)
+  mean_wi = apply(mw7_date,1,median) 
+  sd_wi = apply(mw7_date,1,quantile, probs=c(0.25,0.75)) %>% t
+  
+  data_plot_wi = cbind.data.frame(1970:2009, mean_wi, sd_wi) %>% set_colnames(c("year","yr_mn","sd_neg","sd_pos"))
+  
+  data_plot_wi[,c(2:4)] =data_plot_wi[,c(2:4)] -31 #convert back into normal format for calender
+ 
+ break_y = c(-31,days_in_month(1:11) %>% cumsum-31 %>% as.numeric())
+ 
+  ggplot(data_plot_su)+
+  geom_line(aes(x=year, y=yr_mn, color = "summer"), lwd=1.3)+
+geom_ribbon(data = data_plot_su, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey50", alpha=.4)+
+    geom_blank(aes(color = "IQR"))+ #bracht man für den legendentrick
+    geom_line(data= data_plot_wi, aes(x=year, y=yr_mn, color = "winter"), lwd=1.3 )+
+geom_ribbon(data = data_plot_wi, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "grey50", alpha=.4)+
+    geom_blank(aes(color = "IQR"))+ #bracht man für den legendentrick
+ ylab("ms7 timing")+
+ xlab("")+
+    scale_y_continuous(breaks = break_y, labels=c("Dec",month.abb[1:11]))+
+       scale_color_manual(element_blank(), values = c("summer" = "red", "winter"="lightblue",   "IQR"="grey50"), guide = guide_legend(override.aes = list(size = c(3.5,1.3,1.3), alpha = c(.4,1,1)
+    )))+
+    nice
+  
+ggsave("./plots/statistical/ms7_timing.pdf")
+  
+pos.neg(dat = mmky_mw7_date, positive = F, p=0.03)
+mmky_mw7_date$sen_slope
+
+which(mmky_ms7_date$sen_slope < 0 & gauges$sr_new == 0)%>%length/which(gauges$sr_new==0)%>%length
+ which(mmky_ms7_min$sen_slope >0 & mmky_ms7_min$new_p < 6 & gauges$sr_new == 2) %>%length/which(gauges$sr_new==2)%>%length
+ 
+  which(mmky_mw7_date$sen_slope > 0 & mmky_mw7_date$new_p < 0.03 ) %>% length
+ range(mmky_mw7_date$sen_slope) 
+
+ 
 #precipitation####
 data_plot = yearly_sm_p %>% 
   mutate(year = 1970:2009) %>% 
@@ -404,19 +554,23 @@ ggplot()+
    geom_line(aes(x=date_seq, y=mn_p, color= "SPI-3"), lwd=1, alpha=1)+
    geom_line(aes(x=date_seq, y=mn_q, color="SSI"), lwd=1, alpha=.5)+
       xlab("")+
-         ylab("SCI")+
+         ylab("SCI-3")+
       scale_color_discrete("")+
   theme(legend.position="bottom")+
   geom_hline(yintercept = 0)
 
-#+
-   scale_color_manual(element_blank(), values = c(  "SPI-3" = "orange","SPEI-3" = "green", "SSI" = "blue"), guide = guide_legend(override.aes = list(size = c(1,1,1), linetype = c("solid", "solid","solid"), alpha = c(1,1,.8)
-    )))+
-    nice+
-  geom_hline(yintercept = 0)
-  
-  ggsave("./plots/statistical/sci_2.pdf")
+  ggsave("./plots/statistical/sci_diff.pdf")
         
+  
+  #difference of spi and spei plot
+  ggplot()+
+    geom_line(aes(x=date_seq, y=mn_t-mn_p ),lwd=1)+
+    theme_bw()+
+    xlab("")+
+    ylab("SPI-3 - SPEI-3")+
+    geom_hline(yintercept = 0)
+  
+ggsave("./plots/statistical/spi-spei.pdf")
 
    t.test(x = gauges$mn_deficit[gauges$hydrogeo_simple == "K"] ,y = gauges$mn_deficit[gauges$hydrogeo_simple == "P"])
   
@@ -473,7 +627,7 @@ nice <- theme_bw()+
     theme(legend.position = "bottom",
           text = element_text(size = 12)) 
         
-
+#legende von david ####
 ggplot(data_plot_q)+
     geom_line(aes(x=year, y=yr_med, color = "streamflow  "), linetype = "solid", lwd=1.3)+ #linetype nur als beispiel geändert!!!
     geom_ribbon(data = data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#56B4E9", alpha=.3)+ #alternativ kann man auch geom_polygone nutzen
@@ -634,3 +788,48 @@ geom_ribbon(data= data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill =
   xlab("")+
   theme_bw()
 table(res)
+
+#pet trend #### 
+data_plot = spei_data %>% 
+  group_by(year(yr_mt)) %>% 
+  summarise(mean = mean(pet_th), lb= quantile(pet_th, .25), ub=quantile(pet_th,.75)) %>% 
+  mutate(year = `year(yr_mt)` )
+
+
+  mean = apply(spei_data_mat,1,mean)
+data_plot = cbind(mean , date_seq,apply(spei_data_mat,1,quantile,c( .25,.75)) %>% t) %>% set_colnames(c("mean","year", "lb", "ub")) %>% as.data.frame()
+
+ggplot(data_plot)+
+  geom_line(aes(x=year, y=mean), col="#de2d26")+
+  geom_ribbon(aes(x= year, ymin = lb, ymax= ub), fill = "#fc9272", alpha=.3)
+
+
+  geom_line(data = data_plot_q, aes(x=year, y=yr_med), col="#2b8cbe")+
+  geom_ribbon(data = data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#56B4E9", alpha=.3)+
+  ylab("standardized cumulative deficit")+
+  xlab("")
+#ggsave("./plots/statistical/drought_sum_p_winter.pdf")
+
+ggplot(data_plot_q)+
+    geom_line(aes(x=year, y=yr_med, color = "streamflow  "), linetype = "solid", lwd=1.3)+ #linetype nur als beispiel geändert!!!
+    geom_ribbon(data = data_plot_q, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#56B4E9", alpha=.3)+ #alternativ kann man auch geom_polygone nutzen
+    geom_blank(aes(color = "IQR "))+ #bracht man für den legendentrick
+    labs(y = "mean standardized cum. deficit",
+         x = element_blank())+ #besser so dann wird kein "platz" freigehalten, element blank geht nur mit dem labs befehl!!!
+    geom_line(data=data_plot_p,aes(x=year, y=yr_med, color = "precipitation  "), lwd=1.3)+
+    geom_ribbon(data = data_plot_p, aes(x= year, ymin = sd_neg, ymax= sd_pos), fill = "#fc9272", alpha=.3)+ #wichtig das legend=t muss raus!!!
+    geom_blank(aes(color = "IQR  "))+
+   scale_color_manual(element_blank(), values = c("streamflow  " = "#2b8cbe", "precipitation  " = "#de2d26", "IQR " = "#56B4E9", "IQR  " = "#fc9272"), guide = guide_legend(override.aes = list(size = c(3.5, 3.5,1.3,1.3), linetype = c("solid", "solid", "solid", "solid"), alpha = c(.3,.3,1,1)
+    )))+
+    nice
+ggsave("./plots/statistical/cum_def.pdf")
+
+#temp increase with latitude
+
+plot(mmky_wi_mn_t$sen_slope ~ gauges$Hochwrt)
+fm = lm(mmky_wi_mn_t$sen_slope ~ gauges$Hochwrt)
+summary(fm)
+
+3.476e-08 * 1000000
+mmky_wi_mn_t$sen_slope %>% range
+0.056 -0.008

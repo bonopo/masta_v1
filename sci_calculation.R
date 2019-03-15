@@ -29,7 +29,7 @@ gather(key=gauge, value=ssi, -yr_mt) %>%
 
 #calculate SPI with spei package and gamma
 
-for (n in c(1,2,3,6,12,24)){ 
+for (n in agg_month){ 
 res <- SPEI::spi(data= mt_sm_p_wide, scale=n)
 m1 <- matrix(as.numeric(unclass(res)$fitted), nrow = 480, byrow =F)
 if(any(is.infinite(m1))) {
