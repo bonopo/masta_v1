@@ -82,3 +82,15 @@ assign(paste0("spei_v2_",n),m1)
 
 #v2 (with spei package) has lower values vor negative spi but very similar to v3
 #v1 (non parametric) less neagtive values, doesn't represent extremes
+ 
+ #parametric ssi calcualtion ####
+ mt_mn_q
+ ssi_p3 <- sci_calc(datax = mt_mn_q$q_sum, gaugex = mt_mn_q$gauge, distx = "pe3", agg_n = 1, p0x = F ) 
+  ssi_wb <- sci_calc(datax = mt_mn_q$q_sum, gaugex = mt_mn_q$gauge, distx = "weibull", agg_n = 1, p0x = F ) 
+ssi_gb <- sci_calc(datax = mt_mn_q$q_sum, gaugex = mt_mn_q$gauge, distx = "gumbel", agg_n = 1, p0x = F )
+ssi_ln <- sci_calc(datax = mt_mn_q$q_sum, gaugex = mt_mn_q$gauge, distx = "lnorm", agg_n = 1, p0x = F )
+mt_sum_q$ssi_p3 <- spei_vec(ssi_p3, gaugex = mt_mn_q$gauge)
+mt_sum_q$ssi_wb <- spei_vec(ssi_wb, gaugex = mt_sum_q$gauge)
+mt_sum_q$ssi_gb <- spei_vec(ssi_gb, gaugex = mt_sum_q$gauge)
+mt_sum_q$ssi_ln <- spei_vec(ssi_ln, gaugex = mt_sum_q$gauge)
+ 

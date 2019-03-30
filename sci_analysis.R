@@ -217,18 +217,53 @@ ggsave("./plots/5_choice/memoryeffect_24.png")
 
 
 #monthly correlation ####
-feb_sci_cor = monthly_sci(month=2, threshold = -1.5) 
+feb_sci_cor = monthly_sci(month=2, threshold = 0) 
 mar_sci_cor = monthly_sci(month=3, threshold = 0) 
 apr_sci_cor = monthly_sci(month=4, threshold = 0) 
 mai_sci_cor = monthly_sci(month=5, threshold = 0)
 jun_sci_cor = monthly_sci(month=6, threshold = 0) 
-aug_sci_cor = monthly_sci(month=8,threshold = -1.5) 
-sep_sci_cor = monthly_sci(month=9, threshold = -1.5) 
+aug_sci_cor = monthly_sci(month=8,threshold = 0) 
+sep_sci_cor = monthly_sci(month=9, threshold = 0) 
+oct_sci_cor = monthly_sci(month=10, threshold = 0) 
+nov_sci_cor = monthly_sci(month=11, threshold = 0) 
 
-png("./plots/5_choice/cor_ssi_spi_summer_spring.png", width=800, height=500)
+pdf("./plots/5_choice/cor_ssi_spi_winter_spring.pdf", width=7.6, height = 5.6)
 monthly_cor_sci_spring(sr_x=0,sci_typex="spi")
+
 dev.off()
 
+pdf("./plots/sci_analysis/cor_ssi_spi_winter_aug_sep.pdf")
+monthly_cor_sci_yr(sr_x=2,sci_typex="spi")
+dev.off()
+
+
+oct0 = ggplot()+
+  geom_boxplot(data=oct_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==0), aes(x=sci_type, y = cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("March")+
+  ylab("spearman correlation SSI ~ SPI-n")+
+  scale_x_discrete(labels=c(agg_month))+theme_bw()
+nov0 = ggplot()+
+  geom_boxplot(data=nov_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==0), aes(x=sci_type, y=cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("April")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))+theme_bw()
+oct = ggplot()+
+  geom_boxplot(data=oct_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==2), aes(x=sci_type, y = cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("Oct")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))+theme_bw()
+nov = ggplot()+
+  geom_boxplot(data=nov_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==2), aes(x=sci_type, y=cor), na.rm = T)+
+  ylim(c(0,.9))+
+  xlab("Nov")+
+  ylab("")+
+  scale_x_discrete(labels=c(agg_month))+theme_bw()
+  
+
+grid.arrange(oct0,nov0,oct,nov, ncol=4)
 
 zyp::confint.zyp()
 ggplot()+

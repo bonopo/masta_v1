@@ -274,10 +274,11 @@ ggplot(data= data_plot, aes(y=lm_y, x=lm_x1, col=as.factor(lm_x2)))+
  geom_linerange(alpha= .4,aes( ymin=low_lim, ymax = upp_lim ), data = error_jun_mn_q[sig_points,], lwd=.8)+
   scale_color_discrete("Regime", label=c("pluvial", "nival"))+
   theme(legend.direction = "horizontal", legend.position = "bottom")+
-  theme_bw()
+  theme_bw()+
+  nice
 
 
-ggsave("./plots/drought_attribution/jun_march_v3.pdf")
+ggsave("./plots/drought_attribution/jun_march_v3.pdf", height=15, width=20, unit="cm")
 
 hist(mmky_su_q10$sen_slope) #normal
 hist(mmky_wi_q10$sen_slope) #normal
@@ -538,9 +539,21 @@ load("./output/agg_meteo.Rdata", verbose=T)
 
 #analsis of correlation of meteorologic trends with flow trends on monthly basis
 
+spi_agg = agg.meteo(dat=spi_v2_3, fs=0.02967359, agg_t = agg_month, cor_y = "SSI_1", subset=NULL, cor=F)
+  
+r= flow.attribution(datx = "spei_v2_", daty= ssi_1_long, threshold = NULL) 
+data_plot_spei = r %>% t %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(month = 1:12) %>% 
+  gather(., key= agg_month, value=cor,-month)
 
-
-
+data_plot_spi = flow.attribution(datx = "spi_v2_", daty= ssi_1_long, threshold = NULL) %>% t %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(month = 1:12) %>% 
+  gather(., key= agg_month, value=cor,-month)
+         
 plot(x=1:12, y=precip_agg[[2]][,2], type="l")
 
 data_plot_spi = precip_agg[[2]] %>% 
@@ -555,16 +568,82 @@ data_plot_spei = p_pet_agg[[2]] %>%
   mutate(month = 1:12) %>% 
   gather(., key= agg_month, value=cor,-month)
 
-ggplot(data_plot_spi)+
-  geom_smooth(aes(x=month, y=cor, col=as.factor(agg_month)), se=F)+
-  ylab("spearman correlation p  ~ q ")+
+spi2= ggplot(data_plot_spi)+
+  geom_smooth(aes(x=month, y=cor, col=as.factor(agg_month)), se=F, show.legend = T)+
+  ylab("spearman correlation SPI  ~ SSI ")+
   scale_x_continuous("", breaks = c(1:12),labels=month.abb)+
-  scale_color_discrete("aggregation \nperiod")+
-  ylim(c(-0.3,.8))+
-  theme_bw()
+#  scale_color_discrete("aggregation \nperiod")+
+  ylim(c(0.3,.75))+
+  theme_bw()+nice
 
-ggsave("./plots/drought_attribution/p_q.pdf")
+spei2= ggplot(data_plot_spei)+
+  geom_smooth(aes(x=month, y=cor, col=as.factor(agg_month)), se=F)+
+  ylab("spearman correlation SPEI  ~ SSI ")+
+  scale_x_continuous("", breaks = c(1:12),labels=month.abb)+
+  scale_color_discrete("aggregation period")+
+  theme_bw()+nice+
+   ylim(c(0.3,.75))
 
+p=grid.arrange(spi2, spei2, ncol=2)
+ggsave(plot = p,"./plots/drought_attribution/sci_ssi.png", width=20, height=14, unit="cm")
+
+
+#seasonal drought attribution
+
+r= flow.attribution(datx = "spei_v2_", daty= ssi_1_long, threshold = 0) 
+data_plot_spei = r %>% t %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(month = 1:12) %>% 
+  gather(., key= agg_month, value=cor,-month)
+
+data_plot_spi = flow.attribution(datx = "spi_v2_", daty= ssi_1_long, threshold = 0) %>% t %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(month = 1:12) %>% 
+  gather(., key= agg_month, value=cor,-month)
+         
+
+data_plot_spi = precip_agg[[2]] %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(month = 1:12) %>% 
+  gather(., key= agg_month, value=cor,-month)
+
+data_plot_spei = p_pet_agg[[2]] %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  as.data.frame() %>% 
+  mutate(month = 1:12) %>% 
+  gather(., key= agg_month, value=cor,-month)
+
+spi= ggplot(data_plot_spi)+
+  geom_smooth(aes(x=month, y=cor, col=as.factor(agg_month)), se=F, show.legend = T)+
+  ylab("spearman correlation SPI  ~ SSI")+
+  scale_x_continuous("", breaks = c(1:12),labels=month.abb)+
+  scale_color_discrete("aggregation period [months]")+
+  theme_bw()+nice+
+  ylim(c(.1,.5))
+
+
+spei = ggplot(data_plot_spei)+
+  geom_smooth(aes(x=month, y=cor, col=as.factor(agg_month)), se=F, show.legend = T, span=.7)+
+  ylab("")+
+  scale_x_continuous("", breaks = c(1:12),labels=month.abb)+
+#  scale_color_discrete("aggregation \nperiod")+
+  nice+
+  ylim(c(.1,.5))
+spei
+
+p=grid.arrange(spi, spei, ncol=2)
+ggsave(plot = p,"./plots/drought_attribution/sci_ssi2.png", width=20, height=14, unit="cm")
+
+res= flow.attribution.trends(datx = spi_v2_3, daty= ssi_1_long, threshold = NULL)
+res$month = month.abb
+ggplot(res)+
+  geom_point(aes(y=corrected_z,x=month),col=1)+
+  geom_point(data = filter(res, new_p > 0.03),aes(y=corrected_z,x= month),col="grey")
+
+plot(res$corrected_z)
 
 ggplot(data_plot_spi)+
   geom_line(aes(x=month, y=cor, col=as.factor(agg_month)), se=F)
@@ -643,10 +722,10 @@ cor_spi[g, a] = cor(y= temp$ssi , x= temp$spi, use="c", method = "spearman")
 cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
 }
 }
-
+bfi_id = which(gauges$bfi<0.6)
 
 plotly::plot_ly(x= 1:6, y=1:337, z=cor_spei[bfi_id,], type="heatmap")
-plotly::plot_ly(x= 1:6, y=1:337, z=cor_spei[bfi_id,], type="heatmap")
+plotly::plot_ly(x= 1:6, y=1:337, z=cor_spi[bfi_id,], type="heatmap")
 
 
 data_plot_spi = cor_spi %>% 
@@ -671,10 +750,10 @@ ggsave("./plots/drought_attribution/cor_spi_ssi.pdf")
 
 ggplot(data_plot_spi)+
   geom_boxplot(aes(x= agg_month, y= cor, col=as.factor(bfi_class)))+
-  labs(x="Aggregation Period",
-       y= "spearman correlation spi-n ~ ssi-1")+
+  labs(x="aggregation period [months]",
+       y= "correlation SPI-n ~ SSI")+
   scale_color_discrete("BFI class")+
-  theme_bw()
+  nice
 ggsave("./plots/drought_attribution/cor_spi_ssi.pdf")
 lm(mn_deficit ~ bfi, data=gauges) %>% summary
 

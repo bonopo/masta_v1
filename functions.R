@@ -4,12 +4,12 @@
 # loading function####
 
 load_file <- function(file, value_name, origin="1970-1-1"){
-  output <- melt(file, varnames = c("date", "gauge"), value.name = value_name )
+  output <- melt(file, varnames = c("date", "gauge"), value.name = value_name ) #creates a long format from the wide format
   seq_date <- seq.Date(from= as.Date(origin),by=1, length.out = diff(range(output$date))+1) %>% 
-  rep(., times=length(unique(output$gauge)))
+  rep(., times=length(unique(output$gauge))) #adds a column with the date
   output %<>%
   mutate(date = seq_date) %>% 
-  mutate(gauge = parse_number(gauge)) %>% 
+  mutate(gauge = parse_number(gauge)) %>% #since catchments are not numbered but have a name before the character must be dropped 
   mutate(gauge =as.integer(gauge)) %>% 
   as.tibble()
   return(output)
@@ -308,7 +308,7 @@ catch_res = droughts_q_catch %>%
   }
 return(result)
 }
-
+drought_q
 #computing of drought deficit and days of drought per month per catchment per year
 
 seasonal_80th = function(data= drought_q, year_ta= 1970:2009){
@@ -652,26 +652,26 @@ mar = ggplot()+
   geom_boxplot(data=mar_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
   ylim(c(0,.9))+
   xlab("March")+
-  ylab("spearman correlation ssi-1 ~ x")+
-  scale_x_discrete(labels=c(agg_month))
+  ylab("spearman correlation SSI ~ SPI-n")+
+  scale_x_discrete(labels=c(agg_month))+theme_bw()
 apr = ggplot()+
   geom_boxplot(data=apr_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
   ylim(c(0,.9))+
   xlab("April")+
   ylab("")+
-  scale_x_discrete(labels=c(agg_month))
+  scale_x_discrete(labels=c(agg_month))+theme_bw()
 mai = ggplot()+
   geom_boxplot(data=mai_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y = cor), na.rm = T)+
   ylim(c(0,.9))+
   xlab("Mai")+
   ylab("")+
-  scale_x_discrete(labels=c(agg_month))
+  scale_x_discrete(labels=c(agg_month))+theme_bw()
 jun = ggplot()+
   geom_boxplot(data=jun_sci_cor %>% filter(str_detect(sci_type, sci_typex), sr==sr_x), aes(x=sci_type, y=cor), na.rm = T)+
   ylim(c(0,.9))+
   xlab("June")+
   ylab("")+
-  scale_x_discrete(labels=c(agg_month))
+  scale_x_discrete(labels=c(agg_month))+theme_bw()
   
 
 return(grid.arrange(mar,apr,mai,jun, ncol=4))
@@ -804,7 +804,7 @@ for(d in raw_data){
 }
 }
 
-
+x= mt_sm_p_wide$`2`
 mmky_edit = function(x)
 {
     x = x
@@ -1259,6 +1259,65 @@ if(cor==T){
   }
 }
 
+flow.attribution = function(datx = "spei_v2_", daty= ssi_1_long, threshold = NULL){
+  cor_monthly = matrix(nrow=length(agg_month), ncol=12, data=NA)
+  n=1
+  for(a in agg_month){
+      dat_x = get(paste0(datx, a)) %>% 
+      mutate(yr_mt = date_seq) %>% 
+      gather(key=catchment, value=sci, -yr_mt)
+      for(m in 1:12){
+        temp_x = filter(dat_x, month(yr_mt) == m) %>%
+          mutate(catchment=as.integer(catchment)) %>% 
+          as.tbl
+        temp_y= daty%>% 
+          set_colnames(c("yr_mt","catchment","ssi")) %>% 
+          mutate(catchment=as.integer(catchment)) %>% 
+          filter( month(yr_mt) == m) %>% as.tbl
+        temp_cor = merge(x=temp_x, y=temp_y) 
+        if(is.numeric(threshold)){
+          temp_cor = filter(temp_cor, ssi<threshold)
+        }
+        cor_monthly[n,m] = cor(temp_cor$ssi, temp_cor$sci, method="s", use="na.or.complete")      
+        
+        
+        }
+      n=n+1
+  }
+  return(cor_monthly)
+}
+
+
+
+  
+flow.attribution.trends = function(datx = spei_v2_3, daty= ssi_1_long, threshold = NULL){
+  cor_trend = data.frame()
+  
+      dat_x = datx %>% 
+      mutate(yr_mt = date_seq) %>% 
+      gather(key=catchment, value=sci, -yr_mt)
+      for(m in 1:12){
+        temp_x = filter(dat_x, month(yr_mt) == m) %>%
+          mutate(catchment=as.integer(catchment)) %>% 
+          as.tbl
+        temp_y= daty%>% 
+          set_colnames(c("yr_mt","catchment","ssi")) %>% 
+          mutate(catchment=as.integer(catchment)) %>% 
+          filter( month(yr_mt) == m) %>% as.tbl
+        temp_cor = merge(x=temp_x, y=temp_y) 
+        if(is.numeric(threshold)){
+          temp_cor = filter(temp_cor, ssi<threshold)
+        }
+        trend_temp = temp_cor %>% 
+          group_by(year(yr_mt)) %>% 
+          summarise(cor = cor(ssi, sci, 
+                              method="s", use="na.or.complete") )
+        cor_trend = rbind(cor_trend, mmky_edit(x=trend_temp$cor))
+         
+      }
+     colnames(cor_trend) = c("corrected_z","new_p","n/n*", "orig_z", "old_p", "tau", "sen_slope", "old_var", "new_var","S")
+    return(cor_trend)    
+    }
 
 
 #statistics####
@@ -1350,14 +1409,13 @@ getmode <- function(v) {
 
 #hydroclimatic functions
 #jun-aug, sept-nov, dez - feb, march - mai
-winter = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = F, px=0.03)
-
 
 seasonal_trends = function(lb_season=1, ub_season=12, dat = mt_sm_p, value="month_sum", xtable = T, px=0.03,funx = "max" ,ref = T){
   
   
   if(lb_season > ub_season){
-    hydro_year = c(1970,1970, rep(1971:2009, each=3),2010)
+    rg_year = range(dat$yr_mt) %>% year
+    hydro_year = c(rep(rg_year[1],time=2), rep((rg_year[1]+1):rg_year[2], each=3),(rg_year[2]+1))
     res = dat %>% 
     filter(month(yr_mt) <=ub_season|month(yr_mt) >=lb_season) %>% 
       mutate(hy_year = rep(hydro_year, times=catch_n)) %>% 

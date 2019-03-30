@@ -1,10 +1,6 @@
-
+clustering/ms7_timing_swarm.png
 # Clustering --------------------------------------------------------------
-# source("./R/masta_v1/functions.R")# has to run before if not objects will be missin!
-# source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missin!
-# source("./R/masta_v1/sci_calculation.R")# has to run before if not objects will be missin!
-# source("./R/masta_v1/drought_characteristics.R") # has to run before if not objects will be missing!
-#source("./R/masta_v1/climate_characteristics.R") # has to run before if not objects will be missing!
+
 
 #SAAR ####
 #standart climate period 1971 bis 2000 (see DWD) or just the whole period as the climate normal period 1991 - 202 & 1961 bis 1990.
@@ -172,6 +168,67 @@ cor_spei[g, a] = cor(y= temp$ssi , x= temp$spei, use="c", method = "spearman")
 }
 }
 
+
+
+
+spi_spei_mean = matrix(nrow=40, ncol=6)
+spi_spei_sd = matrix(nrow=40, ncol=6)
+for (a in 1:length(drought_sci_0)){
+for(y in 1970:2009){
+temp= drought_sci_0[[a]] %>% 
+  filter(year(yr_mt) == y)
+
+spi_spei_mean[(y-1969),a] = ((temp$spi) - (temp$spei ))%>% mean(.,na.rm=T)
+spi_spei_sd[(y-1969),a] = (temp$spi - temp$spei )%>% sd(.,na.rm=T)
+}
+}
+data_plot= spi_spei_mean %>% 
+  as.data.frame() %>% 
+  set_colnames(c("01","02","03","06","12","24")) %>% 
+  mutate(year = 1970:2009) %>% 
+  gather(key=agg, value=mean, -year)
+
+ggplot(data_plot)+
+  geom_smooth(aes(x=year, y=mean, col=agg), se=F, span=.3)+
+  theme_bw()+
+  scale_color_discrete("Aggregation\nmonth")+
+  xlab("")+
+  ylab("SPI - SPEI")
+ggsave("./plots/clustering/spi-spei.pdf")
+plot(spi_spei_mean[,4], type="l")
+
+spi_mean = matrix(nrow=40, ncol=6)
+spei_mean = matrix(nrow=40, ncol=6)
+ssi_mean = matrix(nrow=40, ncol=6)
+for (a in 1:length(drought_sci_0)){
+for(y in 1970:2009){
+temp= drought_sci_0[[a]] %>% 
+  filter(year(yr_mt) == y)
+
+spi_mean[(y-1969),a] = (temp$spi )%>% mean(.,na.rm=T)
+spei_mean[(y-1969),a] = (temp$spei  )%>% mean(.,na.rm=T)
+ssi_mean[(y-1969),a]= (temp$ssi  )%>% mean(.,na.rm=T)
+}
+}
+
+
+     
+ggplot()+
+    theme_bw()+
+    geom_line(aes(x=1970:2009, y=spei_mean[,3], color="SPEI-3"), lwd=1, alpha=1)+
+   geom_line(aes(x=date_seq, y=spi_mean[,3], color= "SPI-3"), lwd=1, alpha=1)+
+   geom_line(aes(x=date_seq, y=ssi_mean[,3], color="SSI"), lwd=1, alpha=.5)+
+      xlab("")+
+         ylab("SCI-3")+
+      scale_color_discrete("")+
+  theme(legend.position="bottom")+
+  geom_hline(yintercept = 0)
+
+  ggsave("./plots/statistical/sci_diff.pdf")
+  
+
+plot(spi_mean[,3], type="l")
+lines(spei_mean[,3], col=2)
 #change over time
 
 cor_spi_time = matrix(nrow=40, ncol=length(drought_sci_0))
@@ -239,6 +296,11 @@ for(r in 1:catch_n){
  best_spei[r] = cor_spei[r,] %>% which.max() 
  value_spei[r] = cor_spei[r,] %>% max()}
 
+  #are SPI and SPEI statistically different
+  
+  wilcox.test(x=cor_spi[3,] ,y=cor_spei[2,])
+  
+hist(cor_spi[2,])
 gauges$cor_spei_n_dr = best_spei
 gauges$cor_spi_n_dr  = best_spi
 gauges$cor_spi_dr    = value_spi
@@ -259,12 +321,12 @@ mat_final = rbind(mat_spi, mat_spei)
 
 ggplot(mat_final)+
   #geom_point(aes(x=factor(agg), y= cor, col=factor(sci)))+
-  xlab("aggregation period")+
+  xlab("aggregation period [month]")+
   scale_color_discrete("SCI", labels=c("spi", "spei"))+
   #scale_x_continuous(breaks=c(1,2,3,6,12,24), labels=c("1","2","3","6","12","24"))+
-  theme_bw()+
-  ylab("spearman correlation of SCI ~ SSI-1")+
-  geom_pointrange(aes(x=factor(agg), ymin = sd_neg, ymax=sd_pos,y=mean, col=factor(sci)), position = position_dodge(width=.3))
+  ylab("correlation of SCI ~ SSI")+
+  geom_pointrange(aes(x=factor(agg), ymin = sd_neg, ymax=sd_pos,y=mean, col=factor(sci)), position = position_dodge(width=.3))+
+  nice
 
 ggsave("./plots/clustering/drought_propagation_agg.pdf")
 
@@ -354,21 +416,30 @@ dev.off()
 cor_mat = round(cor(x= clust_ana3, use="na.or.complete", method="p"),2)
 xtable::xtable(cor_mat)
 
-dat_plot = cbind.data.frame(BFI = gauges$bfi, len = gauges$mn_length, saar= gauges$saar, sr=gauges$sr_new, int = gauges$mn_intensity)
+dat_plot = cbind.data.frame(x2 = gauges$bfi, y = gauges$mn_length, x= gauges$saar, sr=gauges$sr_new, int = gauges$mn_intensity)
 ggplot(dat_plot)+
   geom_point(aes(x=BFI, y=len))+
   ylab("mean drought length [d]")
 
-ggplot(dat_plot[dat_plot$BFI<.6,])+
-  geom_point(aes(x=saar, y=len))+
-  ylab("mean drought length [d]")+
-  xlab("SAAR[mm]")
+fm= lm(data= dat_plot[dat_plot$x2<.6,], y~ x + I(x^2))
+summary(fm)
 
-cor(x=dat_plot[dat_plot$BFI<.6,]$saar, y= dat_plot[dat_plot$BFI<.6,]$len)
+
+ggplot(dat_plot[dat_plot$x2<.6,],aes(x=x, y=y))+
+  geom_point()+
+  ylab("mean drought length [d]")+
+  xlab("ARS [mm]")+
+  theme_bw()+
+  geom_smooth(method="lm", formula = y ~ x + I(x^2))+
+  annotate(geom="text", +Inf, +Inf,  hjust =1.3, vjust = 2, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))
+
+
+  ggsave("./plots/clustering/mn_saar_bfi.pdf", width=15, height=15, unit="cm")
+  
+  cor(x=dat_plot[dat_plot$BFI<.6,]$saar, y= dat_plot[dat_plot$BFI<.6,]$len)
 
 t.test(x= gauges$mn_length[gauges$sr_new ==2],y= gauges$mn_length[gauges$sr_new ==0])
 
-  ggsave("./plots/clustering/mn_saar_bfi.pdf")
 gauges$bfi[gauges$sr_new==2]
 
 plot(gauges$mn_t ~ gauges$Hochwrt)
@@ -547,22 +618,37 @@ give.n <- function(x){
 temp_df = cbind.data.frame(as.numeric(mmky_ms7_date$sen_slope[mmky_ms7_date$new_p < fs_ms7_date]), gauges$hydrogeo_simple[mmky_ms7_date$new_p < fs_ms7_date],gauges$bfi_class[mmky_ms7_date$new_p < fs_ms7_date],gauges$sr_new[mmky_ms7_date$new_p < fs_ms7_date])
 colnames(temp_df) = c("date","hydrogeo","bfi", "sr")
 
+temp_df_nonsg = cbind.data.frame(as.numeric(mmky_ms7_date$sen_slope[mmky_ms7_date$new_p >= fs_ms7_date]), gauges$hydrogeo_simple[mmky_ms7_date$new_p >= fs_ms7_date],gauges$bfi_class[mmky_ms7_date$new_p >= fs_ms7_date],gauges$sr_new[mmky_ms7_date$new_p >= fs_ms7_date])
+colnames(temp_df_nonsg) = c("date","hydrogeo","bfi", "sr")
+which(temp_df_nonsg$date < 0 & temp_df_nonsg$hydrogeo == "K") %>% length()
+which(temp_df_nonsg$hydrogeo == "K") %>% length
+
 ggplot(temp_df, aes(x= factor(hydrogeo),y= date))+
   geom_boxplot() +
      stat_summary(fun.data = give.n, geom = "text", fun.y = median,
                   position = position_dodge(width = 0.75))+
   xlab("Hydrogeology")+
   scale_x_discrete(labels=c("fractured","other","porous"))+
-  ylab("ms7 timing trend (slope) [d/y]")+
-  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 1, label=paste("n = ", length(which(mmky_ms7_date$new_p < fs_ms7_date))))+
-  annotate(geom="text",  -Inf, Inf,  hjust = 0, vjust = 3, label="p = 0.07")+
+  ylab(expression(T[Q[" 7"]]*"[d/y]")) +
+  annotate(geom="text",  -Inf, Inf,  hjust = -.10, vjust = 1.5, label=paste("n = ", length(which(mmky_ms7_date$new_p < fs_ms7_date))))+
+  annotate(geom="text",  -Inf, Inf,  hjust = -.1, vjust = 3.5, label="p = 0.07")+
   theme_bw()
   
-ggsave("./plots/clustering/hydrogeo_ms7_timing.pdf")
+ggsave("./plots/clustering/hydrogeo_ms7_timing.pdf", height=10, width=10, unit="cm")
 
 png("./plots/clustering/ms7_timing_swarm.png")
-beeswarm(date ~ factor(hydrogeo), data=temp_df, col=2:4, pch=16,labels=c("fractured","other","porous") , xlab="hydrogeology",ylab="ms7 timing trend (slope) [d/a]", method="center")
+beeswarm(date ~ factor(hydrogeo), data=temp_df, col=2:4, pch=16,labels=c("fractured","other","porous") , xlab="hydrogeology",ylab=expression(T[Q[7]]*" trend (slope) [d/a]"), method="center")
 dev.off()
+
+
+png("./plots/clustering/ms7_timing_swarm3.png")
+beeswarm(date ~ factor(hydrogeo), data=temp_df_nonsg, col="grey", pch=16,labels=c("fractured","other","porous") , ylab=expression(T[Q[7]]*" trend (slope) [d/a]"),xlab="hydrogeology", method="center", ylim=c(-2,2), cex = 1,corral="wrap", spacing=1)
+
+beeswarm(date ~ factor(hydrogeo), data=temp_df, col=2:4, pch=16,labels=c("fractured","other","porous") , xlab="hydrogeology", ylab = "s", method="center", 
+         add=T, ylim=c(-2,2), cex =1,corral="wrap", spacing=1)
+dev.off()
+
+
 
 ggplot(temp_df, aes(x= factor(hydrogeo),y= date, color=factor(sr)))+
   geom_boxplot() +
@@ -576,14 +662,17 @@ ggplot(temp_df, aes(x= factor(hydrogeo),y= date, color=factor(sr)))+
 ggsave("./plots/clustering/hydrogeo_ms7_timing2.pdf")
 
 temp_df = cbind.data.frame(sr =gauges$sr_new[mmky_ms30_min$new_p < fs_ms30], ms30= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p < fs_ms30])
+temp_ns = cbind.data.frame(sr =gauges$sr_new[mmky_ms30_min$new_p >= fs_ms30], ms30= mmky_ms30_min$sen_slope[mmky_ms30_min$new_p >= fs_ms30])
+
 
 ggplot( aes(x= factor(gauges_df$hydrogeo_simple),y= gauges_df$bfi))+
   geom_boxplot()
 
-#ms30 ~ sr
+#ms30 ~ sr ####
 #beeswarm plot
   png("./plots/clustering/clustering_swarm_sr.png")
-beeswarm(ms30 ~ sr, data=temp_df, pch = 16,col = c(2,4), corral="wrap", cex=1,labels = c("non-snow","snow-acc"), xlab="", ylab="ms30 trend (slope) [m³/s/a]", method="center")
+
+beeswarm(ms30 ~ sr, data=temp_df, pch = 16,col = c(2,4), cex=1,labels = c("pluvial","nival"), xlab="", ylab=expression(Q[min[ 30]]*" trend (slope) [m³/s/a]"), method="center", corral="wrap")  
 dev.off()
 #boxplot
 
@@ -641,6 +730,27 @@ ggplot()+
 summary(fm)
 plot((gauges$mn_length) ~ (gauges$bfi))
  
+
+dat_plot = cbind.data.frame(x = gauges$bfi, y = gauges$mn_length, x2= gauges$saar, sr=gauges$sr_new, int = gauges$mn_intensity)
+ggplot(dat_plot)+
+  geom_point(aes(x=BFI, y=len))+
+  ylab("mean drought length [d]")
+
+fm= lm(data= dat_plot, y~ x + I(x^2))
+summary(fm)
+
+
+ggplot(dat_plot,aes(x=x, y=y))+
+  geom_point()+
+  ylab("mean drought length [d]")+
+  xlab("BFI")+
+  theme_bw()+
+  geom_smooth(method="lm", formula = y ~ x + I(x^2))+
+  annotate(geom="text", -Inf, +Inf,  hjust =-0.5, vjust = 4, label=paste("r²=",round(summary(fm)$adj.r.squared,2)))
+
+  ggsave("./plots/clustering/mean_length_bfi.pdf", width=15, height=15, unit="cm")
+  
+  
 ggplot(data=gauges_df)+
   geom_point(aes(x=bfi, y= mn_length))+
   ylab("mean drought length [d]")+
@@ -688,6 +798,9 @@ gauges$hydro_num[which(gauges$hydrogeo_simple == "P")] = 2
 
 as.numeric(as.character(gauges$hydrogeo_simple))[gauges$hydrogeo_simple]
 class(gauges)
+gauges$cor_spi_n
+spplot(gauges, "cor_spi_n")
+
 pdf("./plots/clustering/gauges_hydrogeo.pdf")
 spplot(gauges, "hydro_num",
        col.regions = rtb,

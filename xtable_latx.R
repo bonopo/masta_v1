@@ -73,7 +73,7 @@ mat = matrix(nrow= length(rowname_table), ncol=7, data =
 colname_table = c(rep(c("ns","s"),2),"field significance", "range","")
 rownames(mat)= rowname_table
 colnames(mat) = colname_table
-
+xtable::xtable(mat, digits=0)
 
 #precip.table
 rowname_table = c("yearly", "winter", "summer")
@@ -199,64 +199,83 @@ rownames(mat)= c("yearly dwr", "winter dwr" ,"summer dwr")
 xtable::xtable(mat, digits=0)
 
 #comparing different time periods
-rowname_table=c("spring", "summer", "autumn", "winter")
+
+load("./data/catchments/eobs_temp_part.Rdata", verbose = T)
+tempera = tempera[,c(1:catch_n)]
+colnames(tempera) <- 1:catch_n
+temp_long <- load_file(file=tempera, value_name = "temp", origin = "1950-01-01")
+mt_mn_temp <- temp_long %>%
+  mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>%
+  group_by(gauge, yr_mt) %>%
+  summarise(temp_m = mean(temp)) %>%
+  ungroup()
+
+summer = seasonal_trends(lb_season = 6, ub_season = 8, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+autumn = seasonal_trends(lb_season = 9, ub_season = 11, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+winter = seasonal_trends(lb_season = 12, ub_season = 2, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+spring = seasonal_trends(lb_season = 3, ub_season =5, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+annual = seasonal_trends(lb_season = 1, ub_season =12, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+#now from the shortened period
+load("./data/catchments/eobs_temp_part.Rdata", verbose = T)
+tempera = tempera[,c(1:catch_n)]
+colnames(tempera) <- 1:catch_n
+temp_long <- load_file(file=tempera, value_name = "temp", origin = "1950-01-01")
+temp_long %<>% filter(date>= "1970-01-01" & date <= "2009-12-31") 
+mt_mn_temp <- temp_long %>%
+  mutate(yr_mt =  ymd(paste0(year(date),"-", month(date),"-","15"))) %>%
+  group_by(gauge, yr_mt) %>%
+  summarise(temp_m = mean(temp)) %>%
+  ungroup()
+
+annual_short = seasonal_trends(lb_season = 1, ub_season =12, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+summer_short = seasonal_trends(lb_season = 6, ub_season = 8, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+autumn_short = seasonal_trends(lb_season = 9, ub_season = 11, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+winter_short = seasonal_trends(lb_season = 12, ub_season = 2, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+spring_short = seasonal_trends(lb_season = 3, ub_season =5, dat = mt_mn_temp, value ="temp_m" , funx="mean", xtable = F)
+
+hist(annual$sen_slope)
+t.test(x=winter$sen_slope, y= winter_short$sen_slope)
 
 mat_short = matrix(nrow= length(rowname_table), ncol=2, data = 
                c(
-                 magnitude(mmky_spring_short)*NROW(spring_short),
-                 magnitude(mmky_summer_short)*NROW(spring_short),
-                 magnitude(mmky_autumn_short)*NROW(spring_short),
-                 magnitude(mmky_winter_short)*NROW(spring_short)
+                 magnitude(winter_short)*5,
+                 magnitude(spring_short)*5,
+                 magnitude(summer_short)*5,
+                 magnitude(autumn_short)*5
+                 
  ),               
              byrow=T) %>% as.data.frame()
 
 mat_long = matrix(nrow= length(rowname_table), ncol=2, data = 
                c(
-                 magnitude(mmky_spring)*NROW(spring),
-                 magnitude(mmky_summer)*NROW(spring),
-                 magnitude(mmky_autumn)*NROW(spring),
-                 magnitude(mmky_winter)*NROW(spring)
- ),               
-             byrow=T) %>% as.data.frame()
-  
-  mat_short = matrix(nrow= length(rowname_table), ncol=2, data = 
-               c(
-                 magnitude(mmky_spring_short),
-                 magnitude(mmky_summer_short),
-                 magnitude(mmky_autumn_short),
-                 magnitude(mmky_winter_short)
- ),               
-             byrow=T) %>% as.data.frame()
-
-mat_long = matrix(nrow= length(rowname_table), ncol=2, data = 
-               c(
-                 magnitude(mmky_spring),
-                 magnitude(mmky_summer),
-                 magnitude(mmky_autumn),
-                 magnitude(mmky_winter)
+                 magnitude(winter)*5,
+                 magnitude(spring)*5,
+                 magnitude(summer)*5,
+                 magnitude(autumn)*5
  ),               
              byrow=T) %>% as.data.frame()
   
                  
+
 mat = cbind(mat_short,mat_long)
-rownames(mat)= rowname_table
+rownames(mat) = c("winter","spring","summer","autumn")
 xtable::xtable(mat, digits=2)
 fs_wi_mn_t
 
 #seasonal temp
 
-winter = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03)
-spring = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03)
-summer = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03)
-autumn = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03)
-annual = seasonal_trends(lb_season=1, ub_season=12, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03)
+winter = seasonal_trends(lb_season=12, ub_season=2, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03, ref=F)
+spring = seasonal_trends(lb_season=3, ub_season=5, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03, ref=F)
+summer = seasonal_trends(lb_season=6, ub_season=8, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03, ref=F)
+autumn = seasonal_trends(lb_season=9, ub_season=11, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03, ref=F)
+annual = seasonal_trends(lb_season=1, ub_season=12, dat = mt_mn_temp, value="temp_m", xtable = T, px=0.03, ref=F)
 
 mat = rbind(winter, spring, summer, autumn, annual) %>% 
   as.data.frame() 
 rownames(mat) = c("winter","spring","summer","autumn","annual")
-mat[,5:6]*40
+mat[,5:6]  =mat[,5:6]*40
   
-xtable::xtable(mat)
+xtable::xtable(mat, digits=c(0,0,0,0,0,1,1))
 
 #seasonal precip
 #precip sum
@@ -305,3 +324,23 @@ mat= rbind(mat_sum_range, mat_dwr_range*40, mat_ext_p_range*40)
 
 rownames(mat) = c("precipitation sum","days without rain","72h precipitation")
 xtable::xtable(mat, digits=0)
+
+#cahging period considered for drought trends
+
+mmky_par(c("q_sum_def_sub1","p_sum_def_sub1","q_sum_def_sub2","p_sum_def_sub2"))
+
+rowname_table = c("1970-1999", "1979-2009")
+mat_short = matrix(nrow= length(rowname_table), ncol=4, data=                c(
+pos.neg(dat = mmky_q_sum_def_sub1, positive=T),
+pos.neg(dat = mmky_q_sum_def_sub1, p=fs_ds_q, positive=T),
+pos.neg(dat = mmky_q_sum_def_sub1, positive=F),
+pos.neg(dat = mmky_q_sum_def_sub1,p=fs_ds_q, positive=F),
+pos.neg(dat = mmky_q_sum_def_sub2, positive=T),
+pos.neg(dat = mmky_q_sum_def_sub2, p=fs_ds_q, positive=T),
+pos.neg(dat = mmky_q_sum_def_sub2, positive=F),
+pos.neg(dat = mmky_q_sum_def_sub2,p=fs_ds_q, positive=F)
+),byrow = T) %>% as.data.frame()
+
+rownames(mat_short) = rowname_table
+xtable::xtable(mat_short, digits=0)
+

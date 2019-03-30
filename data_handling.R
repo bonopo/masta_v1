@@ -98,6 +98,8 @@ mt_mn_temp <- temp_long %>%
   summarise(temp_m = mean(temp)) %>%
   ungroup()
 
+mt_mn_temp_wide <- spread(mt_mn_temp, key = gauge, value = temp_m) %>% dplyr::select(-c(yr_mt)) %>% as.data.frame()
+
 
 
 

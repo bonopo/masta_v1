@@ -1,5 +1,3 @@
-# hydroclimatic characteristics -------------------------------------------------
-
 # source("./R/masta_v1/functions.R")# has to run before if not objects will be missing!
 # source("./R/masta_v1/data_handling.R")# has to run before if not objects will be missing!
 
@@ -19,7 +17,9 @@ q_wide_summer = q_long %>%
   ungroup() %>% 
   spread(key=gauge, value=q) %>% 
   as.tbl() %>% 
-  dplyr::select( -`year(date)`)
+  dplyr::select( -`date`)
+
+
 
 ms7 = rollapply(q_wide_summer, FUN = mean, width = 7, align="right", by.column=TRUE, fill=NA)
 
@@ -530,6 +530,15 @@ remove(d30_mn_t)
 
 # precipitation seasonal ####
 #dry spells
+precip
+dry_spell = function(lb=12, ub=2, datx = precip_long){
+   if(lb_season > ub_season){
+    hydro_year = c(rep(1970,times=61), rep(1971:2009, each=92),rep(2010,times=31))
+    res = datx %>% 
+    filter(month(date) <=ub|month(date) >=lb) %>% 
+   mutate(hy_year = rep(hydro_year, times=catch_n)) %>% 
+    group_by(hy_year, gauge)
+}
  su_ds_t = precip_long %>% 
   filter(month(date) >= 5 & month(date) <= 11) %>% 
   mutate(rain = 0) 
@@ -541,6 +550,24 @@ su_ds = su_ds_t%>%
   spread(key=gauge, value = dry_spell) %>% 
   dplyr::select(-`year(date)`) %>% 
   set_colnames(1:catch_n)
+
+yr_ds_t = precip_long %>% 
+  #filter(month(date) >= 5 & month(date) <= 11) %>% 
+  mutate(rain = 0) 
+yr_ds_t$rain[which(yr_ds_t$sum_mm > 0.5)] = 1
+yr_ds = yr_ds_t%>% 
+  group_by(gauge, year(date)) %>% 
+  mutate(cum_precip = cumsum(rain)) %>% 
+  summarise(dry_spell = getmode(cum_precip) ) %>% 
+  spread(key=gauge, value = dry_spell) %>% 
+  dplyr::select(-`year(date)`) %>% 
+  set_colnames(1:catch_n)
+
+mmky_par("yr_ds")
+pos.neg(mmky_yr_ds, positive = T, p=NULL)
+pos.neg(mmky_yr_ds, positive = T, p=0.03)
+pos.neg(mmky_yr_ds, positive = F, p=NULL)
+pos.neg(mmky_yr_ds, positive = F, p=0.03)
 
 
 # wi_dwr = precip_long %>% 

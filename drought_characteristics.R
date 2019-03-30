@@ -253,6 +253,15 @@ mean_def = apply(dat,1,mean, na.rm=T)
 
 q_sum_def_yr = apply(q_sum_def_df,1, sum )%>% cbind(sum_def=., year = rep(1970:2009,catch_n), gauge= rep(1:catch_n, each=40)) %>%as.data.frame() %>%  spread(key=gauge, value = sum_def) %>% dplyr::select(-year)
 
+q_sum_def_sub1 = q_sum_def_yr[1:30,] 
+p_sum_def_sub1 = p_sum_def_yr[1:30,] 
+q_sum_def_sub2 = q_sum_def_yr[11:40,] 
+p_sum_def_sub2 = p_sum_def_yr[11:40,] 
+
+mmky_par(c("q_sum_def_sub1","p_sum_def_sub1","q_sum_def_sub2","p_sum_def_sub2"))
+
+
+
 dat_q =q_sum_def_yr
 mean_def = apply(dat,1,mean, na.rm=T) 
 
